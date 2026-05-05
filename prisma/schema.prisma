@@ -1,0 +1,188 @@
+// Prisma Schema - Fitnessstudio App
+// Referenz: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────
+
+enum ContactStatus {
+  INTERESSENT // Mail eingetragen, ggf. noch nicht DOI-bestätigt
+  NEUKUNDE    // hat sich angemeldet, Vertrag in Vorbereitung
+  KUNDE       // aktives Mitglied
+  EHEMALIGER  // gekündigt / ausgelaufen
+}
+
+enum ContactSource {
+  LANDING // Landing Page (nur Mail)
+  DIRECT  // direkter Anmelde-Flow
+  MANUAL  // vom Admin händisch angelegt
+  IMPORT  // aus CSV / Altsystem importiert
+}
+
+enum BillingInterval {
+  MONATLICH
+  QUARTALSWEISE
+  HALBJAEHRLICH
+  JAEHRLICH
+}
+
+// ─────────────────────────────────────────────────────────────
+// CONTACT - der zentrale Datensatz
+// ─────────────────────────────────────────────────────────────
+
+model Contact {
+  id        String        @id @default(cuid())
+  email     String        @unique
+  firstName String?
+  lastName  String?
+  phone     String?
+  birthDate DateTime?     @db.Date
+
+  status    ContactStatus @default(INTERESSENT)
+  source    ContactSource @default(LANDING)
+
+  // Adresse (optional, später für Mitgliedsanmeldung)
+  street     String?
+  postalCode String?
+  city       String?
+
+  // Double-Opt-In
+  doiToken       String?   @unique
+  doiSentAt      DateTime?
+  doiConfirmedAt DateTime?
+
+  // Consent-Logging (DSGVO)
+  consentText String? // Wortlaut der Einwilligung
+  consentIp   String?
+
+  // Tracking: welcher Lead hat sich tatsächlich angemeldet?
+  // refToken landet im "Hier anmelden"-Button-Link der Preis-Mail
+  refToken String? @unique
+
+  // Mitgliedschaft
+  pricingPlanId String?
+  pricingPlan   PricingPlan? @relation(fields: [pricingPlanId], references: [id])
+  memberSince   DateTime?
+  memberUntil   DateTime?
+
+  // Sonstiges
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lists  ContactList[]
+  events ContactEvent[]
+
+  @@index([status])
+  @@index([source])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// PRICING PLANS - im Admin pflegbar, fließen in Preis-Mail ein
+// ─────────────────────────────────────────────────────────────
+
+model PricingPlan {
+  id              String          @id @default(cuid())
+  name            String // z.B. "Basis", "Premium", "Studenten"
+  description     String?
+  priceCents      Int // 4990 = 49,90 €
+  billingInterval BillingInterval @default(MONATLICH)
+  highlights      String[] // Aufzählungspunkte für die Mail
+  active          Boolean         @default(true)
+  sortOrder       Int             @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contacts Contact[]
+}
+
+// ─────────────────────────────────────────────────────────────
+// LISTS & CAMPAIGNS - Newsletter-Versand
+// ─────────────────────────────────────────────────────────────
+
+model List {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  contacts  ContactList[]
+  campaigns Campaign[]
+}
+
+// n:m zwischen Contact und List
+model ContactList {
+  contactId String
+  listId    String
+  addedAt   DateTime @default(now())
+
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  list    List    @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@id([contactId, listId])
+}
+
+model Campaign {
+  id          String    @id @default(cuid())
+  listId      String
+  list        List      @relation(fields: [listId], references: [id])
+  subject     String
+  bodyHtml    String
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  status      String    @default("DRAFT") // DRAFT | SCHEDULED | SENDING | SENT | FAILED
+  createdAt   DateTime  @default(now())
+
+  events CampaignEvent[]
+}
+
+model CampaignEvent {
+  id         String   @id @default(cuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contactId  String
+  event      String // SENT | OPENED | CLICKED | BOUNCED | UNSUBSCRIBED
+  meta       Json?
+  createdAt  DateTime @default(now())
+
+  @@index([campaignId, event])
+}
+
+// ─────────────────────────────────────────────────────────────
+// AUDIT - was ist mit einem Kontakt passiert?
+// ─────────────────────────────────────────────────────────────
+
+model ContactEvent {
+  id        String   @id @default(cuid())
+  contactId String
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  type      String // STATUS_CHANGED | DOI_CONFIRMED | EMAIL_SENT | NOTE_ADDED | ...
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([contactId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// ADMIN - wer darf ins Dashboard?
+// ─────────────────────────────────────────────────────────────
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+}

@@ -1,0 +1,31 @@
+# Render-Konfiguration
+# Render liest diese Datei beim ersten Connect des Repos und richtet
+# den Web-Service automatisch ein.
+#
+# Geheime Env-Vars (DATABASE_URL, RESEND_API_KEY, ...) werden NICHT hier
+# eingetragen – die fügst du im Render-Dashboard manuell ein.
+
+services:
+  - type: web
+    name: fitnessstudio
+    runtime: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: DATABASE_URL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: STUDIO_NAME
+        sync: false
+      - key: STUDIO_URL
+        sync: false
+      - key: TOKEN_SECRET
+        sync: false
