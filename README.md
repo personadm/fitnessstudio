@@ -173,3 +173,76 @@ prisma/
 - Bezahl-Integration (Stripe / SEPA)
 - Soft-Delete für Kontakte (aktuell hartes Löschen mit Cascade)
 - Rate-Limit auf öffentlichen Endpunkten (sollte vor Production rein)
+
+---
+
+## Funnels (automatische Mail-Sequenzen)
+
+Im Admin unter `/admin/funnels` lassen sich Mail-Funnels anlegen, die automatisch
+ausgelöst werden, sobald ein Kontakt einen bestimmten Status bekommt.
+
+**Auslöser**: Status-Wechsel zu `INTERESSENT`, `NEUKUNDE`, `KUNDE` oder `EHEMALIGER`.
+
+**Schritte**: pro Schritt definierst du eine Wartezeit in Tagen (gerechnet ab
+Eintragung in den Funnel) sowie Betreff und HTML-Inhalt der Mail. Im Inhalt
+kannst du `{{firstName}}` und `{{lastName}}` als Platzhalter nutzen.
+
+**Beispiel: Win-Back für Ehemalige**
+- Auslöser: „Wird Ehemaliger"
+- Schritt 1, nach 14 Tagen: „Schade, dass du gegangen bist – ein paar Worte"
+- Schritt 2, nach 30 Tagen: „Wir haben dir was vorbereitet – komm zurück"
+- Schritt 3, nach 60 Tagen: „Letzte Erinnerung: 1 Monat geschenkt"
+
+Wenn der Kontakt vor Ende des Funnels wieder Kunde wird, stoppt die Sequenz
+automatisch (Option „Automatisch stoppen, wenn Kontakt den Trigger-Status wieder
+verlässt").
+
+### Verarbeitung — wer schickt die Mails?
+
+Es gibt zwei Wege, fällige Schritte zu versenden:
+
+**(a) Manuell, im Admin**
+Auf `/admin/funnels` ist ein Button „Jetzt verarbeiten". Praktisch zum Testen
+und als Fallback.
+
+**(b) Automatisch, via cron-job.org (empfohlen)**
+1. Auf [cron-job.org](https://cron-job.org) kostenlosen Account anlegen
+2. Neuen Cronjob erstellen mit:
+   - **URL**: `https://DEINE-DOMAIN.onrender.com/api/cron/process-funnels?key=DEIN_CRON_SECRET`
+   - **Schedule**: stündlich (z.B. jede volle Stunde)
+   - **Method**: GET
+3. Speichern, fertig. Die Mails werden ab sofort automatisch in den vom Inhaber
+   gesetzten Wartezeiten versendet.
+
+Den Wert für `DEIN_CRON_SECRET` musst du als `CRON_SECRET` Env-Var auf Render
+setzen (gleicher Wert wie in der URL bei cron-job.org). Erzeugen mit
+`openssl rand -hex 24`.
+
+---
+
+## Phase 6 (aktuelle Erweiterung)
+
+Was sich gegenüber Phase 5 geändert hat:
+
+- **Landing-Page**: keine Tarife mehr direkt sichtbar; stattdessen Felder für
+  Vorname, Nachname, Geschlecht. Tarife erscheinen erst auf der neuen Seite
+  `/preise` nach Mail-Eintragung.
+- **Mitgliedsanmeldung**: zusätzliche Felder für IBAN und Vertragsstart.
+- **Dashboard**: neue Sektion „Neukunden diesen Monat" — listet alle, die im
+  laufenden Kalendermonat zu Neukunden geworden sind, Reset zum 1.
+- **Funnels**: neues Modul (siehe Abschnitt oben).
+
+### Schema-Migration
+
+Beim Update sind neue Felder und Tabellen dazugekommen. Einmal ausführen:
+
+```
+npm run db:push
+```
+
+Es werden ergänzt:
+- `Contact`: `gender`, `iban`, `contractStartDate`, `signupAt`
+- Neue Enums: `Gender`, `FunnelTrigger`
+- Neue Tabellen: `Funnel`, `FunnelStep`, `FunnelEnrollment`, `FunnelStepEvent`
+
+Die Migration ist additiv – keine bestehenden Daten gehen verloren.

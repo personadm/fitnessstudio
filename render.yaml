@@ -11,7 +11,7 @@ services:
     runtime: node
     region: frankfurt
     plan: free
-    buildCommand: npm install && npm run build
+    buildCommand: npm install && npm run db:push && npm run build
     startCommand: npm run start
     healthCheckPath: /
     envVars:
@@ -28,4 +28,6 @@ services:
       - key: STUDIO_URL
         sync: false
       - key: TOKEN_SECRET
+        sync: false
+      - key: CRON_SECRET
         sync: false
