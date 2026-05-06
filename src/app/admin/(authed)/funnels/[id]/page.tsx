@@ -1,12 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import {
-  updateFunnel,
-  deleteFunnel,
-  addFunnelStep,
-  deleteFunnelStep,
-} from "@/app/admin/_actions";
+import { updateFunnel, deleteFunnel, deleteFunnelStep } from "@/app/admin/_actions";
+import { AddFunnelStepForm } from "./AddFunnelStepForm";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -96,7 +92,7 @@ export default async function FunnelDetailPage({ params }: PageProps) {
                       <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-[0.1em] text-muted hover:text-ink">
                         Inhalt anzeigen
                       </summary>
-                      <div className="mt-3 max-h-60 overflow-auto border border-ink/10 bg-ink/5 p-4 font-mono text-xs whitespace-pre-wrap">
+                      <div className="mt-3 max-h-60 overflow-auto border border-ink/10 bg-ink/5 p-4 font-mono text-xs whitespace-pre-wrap break-all">
                         {step.bodyHtml}
                       </div>
                     </details>
@@ -106,62 +102,10 @@ export default async function FunnelDetailPage({ params }: PageProps) {
             )}
           </section>
 
-          {/* Schritt hinzufügen */}
+          {/* Schritt hinzufügen — jetzt mit KI-Composer */}
           <section>
             <p className="label mb-4">Schritt hinzufügen</p>
-            <form
-              action={addFunnelStep.bind(null, funnel.id)}
-              className="space-y-5 border border-ink/15 p-6"
-            >
-              <label className="block">
-                <span className="label mb-2 block">Wartezeit (Tage nach Eintragung)</span>
-                <input
-                  type="number"
-                  name="delayDays"
-                  min={0}
-                  max={3650}
-                  defaultValue={funnel.steps.length === 0 ? 0 : 3}
-                  required
-                  className="w-32 border-b-2 border-ink bg-transparent py-2 text-base outline-none focus:border-acid_dark"
-                />
-                <span className="mt-1 block font-mono text-[11px] text-muted">
-                  0 = sofort beim nächsten Verarbeitungslauf. Beispiel: 3 = 3 Tage nach Status-Wechsel.
-                </span>
-              </label>
-
-              <label className="block">
-                <span className="label mb-2 block">Betreff</span>
-                <input
-                  type="text"
-                  name="subject"
-                  required
-                  placeholder="z.B. Schade, dass du gegangen bist, {{firstName}}"
-                  className="w-full border-b-2 border-ink bg-transparent py-2 text-base outline-none focus:border-acid_dark"
-                />
-              </label>
-
-              <label className="block">
-                <span className="label mb-2 block">Mail-Inhalt (HTML erlaubt)</span>
-                <textarea
-                  name="bodyHtml"
-                  required
-                  rows={10}
-                  placeholder={`<p>Hallo {{firstName}},</p>\n<p>schade, dass du dich entschieden hast, deine Mitgliedschaft zu beenden ...</p>\n<p>Wenn du wiederkommen möchtest, schreib uns einfach eine Mail.</p>`}
-                  className="w-full border border-ink/20 bg-transparent p-3 font-mono text-sm outline-none focus:border-ink"
-                />
-                <span className="mt-1 block font-mono text-[11px] text-muted">
-                  Platzhalter: <code>{`{{firstName}}`}</code> und <code>{`{{lastName}}`}</code> werden
-                  automatisch ersetzt.
-                </span>
-              </label>
-
-              <button
-                type="submit"
-                className="bg-ink px-5 py-2.5 font-mono text-xs uppercase tracking-[0.12em] text-acid hover:bg-ink-soft"
-              >
-                + Schritt anlegen
-              </button>
-            </form>
+            <AddFunnelStepForm funnelId={funnel.id} isFirst={funnel.steps.length === 0} />
           </section>
 
           {/* Letzte Enrollments */}
