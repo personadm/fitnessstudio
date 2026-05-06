@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { addFunnelStep } from "@/app/admin/_actions";
 import { AIEmailComposer } from "@/components/admin/AIEmailComposer";
+import { EmailPreview } from "@/components/admin/EmailPreview";
 
 interface Props {
   funnelId: string;
@@ -26,7 +27,7 @@ export function AddFunnelStepForm({ funnelId, isFirst }: Props) {
       <form
         action={async (fd: FormData) => {
           await addFunnelStep(funnelId, fd);
-          // Nach erfolgreichem Anlegen: Felder leeren für den nächsten Schritt
+          // Felder leeren für den nächsten Schritt
           setSubject("");
           setBodyHtml("");
         }}
@@ -74,17 +75,15 @@ export function AddFunnelStepForm({ funnelId, isFirst }: Props) {
           />
           <span className="mt-1 block font-mono text-[11px] text-muted">
             Platzhalter: <code>{`{{firstName}}`}</code> und <code>{`{{lastName}}`}</code> werden
-            beim Versand automatisch ersetzt.
+            beim Versand automatisch durch den echten Vornamen/Nachnamen ersetzt.
           </span>
         </label>
 
-        {bodyHtml && bodyHtml.includes("<img") && (
-          <div className="border border-ink/15 bg-cream/50 p-4">
-            <p className="label mb-2">Live-Vorschau (vereinfacht)</p>
-            <div
-              className="prose prose-sm max-w-none text-sm leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: bodyHtml }}
-            />
+        {/* Live-Vorschau */}
+        {bodyHtml.trim() && (
+          <div>
+            <p className="label mb-2">So sieht's aus</p>
+            <EmailPreview subject={subject} bodyHtml={bodyHtml} />
           </div>
         )}
 

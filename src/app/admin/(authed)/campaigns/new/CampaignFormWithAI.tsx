@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { createCampaign } from "@/app/admin/_actions";
 import { AIEmailComposer } from "@/components/admin/AIEmailComposer";
+import { EmailPreview } from "@/components/admin/EmailPreview";
 
 interface ListOption {
   id: string;
@@ -61,33 +62,30 @@ export function CampaignFormWithAI({ lists }: Props) {
 
         <label className="block">
           <span className="label mb-2 block">
-            Inhalt (HTML, einfach erlaubt: &lt;p&gt;, &lt;a href=...&gt;, &lt;strong&gt;, &lt;br&gt;,
-            &lt;img&gt;)
+            Inhalt (HTML — &lt;p&gt;, &lt;a href=...&gt;, &lt;strong&gt;, &lt;br&gt;, &lt;img&gt;)
           </span>
           <textarea
             name="bodyHtml"
             value={bodyHtml}
             onChange={(e) => setBodyHtml(e.target.value)}
             required
-            rows={16}
-            placeholder={`<p>Hallo zusammen,</p>\n<p>nächste Woche startet unser neuer HYROX-Kurs! Anmeldung ab heute über den Tresen oder unter <a href="https://...">diesem Link</a>.</p>\n<p>Viele Grüße<br>— Studio Iron</p>`}
+            rows={12}
+            placeholder={`<p>Hallo zusammen,</p>\n<p>nächste Woche startet unser neuer HYROX-Kurs!</p>`}
             className="w-full border border-ink/20 bg-transparent p-3 font-mono text-sm outline-none focus:border-ink"
           />
         </label>
 
-        {bodyHtml && bodyHtml.includes("<img") && (
-          <div className="border border-ink/15 bg-cream/50 p-4">
-            <p className="label mb-2">Live-Vorschau (vereinfacht)</p>
-            <div
-              className="prose prose-sm max-w-none text-sm leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: bodyHtml }}
-            />
+        {/* Live-Vorschau */}
+        {bodyHtml.trim() && (
+          <div>
+            <p className="label mb-2">So sieht's aus</p>
+            <EmailPreview subject={subject} bodyHtml={bodyHtml} />
           </div>
         )}
 
         <p className="text-xs text-muted">
-          Die Mail wird automatisch in unser Studio-Layout eingebettet (Header mit Studio-Name,
-          sauberes Styling).
+          Die Mail wird beim Versand automatisch in unser Studio-Layout eingebettet (Header mit
+          Studio-Name, sauberes Styling — wie in der Vorschau zu sehen).
         </p>
 
         <div className="flex gap-3 pt-4">
