@@ -2,80 +2,200 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 
 export default async function AdminDashboard() {
-  const [interessenten, neukunden, kunden, ehemalige, listen, campaigns, plans] = await Promise.all([
+  // Status-Statistiken
+  const [interessent, neukunde, kunde, ehemaliger] = await Promise.all([
     db.contact.count({ where: { status: "INTERESSENT" } }),
     db.contact.count({ where: { status: "NEUKUNDE" } }),
     db.contact.count({ where: { status: "KUNDE" } }),
     db.contact.count({ where: { status: "EHEMALIGER" } }),
-    db.list.count(),
-    db.campaign.count(),
-    db.pricingPlan.count({ where: { active: true } }),
   ]);
 
-  const recentContacts = await db.contact.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 5,
-    select: { id: true, email: true, firstName: true, lastName: true, status: true, createdAt: true },
+  // Phase 6: Neuanmeldungen aktueller Monat
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const newSignupsThisMonth = await db.contact.findMany({
+    where: { signupAt: { gte: startOfMonth } },
+    orderBy: { signupAt: "desc" },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      signupAt: true,
+      pricingPlan: { select: { name: true } },
+    },
   });
+
+  // Letzte 8 Kontakte allgemein
+  const recent = await db.contact.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 8,
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      status: true,
+      createdAt: true,
+    },
+  });
+
+  const [planCount, listCount, campaignCount, funnelCount] = await Promise.all([
+    db.pricingPlan.count(),
+    db.list.count(),
+    db.campaign.count(),
+    db.funnel.count(),
+  ]);
+
+  const monthLabel = new Date().toLocaleDateString("de-DE", { month: "long", year: "numeric" });
 
   return (
     <div className="p-8 md:p-12">
-      <p className="label mb-4">Übersicht</p>
-      <h1 className="text-display text-4xl mb-12">Dashboard</h1>
-
-      <div className="grid grid-cols-2 gap-px bg-ink/15 md:grid-cols-4">
-        <Stat label="Interessenten" value={interessenten} href="/admin/contacts?status=INTERESSENT" />
-        <Stat label="Neukunden" value={neukunden} href="/admin/contacts?status=NEUKUNDE" />
-        <Stat label="Kunden" value={kunden} href="/admin/contacts?status=KUNDE" highlight />
-        <Stat label="Ehemalige" value={ehemalige} href="/admin/contacts?status=EHEMALIGER" />
+      <div className="mb-12">
+        <p className="label">Übersicht</p>
+        <h1 className="mt-2 text-display text-5xl">Studio Dashboard</h1>
       </div>
 
-      <div className="mt-12 grid grid-cols-1 gap-12 md:grid-cols-3">
-        <div className="md:col-span-2">
-          <p className="label mb-4">Zuletzt eingetragen</p>
-          <div className="border border-ink/15">
-            {recentContacts.length === 0 ? (
-              <p className="p-6 text-sm text-muted">Noch keine Einträge.</p>
-            ) : (
-              <ul className="divide-y divide-ink/15">
-                {recentContacts.map((c) => (
-                  <li key={c.id}>
-                    <Link href={`/admin/contacts/${c.id}`} className="flex items-center justify-between p-4 hover:bg-ink/5">
-                      <div>
-                        <p className="text-sm">
-                          {c.firstName || c.lastName
-                            ? `${c.firstName ?? ""} ${c.lastName ?? ""}`.trim()
-                            : c.email}
-                        </p>
-                        <p className="font-mono text-[11px] text-muted">{c.email}</p>
-                      </div>
-                      <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted">{c.status}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
+      {/* Status-Tiles */}
+      <div className="mb-12 grid grid-cols-2 gap-4 md:grid-cols-4">
+        <Stat label="Interessenten" value={interessent} />
+        <Stat label="Neukunden" value={neukunde} />
+        <Stat label="Mitglieder" value={kunde} />
+        <Stat label="Ehemalige" value={ehemaliger} />
+      </div>
+
+      {/* Phase 6: Neuanmeldungen diesen Monat */}
+      <section className="mb-12">
+        <div className="mb-4 flex items-end justify-between">
+          <div>
+            <p className="label">Neuanmeldungen — {monthLabel}</p>
+            <p className="mt-1 text-sm text-muted">
+              {newSignupsThisMonth.length === 0
+                ? "Diesen Monat noch keine Anmeldungen."
+                : `${newSignupsThisMonth.length} ${newSignupsThisMonth.length === 1 ? "Anmeldung" : "Anmeldungen"} – Klick auf einen Eintrag für die Daten zur Übernahme in die Buchhaltung.`}
+            </p>
           </div>
         </div>
 
-        <div>
-          <p className="label mb-4">Stand</p>
-          <ul className="space-y-3 text-sm">
-            <li className="flex justify-between border-b border-ink/15 pb-2"><span>Aktive Tarife</span><span className="font-mono">{plans}</span></li>
-            <li className="flex justify-between border-b border-ink/15 pb-2"><span>Listen</span><span className="font-mono">{listen}</span></li>
-            <li className="flex justify-between border-b border-ink/15 pb-2"><span>Kampagnen</span><span className="font-mono">{campaigns}</span></li>
-          </ul>
+        {newSignupsThisMonth.length > 0 && (
+          <div className="border border-ink/15">
+            <ul className="divide-y divide-ink/10">
+              {newSignupsThisMonth.map((c) => {
+                const fullName =
+                  c.firstName || c.lastName
+                    ? `${c.firstName ?? ""} ${c.lastName ?? ""}`.trim()
+                    : c.email;
+                return (
+                  <li key={c.id}>
+                    <Link
+                      href={`/admin/contacts/${c.id}`}
+                      className="flex flex-wrap items-center justify-between gap-3 p-4 hover:bg-ink/5"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-base">{fullName}</p>
+                        <p className="font-mono text-xs text-muted truncate">{c.email}</p>
+                      </div>
+                      <div className="flex items-center gap-6">
+                        <p className="font-mono text-xs uppercase tracking-[0.1em] text-muted">
+                          {c.pricingPlan?.name ?? "—"}
+                        </p>
+                        <p className="font-mono text-xs text-muted">
+                          {c.signupAt ? c.signupAt.toLocaleDateString("de-DE") : "—"}
+                        </p>
+                        <span className="font-mono text-xs uppercase tracking-[0.1em] text-acid_dark">
+                          Details →
+                        </span>
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+      </section>
+
+      {/* Letzte Kontakte */}
+      <section className="mb-12">
+        <div className="mb-4 flex items-end justify-between">
+          <p className="label">Letzte Kontakte</p>
+          <Link
+            href="/admin/contacts"
+            className="font-mono text-xs uppercase tracking-[0.12em] text-muted hover:text-ink"
+          >
+            Alle Kontakte →
+          </Link>
         </div>
-      </div>
+
+        {recent.length === 0 ? (
+          <p className="border border-ink/15 p-8 text-sm text-muted">Noch keine Kontakte.</p>
+        ) : (
+          <ul className="border border-ink/15 divide-y divide-ink/10">
+            {recent.map((c) => {
+              const fullName =
+                c.firstName || c.lastName
+                  ? `${c.firstName ?? ""} ${c.lastName ?? ""}`.trim()
+                  : c.email;
+              return (
+                <li key={c.id}>
+                  <Link
+                    href={`/admin/contacts/${c.id}`}
+                    className="flex items-center justify-between gap-4 p-4 hover:bg-ink/5"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm">{fullName}</p>
+                      <p className="font-mono text-xs text-muted truncate">{c.email}</p>
+                    </div>
+                    <div className="flex items-center gap-6">
+                      <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
+                        {c.status}
+                      </p>
+                      <p className="font-mono text-[11px] text-muted">
+                        {c.createdAt.toLocaleDateString("de-DE")}
+                      </p>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      {/* Schnellzugriff */}
+      <section>
+        <p className="label mb-4">Verwaltung</p>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <QuickLink href="/admin/plans" label="Tarife" count={planCount} />
+          <QuickLink href="/admin/lists" label="Listen" count={listCount} />
+          <QuickLink href="/admin/campaigns" label="Kampagnen" count={campaignCount} />
+          <QuickLink href="/admin/funnels" label="Funnels" count={funnelCount} />
+        </div>
+      </section>
     </div>
   );
 }
 
-function Stat({ label, value, href, highlight }: { label: string; value: number; href: string; highlight?: boolean }) {
+function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <Link href={href} className={`block p-6 hover:bg-ink/5 ${highlight ? "bg-ink text-cream hover:bg-ink-soft" : "bg-cream"}`}>
-      <p className={`label ${highlight ? "!text-acid" : ""}`}>{label}</p>
-      <p className="mt-3 text-display text-5xl">{value}</p>
+    <div className="border border-ink/15 p-6">
+      <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted">{label}</p>
+      <p className="mt-3 text-display text-4xl">{value}</p>
+    </div>
+  );
+}
+
+function QuickLink({ href, label, count }: { href: string; label: string; count: number }) {
+  return (
+    <Link
+      href={href}
+      className="border border-ink/15 p-6 hover:border-ink/40 hover:bg-ink/5 transition-colors"
+    >
+      <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted">{label}</p>
+      <p className="mt-3 text-display text-3xl">{count}</p>
+      <p className="mt-3 font-mono text-xs uppercase tracking-[0.12em] text-acid_dark">öffnen →</p>
     </Link>
   );
 }

@@ -9,6 +9,7 @@ const NAV = [
   { href: "/admin/plans", label: "Tarife" },
   { href: "/admin/lists", label: "Listen" },
   { href: "/admin/campaigns", label: "Newsletter" },
+  { href: "/admin/funnels", label: "Funnels" },
 ];
 
 export function AdminSidebar({ adminEmail }: { adminEmail: string }) {
@@ -31,7 +32,8 @@ export function AdminSidebar({ adminEmail }: { adminEmail: string }) {
       <nav className="flex-1 p-4">
         <ul className="space-y-1">
           {NAV.map((item) => {
-            const active = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href));
+            const active =
+              pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href));
             return (
               <li key={item.href}>
                 <Link

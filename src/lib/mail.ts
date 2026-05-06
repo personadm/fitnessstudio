@@ -11,14 +11,19 @@ const STUDIO_URL = process.env.STUDIO_URL ?? "http://localhost:3000";
 // 1) Double-Opt-In-Mail
 // ─────────────────────────────────────────────────────────────
 
-export async function sendDoiMail(opts: { to: string; doiToken: string }) {
+export async function sendDoiMail(opts: {
+  to: string;
+  firstName?: string | null;
+  doiToken: string;
+}) {
   const confirmUrl = `${STUDIO_URL}/bestaetigen?token=${opts.doiToken}`;
+  const greeting = opts.firstName ? `Hallo ${opts.firstName},` : "Hallo,";
   return resend.emails.send({
     from: FROM,
     to: opts.to,
     subject: `Bitte bestätige deine E-Mail-Adresse`,
-    html: doiTemplate({ confirmUrl }),
-    text: `Bitte bestätige deine E-Mail-Adresse:\n\n${confirmUrl}\n\nWenn du dich nicht eingetragen hast, ignoriere diese Mail einfach.\n\n— ${STUDIO_NAME}`,
+    html: doiTemplate({ confirmUrl, greeting }),
+    text: `${greeting}\n\nbitte bestätige deine E-Mail-Adresse:\n\n${confirmUrl}\n\nWenn du dich nicht eingetragen hast, ignoriere diese Mail einfach.\n\n— ${STUDIO_NAME}`,
   });
 }
 
@@ -26,18 +31,23 @@ export async function sendDoiMail(opts: { to: string; doiToken: string }) {
 // 2) Willkommens-/Preis-Mail (nach DOI)
 // ─────────────────────────────────────────────────────────────
 
-export async function sendPricingMail(opts: { to: string; refToken: string }) {
+export async function sendPricingMail(opts: {
+  to: string;
+  firstName?: string | null;
+  refToken: string;
+}) {
   const plans = await db.pricingPlan.findMany({
     where: { active: true },
     orderBy: { sortOrder: "asc" },
   });
   const signupUrl = `${STUDIO_URL}/anmelden?ref=${opts.refToken}`;
+  const greeting = opts.firstName ? `Hallo ${opts.firstName},` : "Hallo,";
   return resend.emails.send({
     from: FROM,
     to: opts.to,
     subject: `Willkommen bei ${STUDIO_NAME} – unsere Tarife`,
-    html: pricingTemplate({ plans, signupUrl }),
-    text: pricingTextFallback({ plans, signupUrl }),
+    html: pricingTemplate({ plans, signupUrl, greeting }),
+    text: pricingTextFallback({ plans, signupUrl, greeting }),
   });
 }
 
@@ -79,6 +89,24 @@ export async function sendCampaignMail(opts: {
 }
 
 // ─────────────────────────────────────────────────────────────
+// 5) Funnel-Mails (Phase 6)
+// ─────────────────────────────────────────────────────────────
+
+export async function sendFunnelMail(opts: {
+  to: string;
+  subject: string;
+  bodyHtml: string;
+}) {
+  const wrappedHtml = campaignWrapperTemplate({ bodyHtml: opts.bodyHtml });
+  return resend.emails.send({
+    from: FROM,
+    to: opts.to,
+    subject: opts.subject,
+    html: wrappedHtml,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
 // HTML-Templates
 // ─────────────────────────────────────────────────────────────
 
@@ -86,7 +114,7 @@ function shellStyles() {
   return `body{margin:0;padding:0;background:#F5F0E8;font-family:Georgia,serif;color:#1A1815;}`;
 }
 
-function doiTemplate({ confirmUrl }: { confirmUrl: string }) {
+function doiTemplate({ confirmUrl, greeting }: { confirmUrl: string; greeting: string }) {
   return `<!DOCTYPE html>
 <html lang="de">
 <head><meta charset="utf-8"><style>${shellStyles()}</style></head>
@@ -96,6 +124,7 @@ function doiTemplate({ confirmUrl }: { confirmUrl: string }) {
       <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #D8D2C7;">
         <tr><td style="padding:40px;">
           <p style="font-family:'Courier New',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8A857E;margin:0 0 24px;">${STUDIO_NAME}</p>
+          <p style="font-size:16px;line-height:1.6;margin:0 0 12px;">${greeting}</p>
           <h1 style="font-size:28px;line-height:1.2;margin:0 0 16px;font-weight:400;">Bestätige deine E-Mail-Adresse</h1>
           <p style="font-size:16px;line-height:1.6;margin:0 0 32px;">Klick einmal kurz auf den Button, damit wir wissen, dass die Adresse wirklich dir gehört. Erst danach senden wir dir unsere Tarife zu.</p>
           <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:#1A1815;">
@@ -114,9 +143,11 @@ function doiTemplate({ confirmUrl }: { confirmUrl: string }) {
 function pricingTemplate({
   plans,
   signupUrl,
+  greeting,
 }: {
   plans: Array<{ name: string; description: string | null; priceCents: number; highlights: string[] }>;
   signupUrl: string;
+  greeting: string;
 }) {
   const planRows = plans
     .map(
@@ -149,7 +180,8 @@ function pricingTemplate({
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #D8D2C7;">
         <tr><td style="padding:40px 40px 24px;">
           <p style="font-family:'Courier New',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8A857E;margin:0 0 24px;">${STUDIO_NAME}</p>
-          <h1 style="font-size:34px;line-height:1.1;margin:0 0 16px;font-weight:400;letter-spacing:-0.02em;">Schön, dass du da bist.</h1>
+          <p style="font-size:16px;line-height:1.6;margin:0 0 12px;">${greeting}</p>
+          <h1 style="font-size:34px;line-height:1.1;margin:0 0 16px;font-weight:400;letter-spacing:-0.02em;">schön, dass du da bist.</h1>
           <p style="font-size:16px;line-height:1.6;margin:0;">Hier sind unsere aktuellen Tarife. Wenn dir einer zusagt, klick unten auf <em>Hier anmelden</em>.</p>
         </td></tr>
         ${planRows}
@@ -169,12 +201,16 @@ function pricingTemplate({
 function pricingTextFallback({
   plans,
   signupUrl,
+  greeting,
 }: {
   plans: Array<{ name: string; priceCents: number; highlights: string[] }>;
   signupUrl: string;
+  greeting: string;
 }) {
-  const planText = plans.map((p) => `${p.name} – ${formatPrice(p.priceCents)}/Monat\n  ${p.highlights.join("\n  ")}`).join("\n\n");
-  return `Schön, dass du da bist.\n\nUnsere aktuellen Tarife:\n\n${planText}\n\nHier anmelden: ${signupUrl}\n\n— ${STUDIO_NAME}`;
+  const planText = plans
+    .map((p) => `${p.name} – ${formatPrice(p.priceCents)}/Monat\n  ${p.highlights.join("\n  ")}`)
+    .join("\n\n");
+  return `${greeting}\n\nschön, dass du da bist.\n\nUnsere aktuellen Tarife:\n\n${planText}\n\nHier anmelden: ${signupUrl}\n\n— ${STUDIO_NAME}`;
 }
 
 function signupConfirmTemplate(opts: { firstName: string; planName: string; priceCents: number }) {

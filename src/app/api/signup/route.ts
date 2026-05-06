@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { signupSchema } from "@/lib/validation";
 import { sendSignupConfirmation } from "@/lib/mail";
+import { enrollIntoMatchingFunnels } from "@/lib/funnels";
 
 export const runtime = "nodejs";
 
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 
-    // Contact ggf. existierend per ref-Token oder per Mail finden
+    // Bestehenden Contact finden (per ref-Token oder Mail)
     let contact =
       (data.ref ? await db.contact.findUnique({ where: { refToken: data.ref } }) : null) ??
       (await db.contact.findUnique({ where: { email: data.email } }));
@@ -34,11 +35,15 @@ export async function POST(req: NextRequest) {
       email: data.email,
       firstName: data.firstName,
       lastName: data.lastName,
+      gender: data.gender,
       phone: data.phone || null,
       birthDate: new Date(data.birthDate),
       street: data.street,
       postalCode: data.postalCode,
       city: data.city,
+      iban: data.iban,
+      contractStartDate: new Date(data.contractStartDate),
+      signupAt: new Date(),
       pricingPlanId: data.pricingPlanId,
       status: "NEUKUNDE" as const,
       source: contact ? contact.source : ("DIRECT" as const),
@@ -66,7 +71,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Bestätigung an User – Fehler nicht durchreichen
+    // Bestätigung an User
     try {
       await sendSignupConfirmation({
         to: data.email,
@@ -77,6 +82,9 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       console.error("[/api/signup] sendSignupConfirmation failed", err);
     }
+
+    // Phase 6: in passende Funnels einschreiben (Status NEUKUNDE)
+    await enrollIntoMatchingFunnels(contact.id, contact.status);
 
     return NextResponse.json({ ok: true });
   } catch (err) {

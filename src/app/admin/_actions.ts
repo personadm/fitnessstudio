@@ -4,8 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { planSchema, campaignSchema } from "@/lib/validation";
-import type { ContactStatus } from "@prisma/client";
+import { planSchema, campaignSchema, funnelSchema, funnelStepSchema } from "@/lib/validation";
+import { enrollIntoMatchingFunnels, processFunnels } from "@/lib/funnels";
+import type { ContactStatus, FunnelTrigger } from "@prisma/client";
 
 async function requireAdmin() {
   const s = await getSession();
@@ -19,16 +20,17 @@ async function requireAdmin() {
 
 export async function updateContactStatus(contactId: string, newStatus: ContactStatus) {
   await requireAdmin();
-  const previous = await db.contact.findUnique({ where: { id: contactId }, select: { status: true } });
+  const previous = await db.contact.findUnique({
+    where: { id: contactId },
+    select: { status: true },
+  });
   if (!previous) return;
 
   await db.contact.update({
     where: { id: contactId },
     data: {
       status: newStatus,
-      // bei Wechsel auf KUNDE: memberSince setzen (falls noch nicht gesetzt)
       ...(newStatus === "KUNDE" ? { memberSince: { set: new Date() } } : {}),
-      // bei Wechsel auf EHEMALIGER: memberUntil setzen
       ...(newStatus === "EHEMALIGER" ? { memberUntil: { set: new Date() } } : {}),
     },
   });
@@ -39,6 +41,10 @@ export async function updateContactStatus(contactId: string, newStatus: ContactS
       meta: { from: previous.status, to: newStatus },
     },
   });
+
+  // Phase 6: in passende Funnels einschreiben
+  await enrollIntoMatchingFunnels(contactId, newStatus);
+
   revalidatePath("/admin/contacts");
   revalidatePath(`/admin/contacts/${contactId}`);
 }
@@ -114,10 +120,8 @@ export async function togglePlanActive(planId: string) {
 
 export async function deletePlan(planId: string) {
   await requireAdmin();
-  // Nur löschen, wenn keine Contacts mehr daran hängen
   const inUse = await db.contact.count({ where: { pricingPlanId: planId } });
   if (inUse > 0) {
-    // Statt löschen: deaktivieren
     await db.pricingPlan.update({ where: { id: planId }, data: { active: false } });
   } else {
     await db.pricingPlan.delete({ where: { id: planId } });
@@ -166,3 +170,99 @@ export async function deleteCampaign(campaignId: string) {
   revalidatePath("/admin/campaigns");
   redirect("/admin/campaigns");
 }
+
+// ─────────────────────────────────────────────────────────────
+// FUNNELS (Phase 6)
+// ─────────────────────────────────────────────────────────────
+
+export async function createFunnel(formData: FormData) {
+  await requireAdmin();
+  const parsed = funnelSchema.parse({
+    name: formData.get("name"),
+    trigger: formData.get("trigger"),
+    active: formData.get("active") === "on",
+    autoStop: formData.get("autoStop") === "on",
+  });
+  const f = await db.funnel.create({ data: parsed });
+  revalidatePath("/admin/funnels");
+  redirect(`/admin/funnels/${f.id}`);
+}
+
+export async function updateFunnel(funnelId: string, formData: FormData) {
+  await requireAdmin();
+  const parsed = funnelSchema.parse({
+    name: formData.get("name"),
+    trigger: formData.get("trigger"),
+    active: formData.get("active") === "on",
+    autoStop: formData.get("autoStop") === "on",
+  });
+  await db.funnel.update({ where: { id: funnelId }, data: parsed });
+  revalidatePath("/admin/funnels");
+  revalidatePath(`/admin/funnels/${funnelId}`);
+}
+
+export async function toggleFunnelActive(funnelId: string) {
+  await requireAdmin();
+  const f = await db.funnel.findUnique({ where: { id: funnelId } });
+  if (!f) return;
+  await db.funnel.update({ where: { id: funnelId }, data: { active: !f.active } });
+  revalidatePath("/admin/funnels");
+  revalidatePath(`/admin/funnels/${funnelId}`);
+}
+
+export async function deleteFunnel(funnelId: string) {
+  await requireAdmin();
+  await db.funnel.delete({ where: { id: funnelId } });
+  revalidatePath("/admin/funnels");
+  redirect("/admin/funnels");
+}
+
+export async function addFunnelStep(funnelId: string, formData: FormData) {
+  await requireAdmin();
+  const parsed = funnelStepSchema.parse({
+    funnelId,
+    delayDays: formData.get("delayDays"),
+    subject: formData.get("subject"),
+    bodyHtml: formData.get("bodyHtml"),
+  });
+
+  // orderNum automatisch = höchste vorhandene + 1
+  const lastStep = await db.funnelStep.findFirst({
+    where: { funnelId },
+    orderBy: { orderNum: "desc" },
+    select: { orderNum: true },
+  });
+  const orderNum = (lastStep?.orderNum ?? 0) + 1;
+
+  await db.funnelStep.create({
+    data: {
+      funnelId,
+      orderNum,
+      delayDays: parsed.delayDays,
+      subject: parsed.subject,
+      bodyHtml: parsed.bodyHtml,
+    },
+  });
+  revalidatePath(`/admin/funnels/${funnelId}`);
+}
+
+export async function deleteFunnelStep(stepId: string, funnelId: string) {
+  await requireAdmin();
+  await db.funnelStep.delete({ where: { id: stepId } });
+  revalidatePath(`/admin/funnels/${funnelId}`);
+}
+
+/**
+ * Manueller Trigger für die Funnel-Verarbeitung
+ * (Button "Jetzt verarbeiten" auf /admin/funnels).
+ */
+export async function runFunnelProcessing() {
+  await requireAdmin();
+  const result = await processFunnels({ force: true });
+  revalidatePath("/admin/funnels");
+  revalidatePath("/admin");
+  return result;
+}
+
+// kleine Hilfsfunktion, falls du irgendwo den Trigger-Type brauchst
+export type { FunnelTrigger };

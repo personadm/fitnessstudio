@@ -2,6 +2,11 @@ import { z } from "zod";
 
 export const leadSchema = z.object({
   email: z.string().trim().toLowerCase().email("Bitte gültige E-Mail-Adresse angeben."),
+  firstName: z.string().trim().min(1, "Vorname fehlt.").max(80),
+  lastName: z.string().trim().min(1, "Nachname fehlt.").max(80),
+  gender: z.enum(["MAENNLICH", "WEIBLICH", "DIVERS"], {
+    errorMap: () => ({ message: "Bitte Geschlecht angeben." }),
+  }),
   consent: z.literal(true, {
     errorMap: () => ({ message: "Bitte stimme der Datenverarbeitung zu." }),
   }),
@@ -12,11 +17,16 @@ export const signupSchema = z.object({
   email: z.string().trim().toLowerCase().email("Bitte gültige E-Mail-Adresse angeben."),
   firstName: z.string().trim().min(1, "Vorname fehlt."),
   lastName: z.string().trim().min(1, "Nachname fehlt."),
+  gender: z.enum(["MAENNLICH", "WEIBLICH", "DIVERS"], {
+    errorMap: () => ({ message: "Bitte Geschlecht angeben." }),
+  }),
   phone: z.string().trim().optional().or(z.literal("")),
   birthDate: z.string().trim().min(1, "Geburtsdatum fehlt."),
   street: z.string().trim().min(1, "Straße fehlt."),
   postalCode: z.string().trim().min(4, "PLZ fehlt."),
   city: z.string().trim().min(1, "Stadt fehlt."),
+  iban: z.string().trim().min(15, "IBAN fehlt.").max(34),
+  contractStartDate: z.string().trim().min(1, "Vertragsstart fehlt."),
   pricingPlanId: z.string().min(1, "Bitte einen Tarif auswählen."),
   ref: z.string().optional(),
   consent: z.literal(true, {
@@ -48,3 +58,25 @@ export const campaignSchema = z.object({
   bodyHtml: z.string().min(1, "Inhalt fehlt."),
 });
 export type CampaignInput = z.infer<typeof campaignSchema>;
+
+// ─────────────────────────────────────────────────────────────
+// Phase 6 - Funnels
+// ─────────────────────────────────────────────────────────────
+
+export const funnelSchema = z.object({
+  name: z.string().trim().min(1, "Name fehlt.").max(100),
+  trigger: z.enum(["INTERESSENT", "NEUKUNDE", "KUNDE", "EHEMALIGER"], {
+    errorMap: () => ({ message: "Bitte Auslöser wählen." }),
+  }),
+  active: z.boolean().default(true),
+  autoStop: z.boolean().default(true),
+});
+export type FunnelInput = z.infer<typeof funnelSchema>;
+
+export const funnelStepSchema = z.object({
+  funnelId: z.string().min(1),
+  delayDays: z.coerce.number().int().min(0).max(3650),
+  subject: z.string().trim().min(1, "Betreff fehlt.").max(200),
+  bodyHtml: z.string().min(1, "Inhalt fehlt."),
+});
+export type FunnelStepInput = z.infer<typeof funnelStepSchema>;

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { leadSchema } from "@/lib/validation";
 import { generateToken } from "@/lib/tokens";
 import { sendDoiMail } from "@/lib/mail";
+import { enrollIntoMatchingFunnels } from "@/lib/funnels";
 
 export const runtime = "nodejs";
 
@@ -16,29 +17,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, message }, { status: 400 });
     }
 
-    const { email } = result.data;
+    const { email, firstName, lastName, gender } = result.data;
 
     // IP fürs Consent-Logging (DSGVO-Beleg)
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? req.headers.get("x-real-ip") ?? "unknown";
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      req.headers.get("x-real-ip") ??
+      "unknown";
 
     const consentText =
-      "Ich willige ein, dass meine E-Mail-Adresse zur Zusendung von Informationen und Tarifen des Fitnessstudios verarbeitet wird. Die Einwilligung kann jederzeit widerrufen werden.";
+      "Ich willige ein, dass meine Daten (Vorname, Nachname, Geschlecht, E-Mail) zur Zusendung von Informationen und Tarifen des Fitnessstudios verarbeitet werden. Die Einwilligung kann jederzeit widerrufen werden.";
 
     const doiToken = generateToken();
 
-    // Existierender Kontakt? Dann nur DOI-Token erneuern.
-    // Neuer Kontakt? Anlegen.
+    // Existierender Kontakt? Dann Daten aktualisieren und neuen DOI-Token vergeben.
     const contact = await db.contact.upsert({
       where: { email },
       update: {
+        firstName,
+        lastName,
+        gender,
         doiToken,
         doiSentAt: new Date(),
-        // bereits bestätigte Kontakte nicht zurücksetzen
         consentText,
         consentIp: ip,
       },
       create: {
         email,
+        firstName,
+        lastName,
+        gender,
         status: "INTERESSENT",
         source: "LANDING",
         doiToken,
@@ -48,7 +56,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Wenn schon bestätigt: keine neue DOI-Mail, freundlicher Hinweis
+    // Wenn schon bestätigt: keine neue DOI-Mail
     if (contact.doiConfirmedAt) {
       return NextResponse.json({
         ok: true,
@@ -57,7 +65,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    await sendDoiMail({ to: email, doiToken });
+    await sendDoiMail({ to: email, firstName, doiToken });
 
     await db.contactEvent.create({
       data: {
@@ -67,7 +75,13 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ ok: true, message: "Bitte bestätige deine E-Mail-Adresse." });
+    // Phase 6: in passende Funnels einschreiben (Status INTERESSENT)
+    await enrollIntoMatchingFunnels(contact.id, contact.status);
+
+    return NextResponse.json({
+      ok: true,
+      message: "Bitte bestätige deine E-Mail-Adresse. Danach schicken wir dir die Tarife.",
+    });
   } catch (err) {
     console.error("[/api/leads]", err);
     return NextResponse.json({ ok: false, message: "Etwas ist schiefgelaufen." }, { status: 500 });

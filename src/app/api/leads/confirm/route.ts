@@ -20,10 +20,12 @@ export async function GET(req: NextRequest) {
   const contact = await db.contact.findUnique({ where: { doiToken: token } });
 
   if (!contact) {
-    return NextResponse.json({ ok: false, message: "Ungültiger oder abgelaufener Link." }, { status: 404 });
+    return NextResponse.json(
+      { ok: false, message: "Ungültiger oder abgelaufener Link." },
+      { status: 404 },
+    );
   }
 
-  // Schon bestätigt? Idempotent zurückmelden.
   if (contact.doiConfirmedAt) {
     return NextResponse.json({
       ok: true,
@@ -39,7 +41,6 @@ export async function GET(req: NextRequest) {
     data: {
       doiConfirmedAt: new Date(),
       refToken,
-      // DOI-Token ist nach Bestätigung verbraucht
       doiToken: null,
     },
   });
@@ -48,16 +49,17 @@ export async function GET(req: NextRequest) {
     data: { contactId: contact.id, type: "DOI_CONFIRMED" },
   });
 
-  // Preis-Mail verschicken
   try {
-    await sendPricingMail({ to: contact.email, refToken });
+    await sendPricingMail({
+      to: contact.email,
+      firstName: contact.firstName,
+      refToken,
+    });
     await db.contactEvent.create({
       data: { contactId: contact.id, type: "PRICING_MAIL_SENT" },
     });
   } catch (err) {
     console.error("[/api/leads/confirm] sendPricingMail failed", err);
-    // Wir loggen, geben dem User aber trotzdem ein OK zurück –
-    // die DOI-Bestätigung selbst war ja erfolgreich.
   }
 
   return NextResponse.json({ ok: true, message: "Bestätigung erfolgreich." });

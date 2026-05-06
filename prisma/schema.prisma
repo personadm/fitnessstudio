@@ -1,4 +1,4 @@
-// Prisma Schema - Fitnessstudio App
+// Prisma Schema - Fitnessstudio App (Phase 6)
 // Referenz: https://pris.ly/d/prisma-schema
 
 generator client {
@@ -35,6 +35,21 @@ enum BillingInterval {
   JAEHRLICH
 }
 
+// Phase 6
+enum Gender {
+  MAENNLICH
+  WEIBLICH
+  DIVERS
+}
+
+// Phase 6
+enum FunnelTrigger {
+  INTERESSENT
+  NEUKUNDE
+  KUNDE
+  EHEMALIGER
+}
+
 // ─────────────────────────────────────────────────────────────
 // CONTACT - der zentrale Datensatz
 // ─────────────────────────────────────────────────────────────
@@ -44,11 +59,12 @@ model Contact {
   email     String        @unique
   firstName String?
   lastName  String?
+  gender    Gender? // Phase 6
   phone     String?
   birthDate DateTime?     @db.Date
 
-  status    ContactStatus @default(INTERESSENT)
-  source    ContactSource @default(LANDING)
+  status ContactStatus @default(INTERESSENT)
+  source ContactSource @default(LANDING)
 
   // Adresse (optional, später für Mitgliedsanmeldung)
   street     String?
@@ -65,14 +81,16 @@ model Contact {
   consentIp   String?
 
   // Tracking: welcher Lead hat sich tatsächlich angemeldet?
-  // refToken landet im "Hier anmelden"-Button-Link der Preis-Mail
   refToken String? @unique
 
   // Mitgliedschaft
-  pricingPlanId String?
-  pricingPlan   PricingPlan? @relation(fields: [pricingPlanId], references: [id])
-  memberSince   DateTime?
-  memberUntil   DateTime?
+  pricingPlanId     String?
+  pricingPlan       PricingPlan? @relation(fields: [pricingPlanId], references: [id])
+  memberSince       DateTime?
+  memberUntil       DateTime?
+  iban              String? // Phase 6
+  contractStartDate DateTime?    @db.Date // Phase 6
+  signupAt          DateTime? // Phase 6 - wann das Anmeldeformular abgeschickt wurde
 
   // Sonstiges
   notes String?
@@ -80,12 +98,14 @@ model Contact {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  lists  ContactList[]
-  events ContactEvent[]
+  lists             ContactList[]
+  events            ContactEvent[]
+  funnelEnrollments FunnelEnrollment[]
 
   @@index([status])
   @@index([source])
   @@index([createdAt])
+  @@index([signupAt])
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -94,11 +114,11 @@ model Contact {
 
 model PricingPlan {
   id              String          @id @default(cuid())
-  name            String // z.B. "Basis", "Premium", "Studenten"
+  name            String
   description     String?
-  priceCents      Int // 4990 = 49,90 €
+  priceCents      Int
   billingInterval BillingInterval @default(MONATLICH)
-  highlights      String[] // Aufzählungspunkte für die Mail
+  highlights      String[]
   active          Boolean         @default(true)
   sortOrder       Int             @default(0)
 
@@ -122,7 +142,6 @@ model List {
   campaigns Campaign[]
 }
 
-// n:m zwischen Contact und List
 model ContactList {
   contactId String
   listId    String
@@ -142,7 +161,7 @@ model Campaign {
   bodyHtml    String
   scheduledAt DateTime?
   sentAt      DateTime?
-  status      String    @default("DRAFT") // DRAFT | SCHEDULED | SENDING | SENT | FAILED
+  status      String    @default("DRAFT")
   createdAt   DateTime  @default(now())
 
   events CampaignEvent[]
@@ -153,7 +172,7 @@ model CampaignEvent {
   campaignId String
   campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   contactId  String
-  event      String // SENT | OPENED | CLICKED | BOUNCED | UNSUBSCRIBED
+  event      String
   meta       Json?
   createdAt  DateTime @default(now())
 
@@ -168,11 +187,79 @@ model ContactEvent {
   id        String   @id @default(cuid())
   contactId String
   contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  type      String // STATUS_CHANGED | DOI_CONFIRMED | EMAIL_SENT | NOTE_ADDED | ...
+  type      String
   meta      Json?
   createdAt DateTime @default(now())
 
   @@index([contactId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// FUNNELS - automatisierte Mail-Sequenzen (Phase 6)
+// ─────────────────────────────────────────────────────────────
+
+model Funnel {
+  id        String        @id @default(cuid())
+  name      String
+  trigger   FunnelTrigger
+  active    Boolean       @default(true)
+  // Wenn true: Enrollment wird abgebrochen, sobald der Kontakt
+  // den Trigger-Status wieder verlässt (z.B. EHEMALIGER -> KUNDE
+  // stoppt den Win-Back-Funnel automatisch).
+  autoStop  Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  steps       FunnelStep[]
+  enrollments FunnelEnrollment[]
+
+  @@index([trigger, active])
+}
+
+model FunnelStep {
+  id        String   @id @default(cuid())
+  funnelId  String
+  funnel    Funnel   @relation(fields: [funnelId], references: [id], onDelete: Cascade)
+  orderNum  Int // 1, 2, 3 ...
+  delayDays Int // Wartezeit in Tagen ab Eintragung in den Funnel
+  subject   String
+  bodyHtml  String
+  createdAt DateTime @default(now())
+
+  events FunnelStepEvent[]
+
+  @@unique([funnelId, orderNum])
+  @@index([funnelId])
+}
+
+model FunnelEnrollment {
+  id           String    @id @default(cuid())
+  funnelId     String
+  funnel       Funnel    @relation(fields: [funnelId], references: [id], onDelete: Cascade)
+  contactId    String
+  contact      Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+  cancelledAt  DateTime?
+  cancelReason String? // "STATUS_CHANGED" | "MANUAL"
+
+  events FunnelStepEvent[]
+
+  // Jeder Kontakt durchläuft jeden Funnel max. einmal.
+  // (Wenn du das willst, kannst du das später ändern.)
+  @@unique([funnelId, contactId])
+  @@index([completedAt, cancelledAt])
+}
+
+model FunnelStepEvent {
+  id           String           @id @default(cuid())
+  enrollmentId String
+  enrollment   FunnelEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  stepId       String
+  step         FunnelStep       @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  sentAt       DateTime         @default(now())
+
+  @@unique([enrollmentId, stepId])
 }
 
 // ─────────────────────────────────────────────────────────────
