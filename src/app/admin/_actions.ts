@@ -255,13 +255,15 @@ export async function deleteFunnelStep(stepId: string, funnelId: string) {
 /**
  * Manueller Trigger für die Funnel-Verarbeitung
  * (Button "Jetzt verarbeiten" auf /admin/funnels).
+ *
+ * Gibt absichtlich nichts zurück, weil <form action={...}>
+ * in Next.js Promise<void> erwartet.
  */
 export async function runFunnelProcessing() {
   await requireAdmin();
-  const result = await processFunnels({ force: true });
+  await processFunnels({ force: true });
   revalidatePath("/admin/funnels");
   revalidatePath("/admin");
-  return result;
 }
 
 // kleine Hilfsfunktion, falls du irgendwo den Trigger-Type brauchst
