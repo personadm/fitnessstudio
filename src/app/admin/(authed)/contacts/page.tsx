@@ -18,7 +18,8 @@ const STATUS_VALUES: ContactStatus[] = ["INTERESSENT", "NEUKUNDE", "KUNDE", "EHE
 
 export default async function ContactsPage({ searchParams }: PageProps) {
   const { status, q } = await searchParams;
-  const activeStatus = status && (STATUS_VALUES as string[]).includes(status) ? (status as ContactStatus) : null;
+  const activeStatus =
+    status && (STATUS_VALUES as string[]).includes(status) ? (status as ContactStatus) : null;
 
   const contacts = await db.contact.findMany({
     where: {
@@ -49,8 +50,18 @@ export default async function ContactsPage({ searchParams }: PageProps) {
 
   return (
     <div className="p-8 md:p-12">
-      <p className="label mb-4">Kontakte</p>
-      <h1 className="text-display text-4xl mb-8">Alle Datensätze</h1>
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="label">Kontakte</p>
+          <h1 className="mt-2 text-display text-4xl">Alle Datensätze</h1>
+        </div>
+        <Link
+          href="/admin/contacts/import"
+          className="border border-ink/20 px-4 py-2 font-mono text-xs uppercase tracking-[0.12em] hover:bg-ink hover:text-cream transition-colors"
+        >
+          ↑ Excel importieren
+        </Link>
+      </div>
 
       {/* Status-Tabs */}
       <div className="mb-6 flex flex-wrap gap-2 border-b border-ink/15">
@@ -115,7 +126,9 @@ export default async function ContactsPage({ searchParams }: PageProps) {
                       <p className="font-mono text-[11px] text-muted">{c.email}</p>
                     </Link>
                   </Td>
-                  <Td><StatusBadge status={c.status} /></Td>
+                  <Td>
+                    <StatusBadge status={c.status} />
+                  </Td>
                   <Td>{c.pricingPlan?.name ?? "—"}</Td>
                   <Td className="font-mono text-[10px] uppercase text-muted">{c.source}</Td>
                   <Td className="font-mono text-[11px] text-muted">
@@ -138,7 +151,13 @@ function Th({ children }: { children: React.ReactNode }) {
     </th>
   );
 }
-function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+function Td({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return <td className={`px-4 py-3 ${className}`}>{children}</td>;
 }
 
@@ -150,7 +169,9 @@ function StatusBadge({ status }: { status: ContactStatus }) {
     EHEMALIGER: "bg-cream border-ink/30 text-muted",
   };
   return (
-    <span className={`inline-block border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.1em] ${colors[status]}`}>
+    <span
+      className={`inline-block border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.1em] ${colors[status]}`}
+    >
       {status}
     </span>
   );
