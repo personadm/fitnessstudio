@@ -87,7 +87,7 @@ export default async function PlansPage({ searchParams }: PageProps) {
               <p className="p-8 text-center text-sm text-muted">
                 {filterLocation
                   ? "Keine Tarife in dieser Auswahl."
-                  : "Noch keine Tarife. Mit „+ Neuer Tarif" anlegen."}
+                  : `Noch keine Tarife. Mit "+ Neuer Tarif" anlegen.`}
               </p>
             ) : (
               <table className="w-full text-sm">
