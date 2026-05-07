@@ -13,6 +13,7 @@ export default async function FunnelsPage() {
   const funnels = await db.funnel.findMany({
     orderBy: { createdAt: "desc" },
     include: {
+      location: { select: { name: true } },
       _count: {
         select: {
           steps: true,
@@ -22,7 +23,6 @@ export default async function FunnelsPage() {
     },
   });
 
-  // Globale Stats über alle Funnels
   const [totalActive, totalCompleted, totalCancelled, totalSent] = await Promise.all([
     db.funnelEnrollment.count({ where: { completedAt: null, cancelledAt: null } }),
     db.funnelEnrollment.count({ where: { completedAt: { not: null } } }),
@@ -37,13 +37,11 @@ export default async function FunnelsPage() {
           <p className="label">Marketing</p>
           <h1 className="mt-2 text-display text-5xl">Funnels</h1>
           <p className="mt-3 max-w-2xl text-sm text-muted leading-relaxed">
-            Automatisierte Mail-Sequenzen, ausgelöst durch Status-Wechsel im Kontakt. Status auf
-            <em> Ehemaliger</em> ändern → Win-Back-Funnel startet automatisch. Wird mehrere Tage
-            später dann <em>Kunde</em> → Funnel stoppt automatisch (sofern „Auto-Stop" aktiv).
+            Automatisierte Mail-Sequenzen, ausgelöst durch Status-Wechsel. Optional pro Standort —
+            so kannst du z.B. „Win-Back Bochum" anders fahren als „Win-Back Dortmund".
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Manueller Trigger */}
           <form action={runFunnelProcessing}>
             <button
               type="submit"
@@ -61,7 +59,6 @@ export default async function FunnelsPage() {
         </div>
       </div>
 
-      {/* Globale Stats */}
       <div className="mb-12 grid grid-cols-2 gap-4 md:grid-cols-4">
         <Stat label="Aktive Enrollments" value={totalActive} />
         <Stat label="Mails versendet" value={totalSent} />
@@ -69,7 +66,6 @@ export default async function FunnelsPage() {
         <Stat label="Abgebrochen" value={totalCancelled} />
       </div>
 
-      {/* Funnel-Liste */}
       <section>
         <p className="label mb-4">Alle Funnels</p>
         {funnels.length === 0 ? (
@@ -94,9 +90,18 @@ export default async function FunnelsPage() {
                     {f.name}
                   </Link>
                   <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
-                    Trigger: {TRIGGER_LABELS[f.trigger]} · {f._count.steps}{" "}
-                    {f._count.steps === 1 ? "Schritt" : "Schritte"} · {f._count.enrollments}{" "}
-                    Enrollments
+                    Trigger: {TRIGGER_LABELS[f.trigger]}
+                    {f.location ? (
+                      <>
+                        {" · "}
+                        <span className="text-acid_dark">Standort: {f.location.name}</span>
+                      </>
+                    ) : (
+                      " · Alle Standorte"
+                    )}
+                    {" · "}
+                    {f._count.steps} {f._count.steps === 1 ? "Schritt" : "Schritte"} ·{" "}
+                    {f._count.enrollments} Enrollments
                     {f.autoStop ? " · Auto-Stop an" : " · Auto-Stop aus"}
                   </p>
                 </div>
@@ -127,9 +132,8 @@ export default async function FunnelsPage() {
       </section>
 
       <p className="mt-12 text-xs text-muted leading-relaxed max-w-2xl">
-        <strong>Hinweis:</strong> Die Verarbeitung läuft automatisch im Hintergrund bei jedem
-        Aufruf einer Admin-Seite (Rate-Limit: alle 5 Minuten). Falls du sofort senden willst, klick
-        oben auf <em>Jetzt verarbeiten</em>. Es ist kein externer Cron-Dienst nötig.
+        <strong>Hinweis:</strong> Verarbeitung läuft automatisch im Hintergrund (Rate-Limit alle
+        5 Min). Sofortverarbeitung über „Jetzt verarbeiten".
       </p>
     </div>
   );

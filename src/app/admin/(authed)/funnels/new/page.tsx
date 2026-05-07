@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { db } from "@/lib/db";
 import { createFunnel } from "@/app/admin/_actions";
 
 const TRIGGERS: { value: string; label: string; hint: string }[] = [
@@ -24,7 +25,12 @@ const TRIGGERS: { value: string; label: string; hint: string }[] = [
   },
 ];
 
-export default function NewFunnelPage() {
+export default async function NewFunnelPage() {
+  const locations = await db.location.findMany({
+    where: { active: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
+
   return (
     <div className="p-8 md:p-12">
       <Link
@@ -38,8 +44,8 @@ export default function NewFunnelPage() {
         <p className="label">Neuer Funnel</p>
         <h1 className="mt-2 text-display text-5xl">Funnel anlegen</h1>
         <p className="mt-3 max-w-2xl text-sm text-muted leading-relaxed">
-          Lege erst Name und Auslöser fest. Schritte (Mails) fügst du danach auf der Detailseite
-          hinzu.
+          Lege erst Name, Auslöser und Standort fest. Schritte (Mails) fügst du danach auf der
+          Detailseite hinzu.
         </p>
       </div>
 
@@ -50,7 +56,7 @@ export default function NewFunnelPage() {
             type="text"
             name="name"
             required
-            placeholder="z.B. Win-Back nach Kündigung"
+            placeholder="z.B. Win-Back Bochum nach Kündigung"
             className="w-full border-b-2 border-ink bg-transparent py-2 text-base outline-none focus:border-acid_dark"
           />
           <span className="mt-1 block font-mono text-[11px] text-muted">
@@ -85,9 +91,35 @@ export default function NewFunnelPage() {
           </div>
         </fieldset>
 
+        {/* Standort-Filter */}
+        <label className="block">
+          <span className="label mb-2 block">Standort (optional)</span>
+          <select
+            name="locationId"
+            defaultValue=""
+            className="w-full border-b-2 border-ink bg-transparent py-2 text-base outline-none"
+          >
+            <option value="">Alle Standorte</option>
+            {locations.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name}
+              </option>
+            ))}
+          </select>
+          <span className="mt-1 block font-mono text-[11px] text-muted">
+            Wenn gesetzt: Funnel läuft nur für Kontakte an diesem Standort. So kannst du z.B. den
+            Win-Back-Funnel pro Standort unterschiedlich texten.
+          </span>
+        </label>
+
         <div className="space-y-3 border-t border-ink/15 pt-6">
           <label className="flex items-start gap-3 text-sm leading-relaxed cursor-pointer">
-            <input type="checkbox" name="active" defaultChecked className="mt-0.5 h-4 w-4 accent-ink" />
+            <input
+              type="checkbox"
+              name="active"
+              defaultChecked
+              className="mt-0.5 h-4 w-4 accent-ink"
+            />
             <div>
               <span className="font-medium">Aktiv</span>
               <p className="font-mono text-[11px] text-muted mt-0.5">
@@ -97,12 +129,17 @@ export default function NewFunnelPage() {
           </label>
 
           <label className="flex items-start gap-3 text-sm leading-relaxed cursor-pointer">
-            <input type="checkbox" name="autoStop" defaultChecked className="mt-0.5 h-4 w-4 accent-ink" />
+            <input
+              type="checkbox"
+              name="autoStop"
+              defaultChecked
+              className="mt-0.5 h-4 w-4 accent-ink"
+            />
             <div>
               <span className="font-medium">Auto-Stop bei Status-Wechsel</span>
               <p className="font-mono text-[11px] text-muted mt-0.5">
-                Verlässt der Kontakt den Trigger-Status (z.B. Ehemaliger → Kunde), wird die Sequenz
-                automatisch abgebrochen. Empfohlen.
+                Verlässt der Kontakt den Trigger-Status oder wechselt den Standort, wird die Sequenz
+                abgebrochen. Empfohlen.
               </p>
             </div>
           </label>

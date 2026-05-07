@@ -7,7 +7,7 @@ export const leadSchema = z.object({
   gender: z.enum(["MAENNLICH", "WEIBLICH", "DIVERS"], {
     errorMap: () => ({ message: "Bitte Geschlecht angeben." }),
   }),
-  locationId: z.string().optional(), // optional: wenn nur 1 Standort existiert
+  locationId: z.string().optional(),
   consent: z.literal(true, {
     errorMap: () => ({ message: "Bitte stimme der Datenverarbeitung zu." }),
   }),
@@ -51,15 +51,30 @@ export const planSchema = z.object({
   highlights: z.array(z.string()).default([]),
   active: z.boolean().default(true),
   sortOrder: z.coerce.number().int().default(0),
-  locationId: z.string().optional().nullable(), // null/leer = Allgemein
+  locationId: z.string().optional().nullable(),
 });
 export type PlanInput = z.infer<typeof planSchema>;
 
-export const campaignSchema = z.object({
-  listId: z.string().min(1, "Bitte eine Liste wählen."),
-  subject: z.string().trim().min(1, "Betreff fehlt.").max(150),
-  bodyHtml: z.string().min(1, "Inhalt fehlt."),
-});
+// Campaign: ENTWEDER listId ODER targetStatus muss gesetzt sein.
+// targetLocationId optional in beiden Fällen.
+export const campaignSchema = z
+  .object({
+    targetMode: z.enum(["LIST", "STATUS"]),
+    listId: z.string().optional().nullable(),
+    targetStatus: z
+      .enum(["INTERESSENT", "NEUKUNDE", "KUNDE", "EHEMALIGER"])
+      .optional()
+      .nullable(),
+    targetLocationId: z.string().optional().nullable(),
+    subject: z.string().trim().min(1, "Betreff fehlt.").max(200),
+    bodyHtml: z.string().min(1, "Inhalt fehlt."),
+  })
+  .refine(
+    (v) =>
+      (v.targetMode === "LIST" && !!v.listId) ||
+      (v.targetMode === "STATUS" && !!v.targetStatus),
+    { message: "Bitte Empfänger-Modus mit gültiger Auswahl angeben." },
+  );
 export type CampaignInput = z.infer<typeof campaignSchema>;
 
 export const funnelSchema = z.object({
@@ -69,6 +84,7 @@ export const funnelSchema = z.object({
   }),
   active: z.boolean().default(true),
   autoStop: z.boolean().default(true),
+  locationId: z.string().optional().nullable(),
 });
 export type FunnelInput = z.infer<typeof funnelSchema>;
 
@@ -80,7 +96,6 @@ export const funnelStepSchema = z.object({
 });
 export type FunnelStepInput = z.infer<typeof funnelStepSchema>;
 
-// Standort
 export const locationSchema = z.object({
   name: z.string().trim().min(1, "Name fehlt.").max(80),
   street: z.string().trim().optional().or(z.literal("")),

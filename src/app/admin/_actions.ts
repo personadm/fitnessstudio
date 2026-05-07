@@ -101,7 +101,7 @@ export async function removeContactFromList(contactId: string, listId: string) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// LOCATIONS (Standorte) — neu
+// LOCATIONS
 // ─────────────────────────────────────────────────────────────
 
 export async function saveLocation(formData: FormData) {
@@ -119,7 +119,6 @@ export async function saveLocation(formData: FormData) {
     sortOrder: Number(formData.get("sortOrder") || 0),
   });
 
-  // Leere Strings zu null normalisieren
   const data = {
     name: parsed.name,
     street: parsed.street || null,
@@ -150,8 +149,6 @@ export async function toggleLocationActive(locationId: string) {
 
 export async function deleteLocation(locationId: string) {
   await requireAdmin();
-  // Kontakte und Tarife behalten ihren Verweis nicht — durch onDelete: SetNull
-  // im Schema werden locationId-Felder automatisch genullt.
   await db.location.delete({ where: { id: locationId } });
   revalidatePath("/admin/locations");
 }
@@ -241,17 +238,36 @@ export async function deleteList(listId: string) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// CAMPAIGNS
+// CAMPAIGNS — neu mit Status+Standort-Targeting
 // ─────────────────────────────────────────────────────────────
 
 export async function createCampaign(formData: FormData) {
   await requireAdmin();
+
+  const targetMode = (formData.get("targetMode") as string) || "LIST";
+  const listIdRaw = formData.get("listId") as string | null;
+  const targetStatusRaw = formData.get("targetStatus") as string | null;
+  const targetLocationIdRaw = formData.get("targetLocationId") as string | null;
+
   const parsed = campaignSchema.parse({
-    listId: formData.get("listId"),
+    targetMode,
+    listId: listIdRaw || null,
+    targetStatus: targetStatusRaw || null,
+    targetLocationId: targetLocationIdRaw || null,
     subject: formData.get("subject"),
     bodyHtml: formData.get("bodyHtml"),
   });
-  const c = await db.campaign.create({ data: { ...parsed, status: "DRAFT" } });
+
+  const c = await db.campaign.create({
+    data: {
+      listId: parsed.targetMode === "LIST" ? parsed.listId : null,
+      targetStatus: parsed.targetMode === "STATUS" ? parsed.targetStatus : null,
+      targetLocationId: parsed.targetLocationId || null,
+      subject: parsed.subject,
+      bodyHtml: parsed.bodyHtml,
+      status: "DRAFT",
+    },
+  });
   revalidatePath("/admin/campaigns");
   redirect(`/admin/campaigns/${c.id}`);
 }
@@ -264,31 +280,52 @@ export async function deleteCampaign(campaignId: string) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// FUNNELS
+// FUNNELS — mit locationId
 // ─────────────────────────────────────────────────────────────
 
 export async function createFunnel(formData: FormData) {
   await requireAdmin();
+  const locationIdRaw = formData.get("locationId") as string | null;
   const parsed = funnelSchema.parse({
     name: formData.get("name"),
     trigger: formData.get("trigger"),
     active: formData.get("active") === "on",
     autoStop: formData.get("autoStop") === "on",
+    locationId: locationIdRaw || null,
   });
-  const f = await db.funnel.create({ data: parsed });
+  const f = await db.funnel.create({
+    data: {
+      name: parsed.name,
+      trigger: parsed.trigger,
+      active: parsed.active,
+      autoStop: parsed.autoStop,
+      locationId: parsed.locationId || null,
+    },
+  });
   revalidatePath("/admin/funnels");
   redirect(`/admin/funnels/${f.id}`);
 }
 
 export async function updateFunnel(funnelId: string, formData: FormData) {
   await requireAdmin();
+  const locationIdRaw = formData.get("locationId") as string | null;
   const parsed = funnelSchema.parse({
     name: formData.get("name"),
     trigger: formData.get("trigger"),
     active: formData.get("active") === "on",
     autoStop: formData.get("autoStop") === "on",
+    locationId: locationIdRaw || null,
   });
-  await db.funnel.update({ where: { id: funnelId }, data: parsed });
+  await db.funnel.update({
+    where: { id: funnelId },
+    data: {
+      name: parsed.name,
+      trigger: parsed.trigger,
+      active: parsed.active,
+      autoStop: parsed.autoStop,
+      locationId: parsed.locationId || null,
+    },
+  });
   revalidatePath("/admin/funnels");
   revalidatePath(`/admin/funnels/${funnelId}`);
 }

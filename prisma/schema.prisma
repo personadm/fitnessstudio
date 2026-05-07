@@ -1,5 +1,4 @@
-// Prisma Schema - Fitnessstudio App (Phase 6 + Multi-Location)
-// Referenz: https://pris.ly/d/prisma-schema
+// Prisma Schema — Multi-Location Phase 2
 
 generator client {
   provider = "prisma-client-js"
@@ -49,12 +48,12 @@ enum FunnelTrigger {
 }
 
 // ─────────────────────────────────────────────────────────────
-// LOCATION (Standort) — neu für Multi-Location
+// LOCATION
 // ─────────────────────────────────────────────────────────────
 
 model Location {
   id         String   @id @default(cuid())
-  name       String // z.B. "Studio Bochum", "Vital-Fit Ochtrup"
+  name       String
   street     String?
   postalCode String?
   city       String?
@@ -65,8 +64,10 @@ model Location {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  contacts Contact[]
-  plans    PricingPlan[]
+  contacts         Contact[]
+  plans            PricingPlan[]
+  funnels          Funnel[]
+  targetedCampaigns Campaign[]
 
   @@index([active, sortOrder])
 }
@@ -91,11 +92,9 @@ model Contact {
   postalCode String?
   city       String?
 
-  // Multi-Location: welcher Standort?
   locationId String?
   location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
 
-  // DOI
   doiToken       String?   @unique
   doiSentAt      DateTime?
   doiConfirmedAt DateTime?
@@ -127,6 +126,7 @@ model Contact {
   @@index([createdAt])
   @@index([signupAt])
   @@index([locationId])
+  @@index([status, locationId])
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -143,8 +143,6 @@ model PricingPlan {
   active          Boolean         @default(true)
   sortOrder       Int             @default(0)
 
-  // Multi-Location: für welchen Standort gilt der Tarif?
-  // null = Allgemein (gilt für alle Standorte)
   locationId String?
   location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
 
@@ -183,8 +181,15 @@ model ContactList {
 
 model Campaign {
   id          String    @id @default(cuid())
-  listId      String
-  list        List      @relation(fields: [listId], references: [id])
+
+  // Empfänger-Targeting: ENTWEDER listId ODER targetStatus muss gesetzt sein.
+  // targetLocationId schränkt die Empfänger zusätzlich auf einen Standort ein.
+  listId           String?
+  list             List?          @relation(fields: [listId], references: [id], onDelete: SetNull)
+  targetStatus     ContactStatus?
+  targetLocationId String?
+  targetLocation   Location?      @relation(fields: [targetLocationId], references: [id], onDelete: SetNull)
+
   subject     String
   bodyHtml    String
   scheduledAt DateTime?
@@ -193,6 +198,8 @@ model Campaign {
   createdAt   DateTime  @default(now())
 
   events CampaignEvent[]
+
+  @@index([targetStatus, targetLocationId])
 }
 
 model CampaignEvent {
@@ -232,13 +239,20 @@ model Funnel {
   trigger   FunnelTrigger
   active    Boolean       @default(true)
   autoStop  Boolean       @default(true)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+
+  // Standort-Filter: wenn gesetzt, nur Kontakte an diesem Standort
+  // werden eingeschrieben. null = alle Standorte (Default).
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   steps       FunnelStep[]
   enrollments FunnelEnrollment[]
 
   @@index([trigger, active])
+  @@index([locationId])
 }
 
 model FunnelStep {

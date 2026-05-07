@@ -18,19 +18,26 @@ const TRIGGER_LABELS: Record<string, string> = {
 export default async function FunnelDetailPage({ params }: PageProps) {
   const { id } = await params;
 
-  const funnel = await db.funnel.findUnique({
-    where: { id },
-    include: {
-      steps: { orderBy: { orderNum: "asc" } },
-      enrollments: {
-        include: {
-          contact: { select: { firstName: true, lastName: true, email: true } },
+  const [funnel, locations] = await Promise.all([
+    db.funnel.findUnique({
+      where: { id },
+      include: {
+        location: { select: { id: true, name: true } },
+        steps: { orderBy: { orderNum: "asc" } },
+        enrollments: {
+          include: {
+            contact: { select: { firstName: true, lastName: true, email: true } },
+          },
+          orderBy: { startedAt: "desc" },
+          take: 50,
         },
-        orderBy: { startedAt: "desc" },
-        take: 50,
       },
-    },
-  });
+    }),
+    db.location.findMany({
+      where: { active: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    }),
+  ]);
   if (!funnel) notFound();
 
   const activeCount = funnel.enrollments.filter((e) => !e.completedAt && !e.cancelledAt).length;
@@ -50,7 +57,14 @@ export default async function FunnelDetailPage({ params }: PageProps) {
         <p className="label">Funnel</p>
         <h1 className="mt-2 text-display text-4xl">{funnel.name}</h1>
         <p className="mt-2 font-mono text-xs uppercase tracking-[0.1em] text-muted">
-          Trigger: {TRIGGER_LABELS[funnel.trigger]} · {funnel.active ? "Aktiv" : "Inaktiv"} ·{" "}
+          Trigger: {TRIGGER_LABELS[funnel.trigger]}
+          {funnel.location ? (
+            <> · Standort: <span className="text-acid_dark">{funnel.location.name}</span></>
+          ) : (
+            " · Alle Standorte"
+          )}
+          {" · "}
+          {funnel.active ? "Aktiv" : "Inaktiv"} ·{" "}
           {funnel.autoStop ? "Auto-Stop an" : "Auto-Stop aus"}
         </p>
       </div>
@@ -58,7 +72,6 @@ export default async function FunnelDetailPage({ params }: PageProps) {
       <div className="grid grid-cols-1 gap-12 lg:grid-cols-3">
         {/* Hauptbereich: Schritte */}
         <div className="space-y-12 lg:col-span-2">
-          {/* Schritte */}
           <section>
             <p className="label mb-4">Schritte ({funnel.steps.length})</p>
             {funnel.steps.length === 0 ? (
@@ -102,13 +115,11 @@ export default async function FunnelDetailPage({ params }: PageProps) {
             )}
           </section>
 
-          {/* Schritt hinzufügen — jetzt mit KI-Composer */}
           <section>
             <p className="label mb-4">Schritt hinzufügen</p>
             <AddFunnelStepForm funnelId={funnel.id} isFirst={funnel.steps.length === 0} />
           </section>
 
-          {/* Letzte Enrollments */}
           {funnel.enrollments.length > 0 && (
             <section>
               <p className="label mb-4">Letzte Einschreibungen</p>
@@ -142,9 +153,8 @@ export default async function FunnelDetailPage({ params }: PageProps) {
           )}
         </div>
 
-        {/* Sidebar: Funnel-Settings + Stats */}
+        {/* Sidebar */}
         <div className="space-y-8">
-          {/* Stats */}
           <div className="border border-ink/15 p-6">
             <p className="label mb-4">Statistik</p>
             <dl className="space-y-3 text-sm">
@@ -163,7 +173,6 @@ export default async function FunnelDetailPage({ params }: PageProps) {
             </dl>
           </div>
 
-          {/* Edit-Form */}
           <form
             action={updateFunnel.bind(null, funnel.id)}
             className="space-y-5 border border-ink/15 p-6"
@@ -196,6 +205,22 @@ export default async function FunnelDetailPage({ params }: PageProps) {
               </select>
             </fieldset>
 
+            <label className="block">
+              <span className="label mb-2 block">Standort</span>
+              <select
+                name="locationId"
+                defaultValue={funnel.locationId ?? ""}
+                className="w-full border border-ink/20 bg-transparent p-2 text-sm outline-none focus:border-ink"
+              >
+                <option value="">Alle Standorte</option>
+                {locations.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             <label className="flex items-start gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
@@ -213,7 +238,7 @@ export default async function FunnelDetailPage({ params }: PageProps) {
                 defaultChecked={funnel.autoStop}
                 className="mt-0.5 h-4 w-4 accent-ink"
               />
-              <span>Auto-Stop bei Status-Wechsel</span>
+              <span>Auto-Stop bei Status-/Standort-Wechsel</span>
             </label>
 
             <button
@@ -224,12 +249,10 @@ export default async function FunnelDetailPage({ params }: PageProps) {
             </button>
           </form>
 
-          {/* Delete */}
           <form action={deleteFunnel.bind(null, funnel.id)} className="border border-red-200 p-6">
             <p className="label !text-red-700 mb-2">Gefahrenzone</p>
             <p className="text-xs text-muted leading-relaxed mb-4">
-              Funnel und alle Einschreibungen werden gelöscht. Bereits versendete Mails bleiben
-              natürlich beim Empfänger.
+              Funnel und alle Einschreibungen werden gelöscht.
             </p>
             <button
               type="submit"

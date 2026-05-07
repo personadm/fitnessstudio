@@ -2,38 +2,39 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { sendCampaignMail } from "@/lib/mail";
+import { getCampaignRecipients } from "@/lib/campaigns";
 
 export const runtime = "nodejs";
-export const maxDuration = 300; // 5 Min für längere Listen
+export const maxDuration = 300;
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
-  if (!session) return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
+  if (!session)
+    return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
 
-  const campaign = await db.campaign.findUnique({
-    where: { id },
-    include: {
-      list: {
-        include: {
-          contacts: { include: { contact: true } },
-        },
-      },
-    },
-  });
-  if (!campaign) return NextResponse.json({ ok: false, message: "Kampagne nicht gefunden." }, { status: 404 });
+  const campaign = await db.campaign.findUnique({ where: { id } });
+  if (!campaign)
+    return NextResponse.json(
+      { ok: false, message: "Kampagne nicht gefunden." },
+      { status: 404 },
+    );
   if (campaign.status === "SENT") {
     return NextResponse.json({ ok: false, message: "Bereits versendet." }, { status: 400 });
   }
 
-  // Empfänger filtern
-  const recipients = campaign.list.contacts
-    .map((cl) => cl.contact)
-    .filter((c) => c.doiConfirmedAt && c.status !== "EHEMALIGER");
+  const recipients = await getCampaignRecipients({
+    listId: campaign.listId,
+    targetStatus: campaign.targetStatus,
+    targetLocationId: campaign.targetLocationId,
+  });
 
   if (recipients.length === 0) {
-    return NextResponse.json({ ok: false, message: "Keine versandfähigen Empfänger." }, { status: 400 });
+    return NextResponse.json(
+      { ok: false, message: "Keine versandfähigen Empfänger." },
+      { status: 400 },
+    );
   }
 
   await db.campaign.update({
@@ -44,7 +45,6 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   let sent = 0;
   let failed = 0;
 
-  // Rate-Limit-freundlich: ~5 Mails/Sek (200ms Pause zwischen Sends)
   for (const c of recipients) {
     try {
       await sendCampaignMail({

@@ -3,30 +3,17 @@ import { db } from "@/lib/db";
 import { CampaignFormWithAI } from "./CampaignFormWithAI";
 
 export default async function NewCampaignPage() {
-  const lists = await db.list.findMany({
-    orderBy: { name: "asc" },
-    include: { _count: { select: { contacts: true } } },
-  });
-
-  if (lists.length === 0) {
-    return (
-      <div className="p-8 md:p-12">
-        <Link
-          href="/admin/campaigns"
-          className="font-mono text-xs uppercase tracking-[0.12em] text-muted hover:text-ink"
-        >
-          ← Zurück
-        </Link>
-        <p className="mt-6 max-w-xl text-base">
-          Du hast noch keine Listen. Leg unter{" "}
-          <Link href="/admin/lists" className="underline">
-            Listen
-          </Link>{" "}
-          mindestens eine an und füge Kontakte hinzu, bevor du eine Kampagne erstellst.
-        </p>
-      </div>
-    );
-  }
+  const [lists, locations] = await Promise.all([
+    db.list.findMany({
+      orderBy: { name: "asc" },
+      include: { _count: { select: { contacts: true } } },
+    }),
+    db.location.findMany({
+      where: { active: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, city: true },
+    }),
+  ]);
 
   return (
     <div className="p-8 md:p-12">
@@ -46,6 +33,7 @@ export default async function NewCampaignPage() {
           name: l.name,
           count: l._count.contacts,
         }))}
+        locations={locations}
       />
     </div>
   );

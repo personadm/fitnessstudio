@@ -2,22 +2,13 @@ import { db } from "./db";
 import { sendFunnelMail } from "./mail";
 import type { ContactStatus, FunnelTrigger } from "@prisma/client";
 
-/**
- * FunnelTrigger und ContactStatus haben dieselben Werte
- * (INTERESSENT, NEUKUNDE, KUNDE, EHEMALIGER), sind aber
- * in Prisma getrennte Enums. Diese Funktion mapped zwischen ihnen.
- */
 function triggerToStatus(t: FunnelTrigger): ContactStatus {
   return t as unknown as ContactStatus;
 }
 
-/**
- * Ersetzt die Platzhalter {{firstName}} und {{lastName}}
- * im Mail-Inhalt durch die echten Werte des Kontakts.
- */
 function renderTemplate(
   template: string,
-  contact: { firstName: string | null; lastName: string | null }
+  contact: { firstName: string | null; lastName: string | null },
 ): string {
   return template
     .split("{{firstName}}")
@@ -26,11 +17,8 @@ function renderTemplate(
     .join(contact.lastName ?? "");
 }
 
-// In-Memory Rate-Limit. Reicht für Render mit einem einzigen Node-Prozess.
-// Bei einem Neustart wird der Wert zurückgesetzt — das ist OK,
-// weil die Verarbeitung idempotent ist.
 let lastRunAt = 0;
-const MIN_INTERVAL_MS = 5 * 60 * 1000; // 5 Minuten
+const MIN_INTERVAL_MS = 5 * 60 * 1000;
 
 export type ProcessResult = {
   skipped: boolean;
@@ -43,17 +31,14 @@ export type ProcessResult = {
 
 /**
  * Verarbeitet alle aktiven Funnels:
- *  1. Trägt passende Kontakte (Status = Trigger) in noch nicht
- *     zugeordnete Funnels ein.
- *  2. Schickt fällige Schritte raus (delayDays seit Eintragung erreicht).
- *  3. Bricht Enrollments ab, wenn der Kontakt den Trigger-Status
- *     wieder verlässt und autoStop=true ist.
- *  4. Markiert Enrollments als completed, wenn alle Schritte raus sind.
- *
- * Rate-Limit: läuft maximal alle 5 Min. Mit force=true ignorieren.
+ *  1. Trägt passende Kontakte ein (Status = Trigger; und falls Funnel
+ *     auf einen Standort beschränkt ist, nur Kontakte an diesem Standort).
+ *  2. Schickt fällige Schritte raus.
+ *  3. Bricht Enrollments ab bei Statuswechsel oder Standort-Mismatch.
+ *  4. Markiert Enrollments als completed wenn alle Schritte raus sind.
  */
 export async function processFunnels(
-  opts: { force?: boolean } = {}
+  opts: { force?: boolean } = {},
 ): Promise<ProcessResult> {
   const now = Date.now();
   if (!opts.force && now - lastRunAt < MIN_INTERVAL_MS) {
@@ -76,11 +61,12 @@ export async function processFunnels(
 
     const targetStatus = triggerToStatus(funnel.trigger);
 
-    // 1. Neue Kontakte einschreiben — alle, die den Status haben
-    //    und in diesem Funnel noch keine Enrollment haben.
+    // 1. Neue Kontakte einschreiben
     const candidates = await db.contact.findMany({
       where: {
         status: targetStatus,
+        // Standort-Filter: wenn Funnel an Standort gebunden, nur passende Kontakte
+        ...(funnel.locationId ? { locationId: funnel.locationId } : {}),
         funnelEnrollments: {
           none: { funnelId: funnel.id },
         },
@@ -102,12 +88,11 @@ export async function processFunnels(
         });
         enrolled++;
       } catch (err) {
-        // Race Condition: bereits eingeschrieben — egal
         console.warn("[funnels] enroll skip", err);
       }
     }
 
-    // 2. Aktive Enrollments dieses Funnels durchgehen
+    // 2. Aktive Enrollments durchgehen
     const enrollments = await db.funnelEnrollment.findMany({
       where: {
         funnelId: funnel.id,
@@ -121,24 +106,26 @@ export async function processFunnels(
     });
 
     for (const enrollment of enrollments) {
-      // Auto-Stop: hat der Kontakt den Trigger-Status verlassen?
-      if (funnel.autoStop && enrollment.contact.status !== targetStatus) {
+      // Auto-Stop: Status verlassen?
+      const statusMismatch =
+        funnel.autoStop && enrollment.contact.status !== targetStatus;
+      // Standort-Mismatch: Funnel ist an Standort gebunden,
+      // Kontakt hat aber inzwischen anderen Standort.
+      const locationMismatch =
+        !!funnel.locationId &&
+        enrollment.contact.locationId !== funnel.locationId;
+
+      if (statusMismatch || locationMismatch) {
+        const reason = locationMismatch ? "LOCATION_CHANGED" : "STATUS_CHANGED";
         await db.funnelEnrollment.update({
           where: { id: enrollment.id },
-          data: {
-            cancelledAt: new Date(),
-            cancelReason: "STATUS_CHANGED",
-          },
+          data: { cancelledAt: new Date(), cancelReason: reason },
         });
         await db.contactEvent.create({
           data: {
             contactId: enrollment.contactId,
             type: "FUNNEL_CANCELLED",
-            meta: {
-              funnelId: funnel.id,
-              funnelName: funnel.name,
-              reason: "STATUS_CHANGED",
-            },
+            meta: { funnelId: funnel.id, funnelName: funnel.name, reason },
           },
         });
         cancelled++;
@@ -149,10 +136,9 @@ export async function processFunnels(
       const elapsedMs = Date.now() - enrollment.startedAt.getTime();
       const elapsedDays = elapsedMs / (1000 * 60 * 60 * 24);
 
-      // Schritte in Reihenfolge prüfen
       for (const step of funnel.steps) {
         if (sentStepIds.has(step.id)) continue;
-        if (elapsedDays < step.delayDays) break; // noch nicht fällig
+        if (elapsedDays < step.delayDays) break;
 
         try {
           const subject = renderTemplate(step.subject, enrollment.contact);
@@ -183,16 +169,13 @@ export async function processFunnels(
           sentStepIds.add(step.id);
           sent++;
 
-          // Kleine Pause, um Resend-Rate nicht zu überlasten
           await new Promise((r) => setTimeout(r, 200));
         } catch (err) {
           console.error("[funnels] sending failed", err);
-          // Nicht weitermachen — der nächste Lauf versucht es erneut.
           break;
         }
       }
 
-      // Komplett durch?
       if (sentStepIds.size >= funnel.steps.length) {
         await db.funnelEnrollment.update({
           where: { id: enrollment.id },
@@ -207,18 +190,34 @@ export async function processFunnels(
 }
 
 /**
- * Wird sofort nach einem Status-Wechsel oder einer Anmeldung aufgerufen.
- * Schreibt den Kontakt in alle aktiven Funnels mit passendem Trigger ein
- * (sofern noch nicht eingeschrieben). Tatsächliches Versenden passiert
- * dann beim nächsten processFunnels-Lauf.
+ * Wird sofort nach Status-Wechsel oder Anmeldung aufgerufen.
+ * Schreibt den Kontakt in alle aktiven Funnels mit passendem Trigger
+ * UND passendem Standort ein (oder ohne Standort-Restriktion).
  */
 export async function enrollIntoMatchingFunnels(
   contactId: string,
-  status: ContactStatus
+  status: ContactStatus,
 ): Promise<void> {
   const trigger = status as unknown as FunnelTrigger;
+
+  // Standort des Kontakts laden, um Standort-spezifische Funnels zu prüfen
+  const contact = await db.contact.findUnique({
+    where: { id: contactId },
+    select: { locationId: true },
+  });
+
   const funnels = await db.funnel.findMany({
-    where: { trigger, active: true },
+    where: {
+      trigger,
+      active: true,
+      // Funnel matcht wenn:
+      // - Funnel hat keinen Standort (locationId: null) → matcht alle
+      // - ODER Funnel-Standort = Kontakt-Standort
+      OR: [
+        { locationId: null },
+        ...(contact?.locationId ? [{ locationId: contact.locationId }] : []),
+      ],
+    },
     select: { id: true, name: true },
   });
 
@@ -226,7 +225,7 @@ export async function enrollIntoMatchingFunnels(
     const existing = await db.funnelEnrollment.findUnique({
       where: { funnelId_contactId: { funnelId: f.id, contactId } },
     });
-    if (existing) continue; // Wurde schon mal eingeschrieben — nicht doppelt
+    if (existing) continue;
 
     try {
       await db.funnelEnrollment.create({
@@ -240,7 +239,6 @@ export async function enrollIntoMatchingFunnels(
         },
       });
     } catch (err) {
-      // Race Condition — egal
       console.warn("[funnels] enroll skip", err);
     }
   }
