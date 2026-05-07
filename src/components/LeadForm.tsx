@@ -11,18 +11,36 @@ const GENDERS: { value: Gender; label: string }[] = [
   { value: "DIVERS", label: "Divers" },
 ];
 
-export function LeadForm() {
+interface Location {
+  id: string;
+  name: string;
+  city: string | null;
+}
+
+interface Props {
+  locations?: Location[]; // aktive Standorte, optional — falls leer keine Auswahl
+}
+
+export function LeadForm({ locations = [] }: Props) {
+  const onlyOne = locations.length === 1;
+  const hasMany = locations.length > 1;
+
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [gender, setGender] = useState<Gender | "">("");
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
+  // Bei genau einem Standort vorbelegen
+  const [locationId, setLocationId] = useState<string>(onlyOne ? locations[0].id : "");
   const [state, setState] = useState<State>("idle");
   const [message, setMessage] = useState("");
 
+  const locationRequired = hasMany;
+  const canSubmit = !!gender && consent && (!locationRequired || !!locationId);
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!gender) return;
+    if (!canSubmit) return;
     setState("loading");
     setMessage("");
 
@@ -30,7 +48,14 @@ export function LeadForm() {
       const res = await fetch("/api/leads", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ firstName, lastName, gender, email, consent }),
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          gender,
+          email,
+          consent,
+          locationId: locationId || undefined,
+        }),
       });
       const data = await res.json();
 
@@ -62,6 +87,48 @@ export function LeadForm() {
 
   return (
     <form onSubmit={onSubmit} className="max-w-xl space-y-5" id="email">
+      {/* Standort-Auswahl, nur wenn mehrere */}
+      {hasMany && (
+        <fieldset>
+          <legend className="label mb-3">Welcher Standort?</legend>
+          <div className="flex flex-wrap gap-2">
+            {locations.map((l) => {
+              const selected = locationId === l.id;
+              return (
+                <label
+                  key={l.id}
+                  className={`cursor-pointer border px-4 py-2.5 font-mono text-xs uppercase tracking-[0.1em] transition-colors ${
+                    selected
+                      ? "border-ink bg-ink text-acid"
+                      : "border-ink/20 hover:border-ink/40"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="locationId"
+                    value={l.id}
+                    checked={selected}
+                    onChange={() => setLocationId(l.id)}
+                    required
+                    className="sr-only"
+                  />
+                  <span className="block leading-tight">{l.name}</span>
+                  {l.city && (
+                    <span
+                      className={`block text-[10px] mt-0.5 ${
+                        selected ? "text-cream/70" : "text-muted"
+                      }`}
+                    >
+                      {l.city}
+                    </span>
+                  )}
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+      )}
+
       <div className="grid grid-cols-2 gap-4">
         <label className="block">
           <span className="label mb-2 block">Vorname</span>
@@ -139,8 +206,8 @@ export function LeadForm() {
           required
         />
         <span>
-          Ich willige ein, dass meine Daten zur Zusendung der Tarife verarbeitet werden. Widerruf jederzeit per
-          Klick auf den Abmelde-Link in jeder Mail. Mehr in der{" "}
+          Ich willige ein, dass meine Daten zur Zusendung der Tarife verarbeitet werden. Widerruf
+          jederzeit per Klick auf den Abmelde-Link in jeder Mail. Mehr in der{" "}
           <a href="/datenschutz" className="underline underline-offset-2 hover:text-ink">
             Datenschutzerklärung
           </a>
@@ -150,7 +217,7 @@ export function LeadForm() {
 
       <button
         type="submit"
-        disabled={state === "loading" || !consent || !gender}
+        disabled={state === "loading" || !canSubmit}
         className="group w-full bg-ink py-4 text-acid disabled:bg-ink/40 disabled:text-cream disabled:cursor-not-allowed transition-all hover:bg-ink-soft"
       >
         <span className="font-mono text-xs uppercase tracking-[0.12em]">

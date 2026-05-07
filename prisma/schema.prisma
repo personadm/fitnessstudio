@@ -1,4 +1,4 @@
-// Prisma Schema - Fitnessstudio App (Phase 6)
+// Prisma Schema - Fitnessstudio App (Phase 6 + Multi-Location)
 // Referenz: https://pris.ly/d/prisma-schema
 
 generator client {
@@ -15,17 +15,17 @@ datasource db {
 // ─────────────────────────────────────────────────────────────
 
 enum ContactStatus {
-  INTERESSENT // Mail eingetragen, ggf. noch nicht DOI-bestätigt
-  NEUKUNDE    // hat sich angemeldet, Vertrag in Vorbereitung
-  KUNDE       // aktives Mitglied
-  EHEMALIGER  // gekündigt / ausgelaufen
+  INTERESSENT
+  NEUKUNDE
+  KUNDE
+  EHEMALIGER
 }
 
 enum ContactSource {
-  LANDING // Landing Page (nur Mail)
-  DIRECT  // direkter Anmelde-Flow
-  MANUAL  // vom Admin händisch angelegt
-  IMPORT  // aus CSV / Altsystem importiert
+  LANDING
+  DIRECT
+  MANUAL
+  IMPORT
 }
 
 enum BillingInterval {
@@ -35,14 +35,12 @@ enum BillingInterval {
   JAEHRLICH
 }
 
-// Phase 6
 enum Gender {
   MAENNLICH
   WEIBLICH
   DIVERS
 }
 
-// Phase 6
 enum FunnelTrigger {
   INTERESSENT
   NEUKUNDE
@@ -51,7 +49,30 @@ enum FunnelTrigger {
 }
 
 // ─────────────────────────────────────────────────────────────
-// CONTACT - der zentrale Datensatz
+// LOCATION (Standort) — neu für Multi-Location
+// ─────────────────────────────────────────────────────────────
+
+model Location {
+  id         String   @id @default(cuid())
+  name       String // z.B. "Studio Bochum", "Vital-Fit Ochtrup"
+  street     String?
+  postalCode String?
+  city       String?
+  phone      String?
+  email      String?
+  active     Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  contacts Contact[]
+  plans    PricingPlan[]
+
+  @@index([active, sortOrder])
+}
+
+// ─────────────────────────────────────────────────────────────
+// CONTACT
 // ─────────────────────────────────────────────────────────────
 
 model Contact {
@@ -59,40 +80,39 @@ model Contact {
   email     String        @unique
   firstName String?
   lastName  String?
-  gender    Gender? // Phase 6
+  gender    Gender?
   phone     String?
   birthDate DateTime?     @db.Date
 
   status ContactStatus @default(INTERESSENT)
   source ContactSource @default(LANDING)
 
-  // Adresse (optional, später für Mitgliedsanmeldung)
   street     String?
   postalCode String?
   city       String?
 
-  // Double-Opt-In
+  // Multi-Location: welcher Standort?
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
+  // DOI
   doiToken       String?   @unique
   doiSentAt      DateTime?
   doiConfirmedAt DateTime?
 
-  // Consent-Logging (DSGVO)
-  consentText String? // Wortlaut der Einwilligung
+  consentText String?
   consentIp   String?
 
-  // Tracking: welcher Lead hat sich tatsächlich angemeldet?
   refToken String? @unique
 
-  // Mitgliedschaft
   pricingPlanId     String?
   pricingPlan       PricingPlan? @relation(fields: [pricingPlanId], references: [id])
   memberSince       DateTime?
   memberUntil       DateTime?
-  iban              String? // Phase 6
-  contractStartDate DateTime?    @db.Date // Phase 6
-  signupAt          DateTime? // Phase 6 - wann das Anmeldeformular abgeschickt wurde
+  iban              String?
+  contractStartDate DateTime?    @db.Date
+  signupAt          DateTime?
 
-  // Sonstiges
   notes String?
 
   createdAt DateTime @default(now())
@@ -106,10 +126,11 @@ model Contact {
   @@index([source])
   @@index([createdAt])
   @@index([signupAt])
+  @@index([locationId])
 }
 
 // ─────────────────────────────────────────────────────────────
-// PRICING PLANS - im Admin pflegbar, fließen in Preis-Mail ein
+// PRICING PLANS
 // ─────────────────────────────────────────────────────────────
 
 model PricingPlan {
@@ -122,14 +143,21 @@ model PricingPlan {
   active          Boolean         @default(true)
   sortOrder       Int             @default(0)
 
+  // Multi-Location: für welchen Standort gilt der Tarif?
+  // null = Allgemein (gilt für alle Standorte)
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   contacts Contact[]
+
+  @@index([locationId, active])
 }
 
 // ─────────────────────────────────────────────────────────────
-// LISTS & CAMPAIGNS - Newsletter-Versand
+// LISTS & CAMPAIGNS
 // ─────────────────────────────────────────────────────────────
 
 model List {
@@ -180,7 +208,7 @@ model CampaignEvent {
 }
 
 // ─────────────────────────────────────────────────────────────
-// AUDIT - was ist mit einem Kontakt passiert?
+// AUDIT
 // ─────────────────────────────────────────────────────────────
 
 model ContactEvent {
@@ -195,7 +223,7 @@ model ContactEvent {
 }
 
 // ─────────────────────────────────────────────────────────────
-// FUNNELS - automatisierte Mail-Sequenzen (Phase 6)
+// FUNNELS
 // ─────────────────────────────────────────────────────────────
 
 model Funnel {
@@ -203,9 +231,6 @@ model Funnel {
   name      String
   trigger   FunnelTrigger
   active    Boolean       @default(true)
-  // Wenn true: Enrollment wird abgebrochen, sobald der Kontakt
-  // den Trigger-Status wieder verlässt (z.B. EHEMALIGER -> KUNDE
-  // stoppt den Win-Back-Funnel automatisch).
   autoStop  Boolean       @default(true)
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
@@ -220,8 +245,8 @@ model FunnelStep {
   id        String   @id @default(cuid())
   funnelId  String
   funnel    Funnel   @relation(fields: [funnelId], references: [id], onDelete: Cascade)
-  orderNum  Int // 1, 2, 3 ...
-  delayDays Int // Wartezeit in Tagen ab Eintragung in den Funnel
+  orderNum  Int
+  delayDays Int
   subject   String
   bodyHtml  String
   createdAt DateTime @default(now())
@@ -241,12 +266,10 @@ model FunnelEnrollment {
   startedAt    DateTime  @default(now())
   completedAt  DateTime?
   cancelledAt  DateTime?
-  cancelReason String? // "STATUS_CHANGED" | "MANUAL"
+  cancelReason String?
 
   events FunnelStepEvent[]
 
-  // Jeder Kontakt durchläuft jeden Funnel max. einmal.
-  // (Wenn du das willst, kannst du das später ändern.)
   @@unique([funnelId, contactId])
   @@index([completedAt, cancelledAt])
 }
@@ -263,7 +286,7 @@ model FunnelStepEvent {
 }
 
 // ─────────────────────────────────────────────────────────────
-// ADMIN - wer darf ins Dashboard?
+// ADMIN
 // ─────────────────────────────────────────────────────────────
 
 model AdminUser {

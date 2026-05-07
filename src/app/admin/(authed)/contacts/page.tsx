@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import type { ContactStatus } from "@prisma/client";
 
 interface PageProps {
-  searchParams: Promise<{ status?: string; q?: string }>;
+  searchParams: Promise<{ status?: string; q?: string; location?: string }>;
 }
 
 const STATUS_TABS: Array<{ key: ContactStatus | "ALL"; label: string }> = [
@@ -17,13 +17,24 @@ const STATUS_TABS: Array<{ key: ContactStatus | "ALL"; label: string }> = [
 const STATUS_VALUES: ContactStatus[] = ["INTERESSENT", "NEUKUNDE", "KUNDE", "EHEMALIGER"];
 
 export default async function ContactsPage({ searchParams }: PageProps) {
-  const { status, q } = await searchParams;
+  const { status, q, location } = await searchParams;
   const activeStatus =
     status && (STATUS_VALUES as string[]).includes(status) ? (status as ContactStatus) : null;
+  const filterLocation = location ?? null;
+
+  const locations = await db.location.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true, name: true },
+  });
 
   const contacts = await db.contact.findMany({
     where: {
       ...(activeStatus ? { status: activeStatus } : {}),
+      ...(filterLocation === "none"
+        ? { locationId: null }
+        : filterLocation && filterLocation !== "all"
+        ? { locationId: filterLocation }
+        : {}),
       ...(q
         ? {
             OR: [
@@ -35,7 +46,10 @@ export default async function ContactsPage({ searchParams }: PageProps) {
         : {}),
     },
     orderBy: { createdAt: "desc" },
-    include: { pricingPlan: { select: { name: true } } },
+    include: {
+      pricingPlan: { select: { name: true } },
+      location: { select: { name: true } },
+    },
   });
 
   const counts = await db.contact.groupBy({
@@ -47,6 +61,16 @@ export default async function ContactsPage({ searchParams }: PageProps) {
     countMap[c.status] = c._count;
   });
   const total = Object.values(countMap).reduce((a, b) => a + b, 0);
+
+  // Helper: aktuelle searchParams beim Filter-Wechsel beibehalten
+  function buildHref(params: { status?: string | null; location?: string | null; q?: string }) {
+    const sp = new URLSearchParams();
+    if (params.status) sp.set("status", params.status);
+    if (params.location) sp.set("location", params.location);
+    if (params.q) sp.set("q", params.q);
+    const qs = sp.toString();
+    return qs ? `/admin/contacts?${qs}` : "/admin/contacts";
+  }
 
   return (
     <div className="p-8 md:p-12">
@@ -71,7 +95,11 @@ export default async function ContactsPage({ searchParams }: PageProps) {
           return (
             <Link
               key={tab.key}
-              href={tab.key === "ALL" ? "/admin/contacts" : `/admin/contacts?status=${tab.key}`}
+              href={buildHref({
+                status: tab.key === "ALL" ? null : tab.key,
+                location: filterLocation,
+                q,
+              })}
               className={`-mb-px border-b-2 px-4 py-3 font-mono text-xs uppercase tracking-[0.12em] ${
                 isActive ? "border-ink text-ink" : "border-transparent text-muted hover:text-ink"
               }`}
@@ -82,9 +110,52 @@ export default async function ContactsPage({ searchParams }: PageProps) {
         })}
       </div>
 
+      {/* Standort-Filter (wenn Standorte existieren) */}
+      {locations.length > 0 && (
+        <div className="mb-6 flex flex-wrap items-center gap-2">
+          <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
+            Standort:
+          </span>
+          <Link
+            href={buildHref({ status: activeStatus, location: null, q })}
+            className={`border px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] ${
+              !filterLocation || filterLocation === "all"
+                ? "border-ink bg-ink text-acid"
+                : "border-ink/20 hover:border-ink/40"
+            }`}
+          >
+            Alle
+          </Link>
+          {locations.map((l) => (
+            <Link
+              key={l.id}
+              href={buildHref({ status: activeStatus, location: l.id, q })}
+              className={`border px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] ${
+                filterLocation === l.id
+                  ? "border-ink bg-ink text-acid"
+                  : "border-ink/20 hover:border-ink/40"
+              }`}
+            >
+              {l.name}
+            </Link>
+          ))}
+          <Link
+            href={buildHref({ status: activeStatus, location: "none", q })}
+            className={`border px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] ${
+              filterLocation === "none"
+                ? "border-ink bg-ink text-acid"
+                : "border-ink/20 hover:border-ink/40"
+            }`}
+          >
+            Ohne Standort
+          </Link>
+        </div>
+      )}
+
       {/* Suche */}
       <form className="mb-6">
         {activeStatus && <input type="hidden" name="status" value={activeStatus} />}
+        {filterLocation && <input type="hidden" name="location" value={filterLocation} />}
         <input
           type="search"
           name="q"
@@ -101,6 +172,7 @@ export default async function ContactsPage({ searchParams }: PageProps) {
             <tr className="text-left">
               <Th>Name / E-Mail</Th>
               <Th>Status</Th>
+              {locations.length > 0 && <Th>Standort</Th>}
               <Th>Tarif</Th>
               <Th>Quelle</Th>
               <Th>Eingetragen</Th>
@@ -109,7 +181,10 @@ export default async function ContactsPage({ searchParams }: PageProps) {
           <tbody className="divide-y divide-ink/10">
             {contacts.length === 0 ? (
               <tr>
-                <td colSpan={5} className="p-8 text-center text-sm text-muted">
+                <td
+                  colSpan={locations.length > 0 ? 6 : 5}
+                  className="p-8 text-center text-sm text-muted"
+                >
                   Keine Einträge gefunden.
                 </td>
               </tr>
@@ -129,6 +204,11 @@ export default async function ContactsPage({ searchParams }: PageProps) {
                   <Td>
                     <StatusBadge status={c.status} />
                   </Td>
+                  {locations.length > 0 && (
+                    <Td className="text-xs">
+                      {c.location?.name ?? <span className="text-muted">—</span>}
+                    </Td>
+                  )}
                   <Td>{c.pricingPlan?.name ?? "—"}</Td>
                   <Td className="font-mono text-[10px] uppercase text-muted">{c.source}</Td>
                   <Td className="font-mono text-[11px] text-muted">
@@ -151,13 +231,7 @@ function Th({ children }: { children: React.ReactNode }) {
     </th>
   );
 }
-function Td({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
+function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return <td className={`px-4 py-3 ${className}`}>{children}</td>;
 }
 

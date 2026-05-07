@@ -7,6 +7,7 @@ export const leadSchema = z.object({
   gender: z.enum(["MAENNLICH", "WEIBLICH", "DIVERS"], {
     errorMap: () => ({ message: "Bitte Geschlecht angeben." }),
   }),
+  locationId: z.string().optional(), // optional: wenn nur 1 Standort existiert
   consent: z.literal(true, {
     errorMap: () => ({ message: "Bitte stimme der Datenverarbeitung zu." }),
   }),
@@ -28,6 +29,7 @@ export const signupSchema = z.object({
   iban: z.string().trim().min(15, "IBAN fehlt.").max(34),
   contractStartDate: z.string().trim().min(1, "Vertragsstart fehlt."),
   pricingPlanId: z.string().min(1, "Bitte einen Tarif auswählen."),
+  locationId: z.string().optional(),
   ref: z.string().optional(),
   consent: z.literal(true, {
     errorMap: () => ({ message: "Bitte AGB und Datenschutz akzeptieren." }),
@@ -49,6 +51,7 @@ export const planSchema = z.object({
   highlights: z.array(z.string()).default([]),
   active: z.boolean().default(true),
   sortOrder: z.coerce.number().int().default(0),
+  locationId: z.string().optional().nullable(), // null/leer = Allgemein
 });
 export type PlanInput = z.infer<typeof planSchema>;
 
@@ -58,10 +61,6 @@ export const campaignSchema = z.object({
   bodyHtml: z.string().min(1, "Inhalt fehlt."),
 });
 export type CampaignInput = z.infer<typeof campaignSchema>;
-
-// ─────────────────────────────────────────────────────────────
-// Phase 6 - Funnels
-// ─────────────────────────────────────────────────────────────
 
 export const funnelSchema = z.object({
   name: z.string().trim().min(1, "Name fehlt.").max(100),
@@ -80,3 +79,22 @@ export const funnelStepSchema = z.object({
   bodyHtml: z.string().min(1, "Inhalt fehlt."),
 });
 export type FunnelStepInput = z.infer<typeof funnelStepSchema>;
+
+// Standort
+export const locationSchema = z.object({
+  name: z.string().trim().min(1, "Name fehlt.").max(80),
+  street: z.string().trim().optional().or(z.literal("")),
+  postalCode: z.string().trim().optional().or(z.literal("")),
+  city: z.string().trim().optional().or(z.literal("")),
+  phone: z.string().trim().optional().or(z.literal("")),
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .email("Ungültige E-Mail.")
+    .optional()
+    .or(z.literal("")),
+  active: z.boolean().default(true),
+  sortOrder: z.coerce.number().int().default(0),
+});
+export type LocationInput = z.infer<typeof locationSchema>;

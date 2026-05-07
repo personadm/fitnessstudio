@@ -10,18 +10,23 @@ const STUDIO = process.env.STUDIO_NAME ?? "Studio Iron";
 export default async function AnmeldenPage({ searchParams }: PageProps) {
   const { ref } = await searchParams;
 
-  // Falls ref-Token vorhanden: bestehenden Contact suchen, Daten vorausfüllen
   const existingContact = ref
     ? await db.contact.findUnique({ where: { refToken: ref } })
     : null;
 
-  const plans = await db.pricingPlan.findMany({
-    where: { active: true },
-    orderBy: { sortOrder: "asc" },
-  });
+  const [allPlans, locations] = await Promise.all([
+    db.pricingPlan.findMany({
+      where: { active: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    }),
+    db.location.findMany({
+      where: { active: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, city: true },
+    }),
+  ]);
 
-  // Defensive: falls keine Tarife in DB → klare Fehlerseite
-  if (plans.length === 0) {
+  if (allPlans.length === 0) {
     return (
       <main className="grid min-h-screen place-items-center px-6">
         <div className="max-w-xl">
@@ -56,24 +61,27 @@ export default async function AnmeldenPage({ searchParams }: PageProps) {
           <span className="text-display-italic">starten.</span>
         </h1>
         <p className="mt-6 max-w-2xl text-base leading-relaxed text-ink-soft">
-          Trag dich hier ein und wir bereiten alles für dich vor. Vertrag bekommst du in den nächsten
-          Werktagen per Mail – nichts wird automatisch abgebucht.
+          Trag dich hier ein und wir bereiten alles für dich vor. Vertrag bekommst du in den
+          nächsten Werktagen per Mail – nichts wird automatisch abgebucht.
         </p>
 
         <div className="mt-12">
           <SignupForm
-            plans={plans.map((p) => ({
+            plans={allPlans.map((p) => ({
               id: p.id,
               name: p.name,
               description: p.description,
               priceCents: p.priceCents,
               highlights: p.highlights,
+              locationId: p.locationId,
             }))}
+            locations={locations}
             ref_={ref ?? null}
             prefilledEmail={existingContact?.email ?? ""}
             prefilledFirstName={existingContact?.firstName ?? undefined}
             prefilledLastName={existingContact?.lastName ?? undefined}
             prefilledGender={existingContact?.gender ?? null}
+            prefilledLocationId={existingContact?.locationId ?? null}
           />
         </div>
       </section>

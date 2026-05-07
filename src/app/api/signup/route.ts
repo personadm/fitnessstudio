@@ -24,9 +24,42 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, message: "Tarif nicht verfügbar." }, { status: 400 });
     }
 
+    // Standort-Logik (analog zu leads)
+    const activeLocations = await db.location.findMany({
+      where: { active: true },
+      select: { id: true },
+    });
+
+    let resolvedLocationId: string | null = null;
+
+    if (data.locationId) {
+      const valid = activeLocations.find((l) => l.id === data.locationId);
+      if (!valid) {
+        return NextResponse.json(
+          { ok: false, message: "Standort nicht verfügbar." },
+          { status: 400 },
+        );
+      }
+      resolvedLocationId = data.locationId;
+    } else if (activeLocations.length === 1) {
+      resolvedLocationId = activeLocations[0].id;
+    } else if (activeLocations.length > 1) {
+      return NextResponse.json(
+        { ok: false, message: "Bitte wähle einen Standort aus." },
+        { status: 400 },
+      );
+    }
+
+    // Plan muss zum Standort passen (oder Allgemein sein)
+    if (plan.locationId && plan.locationId !== resolvedLocationId) {
+      return NextResponse.json(
+        { ok: false, message: "Dieser Tarif gehört zu einem anderen Standort." },
+        { status: 400 },
+      );
+    }
+
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 
-    // Bestehenden Contact finden (per ref-Token oder Mail)
     let contact =
       (data.ref ? await db.contact.findUnique({ where: { refToken: data.ref } }) : null) ??
       (await db.contact.findUnique({ where: { email: data.email } }));
@@ -45,6 +78,7 @@ export async function POST(req: NextRequest) {
       contractStartDate: new Date(data.contractStartDate),
       signupAt: new Date(),
       pricingPlanId: data.pricingPlanId,
+      locationId: resolvedLocationId,
       status: "NEUKUNDE" as const,
       source: contact ? contact.source : ("DIRECT" as const),
       consentText:
@@ -58,20 +92,17 @@ export async function POST(req: NextRequest) {
         data: contactData,
       });
     } else {
-      contact = await db.contact.create({
-        data: contactData,
-      });
+      contact = await db.contact.create({ data: contactData });
     }
 
     await db.contactEvent.create({
       data: {
         contactId: contact.id,
         type: "SIGNUP_SUBMITTED",
-        meta: { plan: plan.name, ref: data.ref ?? null },
+        meta: { plan: plan.name, ref: data.ref ?? null, locationId: resolvedLocationId },
       },
     });
 
-    // Bestätigung an User
     try {
       await sendSignupConfirmation({
         to: data.email,
@@ -83,12 +114,14 @@ export async function POST(req: NextRequest) {
       console.error("[/api/signup] sendSignupConfirmation failed", err);
     }
 
-    // Phase 6: in passende Funnels einschreiben (Status NEUKUNDE)
     await enrollIntoMatchingFunnels(contact.id, contact.status);
 
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[/api/signup]", err);
-    return NextResponse.json({ ok: false, message: "Etwas ist schiefgelaufen." }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, message: "Etwas ist schiefgelaufen." },
+      { status: 500 },
+    );
   }
 }

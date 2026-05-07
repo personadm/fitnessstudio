@@ -4,7 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { planSchema, campaignSchema, funnelSchema, funnelStepSchema } from "@/lib/validation";
+import {
+  planSchema,
+  campaignSchema,
+  funnelSchema,
+  funnelStepSchema,
+  locationSchema,
+} from "@/lib/validation";
 import { enrollIntoMatchingFunnels, processFunnels } from "@/lib/funnels";
 import type { ContactStatus, FunnelTrigger } from "@prisma/client";
 
@@ -42,7 +48,6 @@ export async function updateContactStatus(contactId: string, newStatus: ContactS
     },
   });
 
-  // Phase 6: in passende Funnels einschreiben
   await enrollIntoMatchingFunnels(contactId, newStatus);
 
   revalidatePath("/admin/contacts");
@@ -53,6 +58,23 @@ export async function updateContactNotes(contactId: string, notes: string) {
   await requireAdmin();
   await db.contact.update({ where: { id: contactId }, data: { notes } });
   revalidatePath(`/admin/contacts/${contactId}`);
+}
+
+export async function updateContactLocation(contactId: string, locationId: string | null) {
+  await requireAdmin();
+  await db.contact.update({
+    where: { id: contactId },
+    data: { locationId: locationId || null },
+  });
+  await db.contactEvent.create({
+    data: {
+      contactId,
+      type: "LOCATION_CHANGED",
+      meta: { locationId },
+    },
+  });
+  revalidatePath(`/admin/contacts/${contactId}`);
+  revalidatePath("/admin/contacts");
 }
 
 export async function deleteContact(contactId: string) {
@@ -79,6 +101,62 @@ export async function removeContactFromList(contactId: string, listId: string) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// LOCATIONS (Standorte) — neu
+// ─────────────────────────────────────────────────────────────
+
+export async function saveLocation(formData: FormData) {
+  await requireAdmin();
+
+  const id = formData.get("id") as string | null;
+  const parsed = locationSchema.parse({
+    name: formData.get("name"),
+    street: formData.get("street") || "",
+    postalCode: formData.get("postalCode") || "",
+    city: formData.get("city") || "",
+    phone: formData.get("phone") || "",
+    email: formData.get("email") || "",
+    active: formData.get("active") === "on",
+    sortOrder: Number(formData.get("sortOrder") || 0),
+  });
+
+  // Leere Strings zu null normalisieren
+  const data = {
+    name: parsed.name,
+    street: parsed.street || null,
+    postalCode: parsed.postalCode || null,
+    city: parsed.city || null,
+    phone: parsed.phone || null,
+    email: parsed.email || null,
+    active: parsed.active,
+    sortOrder: parsed.sortOrder,
+  };
+
+  if (id) {
+    await db.location.update({ where: { id }, data });
+  } else {
+    await db.location.create({ data });
+  }
+  revalidatePath("/admin/locations");
+  redirect("/admin/locations");
+}
+
+export async function toggleLocationActive(locationId: string) {
+  await requireAdmin();
+  const loc = await db.location.findUnique({ where: { id: locationId } });
+  if (!loc) return;
+  await db.location.update({ where: { id: locationId }, data: { active: !loc.active } });
+  revalidatePath("/admin/locations");
+}
+
+export async function deleteLocation(locationId: string) {
+  await requireAdmin();
+  // Kontakte und Tarife behalten ihren Verweis nicht — durch onDelete: SetNull
+  // im Schema werden locationId-Felder automatisch genullt.
+  await db.location.delete({ where: { id: locationId } });
+  revalidatePath("/admin/locations");
+}
+
+// ─────────────────────────────────────────────────────────────
 // PRICING PLANS
 // ─────────────────────────────────────────────────────────────
 
@@ -91,6 +169,8 @@ export async function savePlan(formData: FormData) {
     .map((s) => s.trim())
     .filter(Boolean);
 
+  const rawLocationId = formData.get("locationId") as string | null;
+
   const parsed = planSchema.parse({
     name: formData.get("name"),
     description: formData.get("description") || "",
@@ -99,12 +179,24 @@ export async function savePlan(formData: FormData) {
     highlights,
     active: formData.get("active") === "on",
     sortOrder: Number(formData.get("sortOrder") || 0),
+    locationId: rawLocationId || null,
   });
 
+  const data = {
+    name: parsed.name,
+    description: parsed.description || null,
+    priceCents: parsed.priceCents,
+    billingInterval: parsed.billingInterval,
+    highlights: parsed.highlights,
+    active: parsed.active,
+    sortOrder: parsed.sortOrder,
+    locationId: parsed.locationId || null,
+  };
+
   if (id) {
-    await db.pricingPlan.update({ where: { id }, data: parsed });
+    await db.pricingPlan.update({ where: { id }, data });
   } else {
-    await db.pricingPlan.create({ data: parsed });
+    await db.pricingPlan.create({ data });
   }
   revalidatePath("/admin/plans");
   redirect("/admin/plans");
@@ -172,7 +264,7 @@ export async function deleteCampaign(campaignId: string) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// FUNNELS (Phase 6)
+// FUNNELS
 // ─────────────────────────────────────────────────────────────
 
 export async function createFunnel(formData: FormData) {
@@ -226,7 +318,6 @@ export async function addFunnelStep(funnelId: string, formData: FormData) {
     bodyHtml: formData.get("bodyHtml"),
   });
 
-  // orderNum automatisch = höchste vorhandene + 1
   const lastStep = await db.funnelStep.findFirst({
     where: { funnelId },
     orderBy: { orderNum: "desc" },
@@ -252,13 +343,6 @@ export async function deleteFunnelStep(stepId: string, funnelId: string) {
   revalidatePath(`/admin/funnels/${funnelId}`);
 }
 
-/**
- * Manueller Trigger für die Funnel-Verarbeitung
- * (Button "Jetzt verarbeiten" auf /admin/funnels).
- *
- * Gibt absichtlich nichts zurück, weil <form action={...}>
- * in Next.js Promise<void> erwartet.
- */
 export async function runFunnelProcessing() {
   await requireAdmin();
   await processFunnels({ force: true });
@@ -266,5 +350,4 @@ export async function runFunnelProcessing() {
   revalidatePath("/admin");
 }
 
-// kleine Hilfsfunktion, falls du irgendwo den Trigger-Type brauchst
 export type { FunnelTrigger };

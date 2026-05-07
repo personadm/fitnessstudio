@@ -1,9 +1,17 @@
 import { LeadForm } from "@/components/LeadForm";
+import { db } from "@/lib/db";
 
 const STUDIO = process.env.STUDIO_NAME ?? "Studio Iron";
-const ISSUE_DATE = new Date().toLocaleDateString("de-DE", { year: "numeric", month: "long" });
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const locations = await db.location.findMany({
+    where: { active: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true, name: true, city: true },
+  });
+
+  const ISSUE_DATE = new Date().toLocaleDateString("de-DE", { year: "numeric", month: "long" });
+
   return (
     <main className="relative min-h-screen">
       {/* ─── Top Utility Bar ─── */}
@@ -11,7 +19,10 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 text-[11px] uppercase tracking-[0.14em]">
           <span className="font-mono">{STUDIO}</span>
           <span className="hidden font-mono text-muted md:inline">Ausgabe · {ISSUE_DATE}</span>
-          <a href="/anmelden" className="font-mono underline underline-offset-4 hover:text-ink-soft">
+          <a
+            href="/anmelden"
+            className="font-mono underline underline-offset-4 hover:text-ink-soft"
+          >
             Direkt anmelden →
           </a>
         </div>
@@ -23,27 +34,32 @@ export default function LandingPage() {
           <div className="col-span-12 md:col-span-7">
             <p className="label mb-8">№ 01 — Eintragen</p>
             <h1 className="text-display text-[64px] leading-[0.95] md:text-[120px] md:leading-[0.92]">
-              Stark
-              <br />
-              werden.
+              Jetzt
               <br />
               <span className="text-display-italic text-acid_dark">
-                Stark{" "}
+                kostenlos{" "}
                 <span className="relative inline-block">
-                  bleiben.
-                  <span className="absolute -bottom-1 left-0 h-[6px] w-full bg-acid -z-10" aria-hidden />
+                  starten.
+                  <span
+                    className="absolute -bottom-1 left-0 h-[6px] w-full bg-acid -z-10"
+                    aria-hidden
+                  />
                 </span>
               </span>
             </h1>
+            <p className="mt-8 max-w-md font-mono text-sm uppercase tracking-[0.14em] text-muted">
+              (Unser Angebot in dein Postfach)
+            </p>
           </div>
 
           <aside className="col-span-12 md:col-span-5 md:pt-24">
             <p className="label mb-3">Was passiert</p>
             <p className="mb-12 max-w-md text-base leading-relaxed text-ink-soft">
-              Trag deine Mail ein. Du bekommst sofort unsere aktuellen Tarife im Postfach – inklusive direktem
-              Anmelde-Button. Kein Spam, kein Verkaufsdruck, keine versteckten Kosten.
+              Trag deine Mail ein. Du bekommst sofort unsere aktuellen Tarife im Postfach –
+              inklusive direktem Anmelde-Button. Kein Spam, kein Verkaufsdruck, keine versteckten
+              Kosten.
             </p>
-            <LeadForm />
+            <LeadForm locations={locations} />
           </aside>
         </div>
       </section>
@@ -79,10 +95,26 @@ export default function LandingPage() {
           </div>
           <div className="col-span-12 grid gap-px bg-ink/15 md:col-span-8 md:grid-cols-2">
             {[
-              { n: "01", title: "Geräte ohne Wartezeit", body: "Über 80 Stationen, klar zoniert, immer gewartet." },
-              { n: "02", title: "Echte Trainer", body: "Studierte Sportwissenschaftler. Kein Sales auf der Fläche." },
-              { n: "03", title: "Kurse, die Spaß machen", body: "Von HYROX-Prep bis Mobility – alles im Tarif Premium." },
-              { n: "04", title: "Sauna & Ruhe", body: "Finnische Sauna, kalte Dusche, Ruheraum mit Tee." },
+              {
+                n: "01",
+                title: "Geräte ohne Wartezeit",
+                body: "Über 80 Stationen, klar zoniert, immer gewartet.",
+              },
+              {
+                n: "02",
+                title: "Echte Trainer",
+                body: "Studierte Sportwissenschaftler. Kein Sales auf der Fläche.",
+              },
+              {
+                n: "03",
+                title: "Kurse, die Spaß machen",
+                body: "Von HYROX-Prep bis Mobility – alles im Tarif Premium.",
+              },
+              {
+                n: "04",
+                title: "Sauna & Ruhe",
+                body: "Finnische Sauna, kalte Dusche, Ruheraum mit Tee.",
+              },
             ].map((b) => (
               <div key={b.n} className="bg-cream p-6 md:p-8">
                 <p className="font-mono text-xs text-muted">{b.n}</p>
@@ -100,8 +132,8 @@ export default function LandingPage() {
           <p className="label !text-acid mb-8">Stimme aus dem Studio</p>
           <blockquote className="text-display text-3xl leading-[1.15] md:text-5xl md:leading-[1.1]">
             „Ich bin reingestolpert für ein Probetraining.{" "}
-            <span className="text-display-italic">Drei Jahre später</span> ist es einfach mein Studio. Niemand quatscht
-            dich voll, alle nicken kurz, dann legst du los."
+            <span className="text-display-italic">Drei Jahre später</span> ist es einfach mein
+            Studio. Niemand quatscht dich voll, alle nicken kurz, dann legst du los."
           </blockquote>
           <p className="mt-8 font-mono text-xs uppercase tracking-[0.14em] text-cream/60">
             — Jana K., Mitglied seit 2023

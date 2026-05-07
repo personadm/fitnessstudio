@@ -17,9 +17,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, message }, { status: 400 });
     }
 
-    const { email, firstName, lastName, gender } = result.data;
+    const { email, firstName, lastName, gender, locationId } = result.data;
 
-    // IP fürs Consent-Logging (DSGVO-Beleg)
+    // Standort-Logik:
+    // - Wenn locationId mitgeschickt: muss existieren und aktiv sein
+    // - Wenn nicht mitgeschickt: Auto-Set wenn genau 1 aktiver Standort,
+    //   Fehler wenn 2+ aktive Standorte existieren
+    const activeLocations = await db.location.findMany({
+      where: { active: true },
+      select: { id: true },
+    });
+
+    let resolvedLocationId: string | null = null;
+
+    if (locationId) {
+      const valid = activeLocations.find((l) => l.id === locationId);
+      if (!valid) {
+        return NextResponse.json(
+          { ok: false, message: "Standort nicht verfügbar." },
+          { status: 400 },
+        );
+      }
+      resolvedLocationId = locationId;
+    } else if (activeLocations.length === 1) {
+      resolvedLocationId = activeLocations[0].id;
+    } else if (activeLocations.length > 1) {
+      return NextResponse.json(
+        { ok: false, message: "Bitte wähle einen Standort aus." },
+        { status: 400 },
+      );
+    }
+    // activeLocations.length === 0: kein Standort-System aktiv, läuft ohne
+
     const ip =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
       req.headers.get("x-real-ip") ??
@@ -30,13 +59,13 @@ export async function POST(req: NextRequest) {
 
     const doiToken = generateToken();
 
-    // Existierender Kontakt? Dann Daten aktualisieren und neuen DOI-Token vergeben.
     const contact = await db.contact.upsert({
       where: { email },
       update: {
         firstName,
         lastName,
         gender,
+        locationId: resolvedLocationId,
         doiToken,
         doiSentAt: new Date(),
         consentText,
@@ -47,6 +76,7 @@ export async function POST(req: NextRequest) {
         firstName,
         lastName,
         gender,
+        locationId: resolvedLocationId,
         status: "INTERESSENT",
         source: "LANDING",
         doiToken,
@@ -56,7 +86,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Wenn schon bestätigt: keine neue DOI-Mail
     if (contact.doiConfirmedAt) {
       return NextResponse.json({
         ok: true,
@@ -71,11 +100,10 @@ export async function POST(req: NextRequest) {
       data: {
         contactId: contact.id,
         type: "DOI_REQUESTED",
-        meta: { ip },
+        meta: { ip, locationId: resolvedLocationId },
       },
     });
 
-    // Phase 6: in passende Funnels einschreiben (Status INTERESSENT)
     await enrollIntoMatchingFunnels(contact.id, contact.status);
 
     return NextResponse.json({
@@ -84,6 +112,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("[/api/leads]", err);
-    return NextResponse.json({ ok: false, message: "Etwas ist schiefgelaufen." }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, message: "Etwas ist schiefgelaufen." },
+      { status: 500 },
+    );
   }
 }

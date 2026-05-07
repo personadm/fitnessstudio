@@ -19,6 +19,7 @@ export default async function ContactDetail({ params }: PageProps) {
     where: { id },
     include: {
       pricingPlan: true,
+      location: true,
       lists: { include: { list: true } },
       events: { orderBy: { createdAt: "desc" }, take: 30 },
       funnelEnrollments: {
@@ -64,6 +65,7 @@ export default async function ContactDetail({ params }: PageProps) {
               <DataRow k="Vorname" v={contact.firstName ?? "—"} />
               <DataRow k="Nachname" v={contact.lastName ?? "—"} />
               <DataRow k="Geschlecht" v={contact.gender ? GENDER_LABELS[contact.gender] : "—"} />
+              <DataRow k="Standort" v={contact.location?.name ?? "—"} />
               <DataRow k="Telefon" v={contact.phone ?? "—"} />
               <DataRow
                 k="Geburtsdatum"
@@ -120,7 +122,9 @@ export default async function ContactDetail({ params }: PageProps) {
                   const status = e.completedAt
                     ? `Abgeschlossen (${e.completedAt.toLocaleDateString("de-DE")})`
                     : e.cancelledAt
-                    ? `Abgebrochen (${e.cancelledAt.toLocaleDateString("de-DE")}) – ${e.cancelReason ?? ""}`
+                    ? `Abgebrochen (${e.cancelledAt.toLocaleDateString("de-DE")}) – ${
+                        e.cancelReason ?? ""
+                      }`
                     : "Aktiv";
                   return (
                     <div key={e.id} className="p-4">
@@ -137,7 +141,8 @@ export default async function ContactDetail({ params }: PageProps) {
                       </div>
                       {e.events.length > 0 && (
                         <p className="mt-1 font-mono text-[11px] text-muted">
-                          {e.events.length} {e.events.length === 1 ? "Schritt" : "Schritte"} versendet
+                          {e.events.length} {e.events.length === 1 ? "Schritt" : "Schritte"}{" "}
+                          versendet
                         </p>
                       )}
                     </div>
@@ -158,7 +163,9 @@ export default async function ContactDetail({ params }: PageProps) {
                   {contact.events.map((e) => (
                     <li key={e.id} className="p-4 text-sm">
                       <p className="font-mono text-xs uppercase tracking-[0.1em]">{e.type}</p>
-                      <p className="mt-1 text-xs text-muted">{e.createdAt.toLocaleString("de-DE")}</p>
+                      <p className="mt-1 text-xs text-muted">
+                        {e.createdAt.toLocaleString("de-DE")}
+                      </p>
                     </li>
                   ))}
                 </ul>
