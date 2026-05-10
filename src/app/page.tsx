@@ -84,13 +84,12 @@ export default async function LandingPage() {
               </h1>
 
               <p className="mt-10 max-w-xl text-display text-xl leading-relaxed text-ink-soft md:text-2xl">
-                Trag deine Mail ein und du bekommst unsere aktuellen Tarife mit einem starken
-                Gratis-Start direkt ins Postfach.
+                Wohlfühlfigur, schmerzfreie Gelenke, neue Energie — ganzheitlich, ohne Diätstress
+                und ohne Leistungsdruck.
               </p>
 
               <ul className="mt-12 space-y-5">
-                {["Wohlfühlfigur", "Weniger Gelenkbeschwerden", "Wieder fit werden"].map(
-                  (item) => (
+                {["Wohlfühlfigur", "Schmerzfreie Gelenke", "Mehr Energie"].map((item) => (
                     <li
                       key={item}
                       className="flex items-center gap-4 text-2xl md:text-3xl"
@@ -126,8 +125,8 @@ export default async function LandingPage() {
                   <p className="label mb-3">Was passiert</p>
                   <p className="text-base leading-relaxed text-ink-soft">
                     Trag deine Mail ein. Du bekommst sofort unsere aktuellen Tarife in dein
-                    Postfach – inklusive direktem Anmelde-Button mit einem tollen Angebot für
-                    deinen Gratis-Start. Kein Spam, kein Verkaufsdruck, keine versteckten Kosten.
+                    Postfach – inklusive Anmelde-Link für deinen ganzheitlichen Gratis-Start.
+                    Kein Spam, kein Verkaufsdruck, keine versteckten Kosten.
                   </p>
                 </div>
                 <LeadForm locations={locations} />
@@ -149,12 +148,12 @@ export default async function LandingPage() {
         <div className="relative z-10 flex h-full items-end">
           <div className="mx-auto w-full max-w-7xl px-6 pb-12 md:pb-20">
             <p className="font-mono text-xs uppercase tracking-[0.14em] text-cream/80 mb-4">
-              Echte Menschen. Echtes Training.
+              Seit 2008 · Persönlich vor Ort
             </p>
             <p className="text-display-italic text-cream text-4xl leading-[1] md:text-7xl">
-              Wir sind hier.
+              Tina &amp; Erik.
               <br />
-              Vor Ort. Für dich.
+              Eure Gesundheitscoaches.
             </p>
           </div>
         </div>
@@ -167,18 +166,18 @@ export default async function LandingPage() {
             <div className="col-span-12 md:col-span-5">
               <p className="label !text-cream/70 mb-4">Unser Weg</p>
               <h2 className="text-display-italic text-cream text-5xl md:text-7xl leading-[0.95]">
-                Anders
+                Der
                 <br />
-                als der
+                ganzheitliche
                 <br />
-                Rest.
+                Weg.
               </h2>
             </div>
             <div className="col-span-12 md:col-span-6 md:col-start-7 flex items-end">
               <p className="text-cream/95 text-lg md:text-xl leading-relaxed text-display">
-                Wir mischen drei Dinge, die andere getrennt machen: Bewegung, Ernährung, Mindset.
-                In echten Studios mit echten Menschen — und nehmen dich an die Hand, wenn du das
-                willst.
+                Unsere Methode verbindet Ernährung, Bewegung, Entgiftung und Regeneration. Damit
+                du leichter abnimmst, schmerzfrei durch den Alltag kommst und wieder Energie für
+                Beruf, Familie und Freizeit hast.
               </p>
             </div>
           </div>
@@ -188,17 +187,17 @@ export default async function LandingPage() {
               {
                 num: "№ 01",
                 title: "Ganzheitlich",
-                body: "Bewegung, Ernährung, Mindset. Drei Säulen, die zusammen wirken — nicht einzeln. Wir ziehen alle gleichzeitig durch.",
+                body: "Vier Säulen, die zusammen wirken: Ernährung, Bewegung, Entgiftung, Regeneration. Wir ziehen alle gleichzeitig durch — nicht nur eine.",
               },
               {
                 num: "№ 02",
                 title: "Persönlich",
-                body: "Echte Coaches statt App. Du bekommst einen Plan, der zu dir passt — und Begleitung, wenn's mal schwierig wird.",
+                body: "Echte Coaches, die mit dir trainieren, beraten und an deiner Seite bleiben. Statt App im Vakuum bekommst du einen Plan, der zu dir passt.",
               },
               {
                 num: "№ 03",
                 title: "Lokal",
-                body: "Studios in deiner Nähe. Echte Menschen, die du tatsächlich triffst. Kein Online-Programm im Vakuum.",
+                body: "Zwei Studios im Westmünsterland: Villa-Fit Ahaus und Vital-Fit Ochtrup. Komm vorbei, statt nur online zu klicken.",
               },
             ].map((p) => (
               <div key={p.title}>
@@ -217,7 +216,7 @@ export default async function LandingPage() {
       <section className="bg-ink text-cream">
         <div className="mx-auto max-w-7xl px-6 py-20 md:py-24">
           <div className="mb-12 max-w-2xl">
-            <p className="label !text-acid mb-4">Stimmen aus dem Studio</p>
+            <p className="label !text-acid mb-4">Das sagen unsere Kunden</p>
             <h2 className="text-display-italic text-cream text-5xl leading-[0.95] md:text-7xl">
               Echte
               <br />
@@ -248,7 +247,7 @@ export default async function LandingPage() {
       <section className="bg-cream">
         <div className="mx-auto max-w-7xl px-6 py-16 md:py-20">
           <div className="mb-10 max-w-2xl">
-            <p className="label mb-4">Was du bei uns findest</p>
+            <p className="label mb-4">Im Studio</p>
             <h2 className="text-display text-3xl leading-[1] md:text-5xl">
               Fünf Bausteine.
               <br />
@@ -295,7 +294,7 @@ export default async function LandingPage() {
                 <br />
                 Tarife raus.
                 <br />
-                <span className="text-display-italic">Let's go.</span>
+                <span className="text-display-italic">Jetzt starten.</span>
               </p>
               <a
                 href="#email"
