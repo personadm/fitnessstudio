@@ -7,8 +7,7 @@ const STUDIO = process.env.STUDIO_NAME ?? "Studio Iron";
 // Etwas tiefer/refiner als das Neon-Grün vorher
 const GREEN = "#7CAE2D";
 
-const HERO_BANNER =
-  "https://static.wixstatic.com/media/fe97c9_a306447d4ff9498194dc1c66025bbffa~mv2.jpg/v1/fill/w_1600,h_900,al_c,q_85,enc_avif,quality_auto/wir.jpg";
+const HERO_BANNER = "/images/coaches-tina-erik.jpg";
 
 const BENEFIT_IMAGES = [
   {
@@ -137,24 +136,26 @@ export default async function LandingPage() {
       </section>
 
       {/* ─── Cinematic Image Band ─── */}
-      <section className="relative h-[400px] overflow-hidden md:h-[520px]">
-        <img
-          src={HERO_BANNER}
-          alt="Coaches im Studio"
-          className="absolute inset-0 h-full w-full object-cover"
-          loading="lazy"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-ink/70 via-ink/30 to-transparent" />
-        <div className="relative z-10 flex h-full items-end">
-          <div className="mx-auto w-full max-w-7xl px-6 pb-12 md:pb-20">
-            <p className="font-mono text-xs uppercase tracking-[0.14em] text-cream/80 mb-4">
-              Seit 2008 · Persönlich vor Ort
-            </p>
-            <p className="text-display-italic text-cream text-4xl leading-[1] md:text-7xl">
-              Tina &amp; Erik.
-              <br />
-              Eure Gesundheitscoaches.
-            </p>
+      <section className="relative w-full overflow-hidden bg-ink">
+        <div className="relative aspect-[16/9] md:aspect-[2/1]">
+          <img
+            src={HERO_BANNER}
+            alt="Tina & Erik Bodon — Eure Gesundheitscoaches"
+            className="absolute inset-0 h-full w-full object-cover object-[center_30%]"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-ink/75 via-ink/20 to-transparent" />
+          <div className="relative z-10 flex h-full items-end">
+            <div className="mx-auto w-full max-w-7xl px-6 pb-8 md:pb-16">
+              <p className="font-mono text-xs uppercase tracking-[0.14em] text-cream/80 mb-4">
+                Seit 2008 · Persönlich vor Ort
+              </p>
+              <p className="text-display-italic text-cream text-3xl leading-[1] md:text-7xl">
+                Tina &amp; Erik.
+                <br />
+                Eure Gesundheitscoaches.
+              </p>
+            </div>
           </div>
         </div>
       </section>
