@@ -127,8 +127,8 @@ export default async function LandingPage() {
                   <p className="label mb-3">Was passiert</p>
                   <p className="text-base leading-relaxed text-ink-soft">
                     Trag deine Mail ein. Du bekommst sofort unsere aktuellen Tarife in dein
-                    Postfach – inklusive Anmelde-Link für deinen ganzheitlichen Gratis-Start.
-                    Kein Spam, kein Verkaufsdruck, keine versteckten Kosten.
+                    Postfach – inklusive direktem Anmelde-Button mit einem tollen Angebot für
+                    deinen Gratis-Start. Kein Spam, kein Verkaufsdruck, keine versteckten Kosten.
                   </p>
                 </div>
                 <LeadForm locations={locations} />
