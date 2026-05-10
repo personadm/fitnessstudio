@@ -1,164 +1,211 @@
 import { LeadForm } from "@/components/LeadForm";
 import { db } from "@/lib/db";
+import { TESTIMONIALS } from "@/lib/testimonials";
 
 const STUDIO = process.env.STUDIO_NAME ?? "Studio Iron";
+
+// Bilder vom Wix-CDN — stabile URLs.
+const BENEFIT_IMAGES = [
+  {
+    label: "Stoffwechselanalyse",
+    url: "https://static.wixstatic.com/media/fe97c9_1269ad2065dd4fc786ce82b236d7a8a3~mv2.jpg/v1/fill/w_500,h_400,al_c,q_80,enc_avif,quality_auto/fe97c9_1269ad2065dd4fc786ce82b236d7a8a3~mv2.jpg",
+  },
+  {
+    label: "betreutes Training",
+    url: "https://static.wixstatic.com/media/fe97c9_6370365bbd2e4314894c52bbb32b4642~mv2.jpg/v1/fill/w_500,h_400,al_c,q_80,enc_avif,quality_auto/fe97c9_6370365bbd2e4314894c52bbb32b4642~mv2.jpg",
+  },
+  {
+    label: "genussvolle Ernährung",
+    url: "https://static.wixstatic.com/media/fe97c9_3ace69f455f347718e5a8d67df780d4d~mv2.jpg/v1/fill/w_500,h_400,al_c,q_80,enc_avif,quality_auto/fe97c9_3ace69f455f347718e5a8d67df780d4d~mv2.jpg",
+  },
+  {
+    label: "Regeneration",
+    url: "https://static.wixstatic.com/media/fe97c9_a0de014f40c5483fb75a034f67dbaa47~mv2.jpg/v1/fill/w_500,h_400,al_c,q_80,enc_avif,quality_auto/fe97c9_a0de014f40c5483fb75a034f67dbaa47~mv2.jpg",
+  },
+  {
+    label: "Entspannung",
+    url: "https://static.wixstatic.com/media/fe97c9_a38efef76365461c8382c3aed64b8fc3~mv2.jpg/v1/fill/w_500,h_400,al_c,q_80,enc_avif,quality_auto/fe97c9_a38efef76365461c8382c3aed64b8fc3~mv2.jpg",
+  },
+];
+
+const LOGO_URL =
+  "https://static.wixstatic.com/media/fe97c9_89b309723d40451699a7888dfac8593a~mv2.png/v1/fill/w_180,h_180,al_c,q_85,enc_avif,quality_auto/Logo-FB-NEU.png";
 
 export default async function LandingPage() {
   const locations = await db.location.findMany({
     where: { active: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    select: { id: true, name: true, city: true },
+    select: { id: true, name: true, city: true, street: true, postalCode: true, phone: true },
   });
 
-  const ISSUE_DATE = new Date().toLocaleDateString("de-DE", { year: "numeric", month: "long" });
-
   return (
-    <main className="relative min-h-screen">
-      {/* ─── Top Utility Bar ─── */}
-      <header className="border-b border-ink/15">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 text-[11px] uppercase tracking-[0.14em]">
-          <span className="font-mono">{STUDIO}</span>
-          <span className="hidden font-mono text-muted md:inline">Ausgabe · {ISSUE_DATE}</span>
-          <a
-            href="/anmelden"
-            className="font-mono underline underline-offset-4 hover:text-ink-soft"
-          >
-            Direkt anmelden →
-          </a>
-        </div>
-      </header>
-
-      {/* ─── Hero ─── */}
+    <main className="min-h-screen bg-cream">
+      {/* ─── HERO ─── */}
       <section className="relative">
-        <div className="mx-auto grid max-w-7xl grid-cols-12 gap-6 px-6 py-20 md:py-32">
-          <div className="col-span-12 md:col-span-7">
-            <p className="label mb-8">№ 01 — Eintragen</p>
-            <h1 className="text-display text-[64px] leading-[0.95] md:text-[120px] md:leading-[0.92]">
-              Jetzt
-              <br />
-              <span className="text-display-italic text-acid_dark">
-                kostenlos{" "}
-                <span className="relative inline-block">
-                  starten.
-                  <span
-                    className="absolute -bottom-1 left-0 h-[6px] w-full bg-acid -z-10"
-                    aria-hidden
-                  />
-                </span>
-              </span>
-            </h1>
-            <p className="mt-8 max-w-md font-mono text-sm uppercase tracking-[0.14em] text-muted">
-              (Unser Angebot in dein Postfach)
-            </p>
-          </div>
+        <div className="mx-auto max-w-7xl px-6 pt-12 pb-20 md:pt-16 md:pb-24">
+          <div className="grid grid-cols-12 gap-8">
+            {/* Linke Spalte: Headline + Bullets */}
+            <div className="col-span-12 md:col-span-7">
+              <h1
+                className="text-display-italic text-[#9CC230] text-[56px] leading-[1] md:text-[88px] md:leading-[1.05]"
+              >
+                Unser Angebot
+                <br />
+                per Email
+              </h1>
 
-          <aside className="col-span-12 md:col-span-5 md:pt-24">
-            <p className="label mb-3">Was passiert</p>
-            <p className="mb-12 max-w-md text-base leading-relaxed text-ink-soft">
-              Trag deine Mail ein. Du bekommst sofort unsere aktuellen Tarife im Postfach –
-              inklusive direktem Anmelde-Button. Kein Spam, kein Verkaufsdruck, keine versteckten
-              Kosten.
-            </p>
-            <LeadForm locations={locations} />
-          </aside>
-        </div>
-      </section>
-
-      {/* ─── Stats / Proof ─── */}
-      <section className="border-y border-ink/15 bg-cream">
-        <div className="mx-auto grid max-w-7xl grid-cols-2 divide-ink/15 px-6 md:grid-cols-4 md:divide-x">
-          {[
-            { value: "12", unit: "Jahre", label: "im Viertel" },
-            { value: "1.840", unit: "m²", label: "Trainingsfläche" },
-            { value: "24/7", unit: "", label: "für Premium" },
-            { value: "16", unit: "", label: "Trainer im Team" },
-          ].map((s, i) => (
-            <div key={i} className="px-6 py-10 md:px-8">
-              <p className="text-display text-5xl md:text-6xl">
-                {s.value}
-                {s.unit && <span className="ml-1 text-2xl text-muted">{s.unit}</span>}
-              </p>
-              <p className="label mt-3">{s.label}</p>
+              <ul className="mt-12 space-y-4 md:space-y-5">
+                {["Wohlfühlfigur", "Weniger Gelenkbeschwerden", "Wieder fit werden"].map(
+                  (item) => (
+                    <li
+                      key={item}
+                      className="flex items-center gap-4 text-[#9CC230] text-2xl md:text-3xl"
+                    >
+                      <span
+                        className="inline-block h-2 w-2 md:h-2.5 md:w-2.5 rounded-full bg-[#9CC230] flex-shrink-0"
+                        aria-hidden
+                      />
+                      <span className="font-medium">{item}</span>
+                    </li>
+                  ),
+                )}
+              </ul>
             </div>
-          ))}
+
+            {/* Rechte Spalte: Logo + Form */}
+            <div className="col-span-12 md:col-span-5">
+              {/* Logo */}
+              <div className="mb-8 flex justify-end">
+                <img
+                  src={LOGO_URL}
+                  alt="Deine Gesundheitscoaches"
+                  width={120}
+                  height={120}
+                  className="h-24 w-24 md:h-28 md:w-28"
+                  loading="eager"
+                />
+              </div>
+
+              {/* Was passiert + Form */}
+              <div className="space-y-6">
+                <div>
+                  <p className="label mb-3">Was passiert</p>
+                  <p className="text-base leading-relaxed text-ink-soft">
+                    Trag deine Mail ein. Du bekommst sofort unsere aktuellen Tarife in dein
+                    Postfach – inklusive direktem Anmelde-Button mit einem tollen Angebot für deinen
+                    Gratis-Start. Kein Spam, kein Verkaufsdruck, keine versteckten Kosten.
+                  </p>
+                </div>
+
+                <LeadForm locations={locations} />
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* ─── Editorial: Was du bekommst ─── */}
-      <section className="mx-auto max-w-7xl px-6 py-24">
-        <div className="grid grid-cols-12 gap-6">
-          <div className="col-span-12 md:col-span-4">
-            <p className="label mb-6">№ 02 — Drinnen</p>
-            <h2 className="text-display text-5xl leading-[0.95] md:text-6xl">
-              Was du <span className="text-display-italic">bekommst</span>.
-            </h2>
+      {/* ─── TESTIMONIALS (schwarzer Hintergrund) ─── */}
+      <section className="bg-ink text-cream">
+        <div className="mx-auto max-w-7xl px-6 py-16 md:py-20">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
+            {TESTIMONIALS.map((t) => (
+              <article
+                key={t.name}
+                className="bg-cream text-ink p-4 flex flex-col"
+              >
+                <img
+                  src={t.imageUrl}
+                  alt={t.name}
+                  className="aspect-square w-full object-cover mb-4"
+                  loading="lazy"
+                />
+                <h3 className="text-base font-medium leading-tight">{t.name}</h3>
+                <p className="mt-1 text-xs text-muted">
+                  Alter: {t.age} - {t.city}
+                </p>
+                <p className="mt-4 text-sm leading-relaxed italic">„{t.quote}"</p>
+              </article>
+            ))}
           </div>
-          <div className="col-span-12 grid gap-px bg-ink/15 md:col-span-8 md:grid-cols-2">
-            {[
-              {
-                n: "01",
-                title: "Geräte ohne Wartezeit",
-                body: "Über 80 Stationen, klar zoniert, immer gewartet.",
-              },
-              {
-                n: "02",
-                title: "Echte Trainer",
-                body: "Studierte Sportwissenschaftler. Kein Sales auf der Fläche.",
-              },
-              {
-                n: "03",
-                title: "Kurse, die Spaß machen",
-                body: "Von HYROX-Prep bis Mobility – alles im Tarif Premium.",
-              },
-              {
-                n: "04",
-                title: "Sauna & Ruhe",
-                body: "Finnische Sauna, kalte Dusche, Ruheraum mit Tee.",
-              },
-            ].map((b) => (
-              <div key={b.n} className="bg-cream p-6 md:p-8">
-                <p className="font-mono text-xs text-muted">{b.n}</p>
-                <p className="mt-4 text-display text-2xl leading-tight">{b.title}</p>
-                <p className="mt-3 text-sm leading-relaxed text-ink-soft">{b.body}</p>
+        </div>
+      </section>
+
+      {/* ─── 5-Bilder-Grid mit Overlay-Labels ─── */}
+      <section className="bg-cream">
+        <div className="mx-auto max-w-7xl px-6 py-12 md:py-16">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {BENEFIT_IMAGES.map((b) => (
+              <div key={b.label} className="relative aspect-[4/5] overflow-hidden">
+                <img
+                  src={b.url}
+                  alt={b.label}
+                  className="absolute inset-0 h-full w-full object-cover"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                <p className="absolute bottom-4 left-4 right-4 text-cream text-lg md:text-xl font-medium leading-tight">
+                  {b.label}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ─── Pull Quote ─── */}
-      <section className="bg-ink text-cream">
-        <div className="mx-auto max-w-7xl px-6 py-24">
-          <p className="label !text-acid mb-8">Stimme aus dem Studio</p>
-          <blockquote className="text-display text-3xl leading-[1.15] md:text-5xl md:leading-[1.1]">
-            „Ich bin reingestolpert für ein Probetraining.{" "}
-            <span className="text-display-italic">Drei Jahre später</span> ist es einfach mein
-            Studio. Niemand quatscht dich voll, alle nicken kurz, dann legst du los."
-          </blockquote>
-          <p className="mt-8 font-mono text-xs uppercase tracking-[0.14em] text-cream/60">
-            — Jana K., Mitglied seit 2023
-          </p>
+      {/* ─── Bottom: Standorte + CTA ─── */}
+      <section className="bg-cream">
+        <div className="mx-auto max-w-7xl px-6 py-16 md:py-20">
+          <div className="grid grid-cols-1 gap-12 md:grid-cols-3 md:items-center">
+            {/* Linker Standort */}
+            <div className="md:text-left">
+              {locations[0] ? (
+                <LocationBlock loc={locations[0]} />
+              ) : (
+                <div className="text-sm text-muted">— kein Standort angelegt —</div>
+              )}
+            </div>
+
+            {/* Center CTA */}
+            <div className="text-center">
+              <p className="label mb-6">Letzter Schritt</p>
+              <p className="text-display text-3xl md:text-4xl leading-[1.1]">
+                Mail rein.
+                <br />
+                Tarife raus.
+                <br />
+                <span className="text-display-italic">Let's go.</span>
+              </p>
+              <a
+                href="#email"
+                className="mt-8 inline-block border-b-2 border-ink pb-1 font-mono text-xs uppercase tracking-[0.14em] hover:text-ink-soft"
+              >
+                Zum Formular ↑
+              </a>
+            </div>
+
+            {/* Rechter Standort */}
+            <div className="md:text-right">
+              {locations[1] ? (
+                <LocationBlock loc={locations[1]} alignRight />
+              ) : (
+                <div className="text-sm text-muted">— zweiten Standort im Admin anlegen —</div>
+              )}
+            </div>
+          </div>
+
+          {/* Falls 3+ Standorte: weitere unter den 3-Spalten */}
+          {locations.length > 2 && (
+            <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-3 border-t border-ink/15 pt-12">
+              {locations.slice(2).map((loc) => (
+                <LocationBlock key={loc.id} loc={loc} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
-      {/* ─── Final CTA ─── */}
-      <section className="mx-auto max-w-7xl px-6 py-24 text-center">
-        <p className="label mb-6">Letzter Schritt</p>
-        <h2 className="text-display text-5xl leading-[0.95] md:text-7xl">
-          Mail rein. Tarife raus.
-          <br />
-          <span className="text-display-italic">In zwei Minuten.</span>
-        </h2>
-        <a
-          href="#email"
-          className="mt-10 inline-block border-b-2 border-ink pb-1 font-mono text-sm uppercase tracking-[0.14em] hover:text-ink-soft"
-        >
-          Zum Formular ↑
-        </a>
-      </section>
-
       {/* ─── Footer ─── */}
-      <footer className="border-t border-ink/15">
+      <footer className="border-t border-ink/15 bg-cream">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-6 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
           <span>
             © {new Date().getFullYear()} {STUDIO}
@@ -177,5 +224,43 @@ export default async function LandingPage() {
         </div>
       </footer>
     </main>
+  );
+}
+
+type LocSummary = {
+  name: string;
+  city: string | null;
+  street: string | null;
+  postalCode: string | null;
+  phone: string | null;
+};
+
+function LocationBlock({ loc, alignRight }: { loc: LocSummary; alignRight?: boolean }) {
+  const className = alignRight ? "text-left md:text-right" : "text-left";
+  // Name hochstellen, "CLUB" voranstellen wenn nicht schon enthalten
+  const displayName = /^club/i.test(loc.name)
+    ? loc.name.toUpperCase()
+    : `CLUB ${loc.name.toUpperCase()}`;
+
+  return (
+    <div className={className}>
+      <p className="font-mono text-xs uppercase tracking-[0.12em] text-acid_dark">
+        {displayName}
+      </p>
+      {loc.street && <p className="mt-2 text-base">{loc.street}</p>}
+      {(loc.postalCode || loc.city) && (
+        <p className="text-base text-ink-soft">
+          {loc.postalCode} {loc.city}
+        </p>
+      )}
+      {loc.phone && (
+        <a
+          href={`tel:${loc.phone.replace(/\s/g, "")}`}
+          className="mt-3 inline-block font-mono text-sm hover:underline"
+        >
+          Tel: {loc.phone}
+        </a>
+      )}
+    </div>
   );
 }
