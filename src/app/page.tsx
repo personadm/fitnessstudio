@@ -4,7 +4,12 @@ import { TESTIMONIALS } from "@/lib/testimonials";
 
 const STUDIO = process.env.STUDIO_NAME ?? "Studio Iron";
 
-// Bilder vom Wix-CDN — stabile URLs.
+// Etwas tiefer/refiner als das Neon-Grün vorher
+const GREEN = "#7CAE2D";
+
+const HERO_BANNER =
+  "https://static.wixstatic.com/media/fe97c9_a306447d4ff9498194dc1c66025bbffa~mv2.jpg/v1/fill/w_1600,h_900,al_c,q_85,enc_avif,quality_auto/wir.jpg";
+
 const BENEFIT_IMAGES = [
   {
     label: "Stoffwechselanalyse",
@@ -35,46 +40,76 @@ export default async function LandingPage() {
   const locations = await db.location.findMany({
     where: { active: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    select: { id: true, name: true, city: true, street: true, postalCode: true, phone: true },
+    select: {
+      id: true,
+      name: true,
+      city: true,
+      street: true,
+      postalCode: true,
+      phone: true,
+    },
   });
 
   return (
     <main className="min-h-screen bg-cream">
+      {/* ─── Top Bar ─── */}
+      <header className="border-b border-ink/10">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 text-[11px] uppercase tracking-[0.14em]">
+          <span className="font-mono">{STUDIO}</span>
+          <a
+            href="#email"
+            className="font-mono underline underline-offset-4 hover:text-ink-soft"
+          >
+            Direkt anmelden →
+          </a>
+        </div>
+      </header>
+
       {/* ─── HERO ─── */}
-      <section className="relative">
-        <div className="mx-auto max-w-7xl px-6 pt-12 pb-20 md:pt-16 md:pb-24">
-          <div className="grid grid-cols-12 gap-8">
-            {/* Linke Spalte: Headline + Bullets */}
-            <div className="col-span-12 md:col-span-7">
+      <section>
+        <div className="mx-auto max-w-7xl px-6 py-16 md:py-24">
+          <div className="grid grid-cols-12 gap-x-10 gap-y-12 md:gap-x-16">
+            {/* Left */}
+            <div className="col-span-12 lg:col-span-7">
+              <p className="label mb-6" style={{ color: GREEN }}>
+                Ganzheitlich Fit
+              </p>
               <h1
-                className="text-display-italic text-[#9CC230] text-[56px] leading-[1] md:text-[88px] md:leading-[1.05]"
+                className="text-display-italic text-6xl leading-[1] md:text-[110px] md:leading-[0.95]"
+                style={{ color: GREEN }}
               >
                 Unser Angebot
                 <br />
                 per Email
               </h1>
 
-              <ul className="mt-12 space-y-4 md:space-y-5">
+              <p className="mt-10 max-w-xl text-display text-xl leading-relaxed text-ink-soft md:text-2xl">
+                Trag deine Mail ein und du bekommst unsere aktuellen Tarife mit einem starken
+                Gratis-Start direkt ins Postfach.
+              </p>
+
+              <ul className="mt-12 space-y-5">
                 {["Wohlfühlfigur", "Weniger Gelenkbeschwerden", "Wieder fit werden"].map(
                   (item) => (
                     <li
                       key={item}
-                      className="flex items-center gap-4 text-[#9CC230] text-2xl md:text-3xl"
+                      className="flex items-center gap-4 text-2xl md:text-3xl"
+                      style={{ color: GREEN }}
                     >
                       <span
-                        className="inline-block h-2 w-2 md:h-2.5 md:w-2.5 rounded-full bg-[#9CC230] flex-shrink-0"
+                        className="inline-block h-3 w-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: GREEN }}
                         aria-hidden
                       />
-                      <span className="font-medium">{item}</span>
+                      <span className="text-display">{item}</span>
                     </li>
                   ),
                 )}
               </ul>
             </div>
 
-            {/* Rechte Spalte: Logo + Form */}
-            <div className="col-span-12 md:col-span-5">
-              {/* Logo */}
+            {/* Right */}
+            <div className="col-span-12 lg:col-span-5">
               <div className="mb-8 flex justify-end">
                 <img
                   src={LOGO_URL}
@@ -86,17 +121,15 @@ export default async function LandingPage() {
                 />
               </div>
 
-              {/* Was passiert + Form */}
               <div className="space-y-6">
                 <div>
                   <p className="label mb-3">Was passiert</p>
                   <p className="text-base leading-relaxed text-ink-soft">
                     Trag deine Mail ein. Du bekommst sofort unsere aktuellen Tarife in dein
-                    Postfach – inklusive direktem Anmelde-Button mit einem tollen Angebot für deinen
-                    Gratis-Start. Kein Spam, kein Verkaufsdruck, keine versteckten Kosten.
+                    Postfach – inklusive direktem Anmelde-Button mit einem tollen Angebot für
+                    deinen Gratis-Start. Kein Spam, kein Verkaufsdruck, keine versteckten Kosten.
                   </p>
                 </div>
-
                 <LeadForm locations={locations} />
               </div>
             </div>
@@ -104,35 +137,126 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ─── TESTIMONIALS (schwarzer Hintergrund) ─── */}
+      {/* ─── Cinematic Image Band ─── */}
+      <section className="relative h-[400px] overflow-hidden md:h-[520px]">
+        <img
+          src={HERO_BANNER}
+          alt="Coaches im Studio"
+          className="absolute inset-0 h-full w-full object-cover"
+          loading="lazy"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-ink/70 via-ink/30 to-transparent" />
+        <div className="relative z-10 flex h-full items-end">
+          <div className="mx-auto w-full max-w-7xl px-6 pb-12 md:pb-20">
+            <p className="font-mono text-xs uppercase tracking-[0.14em] text-cream/80 mb-4">
+              Echte Menschen. Echtes Training.
+            </p>
+            <p className="text-display-italic text-cream text-4xl leading-[1] md:text-7xl">
+              Wir sind hier.
+              <br />
+              Vor Ort. Für dich.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── So arbeiten wir (grüner Block) ─── */}
+      <section style={{ backgroundColor: GREEN }}>
+        <div className="mx-auto max-w-7xl px-6 py-20 md:py-28">
+          <div className="grid grid-cols-12 gap-8 mb-16">
+            <div className="col-span-12 md:col-span-5">
+              <p className="label !text-cream/70 mb-4">Unser Weg</p>
+              <h2 className="text-display-italic text-cream text-5xl md:text-7xl leading-[0.95]">
+                Anders
+                <br />
+                als der
+                <br />
+                Rest.
+              </h2>
+            </div>
+            <div className="col-span-12 md:col-span-6 md:col-start-7 flex items-end">
+              <p className="text-cream/95 text-lg md:text-xl leading-relaxed text-display">
+                Wir mischen drei Dinge, die andere getrennt machen: Bewegung, Ernährung, Mindset.
+                In echten Studios mit echten Menschen — und nehmen dich an die Hand, wenn du das
+                willst.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-12 md:grid-cols-3 border-t border-cream/30 pt-12">
+            {[
+              {
+                num: "№ 01",
+                title: "Ganzheitlich",
+                body: "Bewegung, Ernährung, Mindset. Drei Säulen, die zusammen wirken — nicht einzeln. Wir ziehen alle gleichzeitig durch.",
+              },
+              {
+                num: "№ 02",
+                title: "Persönlich",
+                body: "Echte Coaches statt App. Du bekommst einen Plan, der zu dir passt — und Begleitung, wenn's mal schwierig wird.",
+              },
+              {
+                num: "№ 03",
+                title: "Lokal",
+                body: "Studios in deiner Nähe. Echte Menschen, die du tatsächlich triffst. Kein Online-Programm im Vakuum.",
+              },
+            ].map((p) => (
+              <div key={p.title}>
+                <p className="font-mono text-xs uppercase tracking-[0.14em] text-cream/70 mb-3">
+                  {p.num}
+                </p>
+                <h3 className="text-display text-cream text-3xl md:text-4xl mb-4">{p.title}</h3>
+                <p className="text-cream/90 leading-relaxed">{p.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Testimonials (schwarz) ─── */}
       <section className="bg-ink text-cream">
-        <div className="mx-auto max-w-7xl px-6 py-16 md:py-20">
+        <div className="mx-auto max-w-7xl px-6 py-20 md:py-24">
+          <div className="mb-12 max-w-2xl">
+            <p className="label !text-acid mb-4">Stimmen aus dem Studio</p>
+            <h2 className="text-display-italic text-cream text-5xl leading-[0.95] md:text-7xl">
+              Echte
+              <br />
+              Erfolge.
+            </h2>
+          </div>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
             {TESTIMONIALS.map((t) => (
-              <article
-                key={t.name}
-                className="bg-cream text-ink p-4 flex flex-col"
-              >
+              <article key={t.name} className="bg-cream text-ink p-4 flex flex-col">
                 <img
                   src={t.imageUrl}
                   alt={t.name}
                   className="aspect-square w-full object-cover mb-4"
                   loading="lazy"
                 />
-                <h3 className="text-base font-medium leading-tight">{t.name}</h3>
+                <h3 className="text-display text-base font-medium leading-tight">{t.name}</h3>
                 <p className="mt-1 text-xs text-muted">
                   Alter: {t.age} - {t.city}
                 </p>
-                <p className="mt-4 text-sm leading-relaxed italic">„{t.quote}"</p>
+                <p className="mt-4 text-sm leading-relaxed text-display italic">„{t.quote}"</p>
               </article>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ─── 5-Bilder-Grid mit Overlay-Labels ─── */}
+      {/* ─── 5-Bilder-Grid ─── */}
       <section className="bg-cream">
-        <div className="mx-auto max-w-7xl px-6 py-12 md:py-16">
+        <div className="mx-auto max-w-7xl px-6 py-16 md:py-20">
+          <div className="mb-10 max-w-2xl">
+            <p className="label mb-4">Was du bei uns findest</p>
+            <h2 className="text-display text-3xl leading-[1] md:text-5xl">
+              Fünf Bausteine.
+              <br />
+              <span className="text-display-italic" style={{ color: GREEN }}>
+                Ein System.
+              </span>
+            </h2>
+          </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {BENEFIT_IMAGES.map((b) => (
               <div key={b.label} className="relative aspect-[4/5] overflow-hidden">
@@ -142,8 +266,8 @@ export default async function LandingPage() {
                   className="absolute inset-0 h-full w-full object-cover"
                   loading="lazy"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-                <p className="absolute bottom-4 left-4 right-4 text-cream text-lg md:text-xl font-medium leading-tight">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                <p className="absolute bottom-4 left-4 right-4 text-cream text-display text-lg md:text-xl leading-tight">
                   {b.label}
                 </p>
               </div>
@@ -152,11 +276,10 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ─── Bottom: Standorte + CTA ─── */}
+      {/* ─── Standorte + CTA ─── */}
       <section className="bg-cream">
         <div className="mx-auto max-w-7xl px-6 py-16 md:py-20">
           <div className="grid grid-cols-1 gap-12 md:grid-cols-3 md:items-center">
-            {/* Linker Standort */}
             <div className="md:text-left">
               {locations[0] ? (
                 <LocationBlock loc={locations[0]} />
@@ -165,10 +288,9 @@ export default async function LandingPage() {
               )}
             </div>
 
-            {/* Center CTA */}
             <div className="text-center">
               <p className="label mb-6">Letzter Schritt</p>
-              <p className="text-display text-3xl md:text-4xl leading-[1.1]">
+              <p className="text-display text-3xl leading-[1.1] md:text-4xl">
                 Mail rein.
                 <br />
                 Tarife raus.
@@ -183,7 +305,6 @@ export default async function LandingPage() {
               </a>
             </div>
 
-            {/* Rechter Standort */}
             <div className="md:text-right">
               {locations[1] ? (
                 <LocationBlock loc={locations[1]} alignRight />
@@ -193,7 +314,6 @@ export default async function LandingPage() {
             </div>
           </div>
 
-          {/* Falls 3+ Standorte: weitere unter den 3-Spalten */}
           {locations.length > 2 && (
             <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-3 border-t border-ink/15 pt-12">
               {locations.slice(2).map((loc) => (
@@ -237,19 +357,18 @@ type LocSummary = {
 
 function LocationBlock({ loc, alignRight }: { loc: LocSummary; alignRight?: boolean }) {
   const className = alignRight ? "text-left md:text-right" : "text-left";
-  // Name hochstellen, "CLUB" voranstellen wenn nicht schon enthalten
   const displayName = /^club/i.test(loc.name)
     ? loc.name.toUpperCase()
     : `CLUB ${loc.name.toUpperCase()}`;
 
   return (
     <div className={className}>
-      <p className="font-mono text-xs uppercase tracking-[0.12em] text-acid_dark">
+      <p className="font-mono text-xs uppercase tracking-[0.12em]" style={{ color: GREEN }}>
         {displayName}
       </p>
-      {loc.street && <p className="mt-2 text-base">{loc.street}</p>}
+      {loc.street && <p className="mt-2 text-base text-display">{loc.street}</p>}
       {(loc.postalCode || loc.city) && (
-        <p className="text-base text-ink-soft">
+        <p className="text-base text-display text-ink-soft">
           {loc.postalCode} {loc.city}
         </p>
       )}
