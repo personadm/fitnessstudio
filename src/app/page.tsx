@@ -340,9 +340,6 @@ export default async function LandingPage() {
             <a href="/datenschutz" className="hover:text-ink">
               Datenschutz
             </a>
-            <a href="/agb" className="hover:text-ink">
-              AGB
-            </a>
           </nav>
         </div>
       </footer>
