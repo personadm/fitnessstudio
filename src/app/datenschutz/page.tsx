@@ -10,7 +10,6 @@ export const metadata = {
 export default function DatenschutzPage() {
   return (
     <main className="min-h-screen bg-cream">
-      {/* Top Bar */}
       <header className="border-b border-ink/10">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 text-[11px] uppercase tracking-[0.14em]">
           <Link href="/" className="font-mono hover:text-ink-soft">
@@ -23,399 +22,443 @@ export default function DatenschutzPage() {
       <article className="mx-auto max-w-3xl px-6 py-16 md:py-20">
         <p className="label mb-6">Rechtliches</p>
         <h1 className="text-display-italic text-5xl md:text-7xl leading-[0.95] mb-12">
-          Datenschutzerklärung
+          Datenschutz
         </h1>
 
         <div className="text-display text-base leading-relaxed space-y-6 text-ink-soft">
-          <p>
-            Wir freuen uns sehr über Ihr Interesse an unserem Unternehmen. Datenschutz hat einen
-            besonders hohen Stellenwert für die Geschäftsleitung der Villa-Fit GmbH. Eine Nutzung
-            der Internetseiten der Villa-Fit GmbH ist grundsätzlich ohne jede Angabe
-            personenbezogener Daten möglich. Sofern eine betroffene Person besondere Services
-            unseres Unternehmens über unsere Internetseite in Anspruch nehmen möchte, könnte jedoch
-            eine Verarbeitung personenbezogener Daten erforderlich werden. Ist die Verarbeitung
-            personenbezogener Daten erforderlich und besteht für eine solche Verarbeitung keine
-            gesetzliche Grundlage, holen wir generell eine Einwilligung der betroffenen Person ein.
+          <p className="text-display-italic text-xl text-ink">
+            Der Schutz persönlicher Daten liegt uns am Herzen!
           </p>
           <p>
-            Die Verarbeitung personenbezogener Daten, beispielsweise des Namens, der Anschrift,
-            E-Mail-Adresse oder Telefonnummer einer betroffenen Person, erfolgt stets im Einklang
-            mit der Datenschutz-Grundverordnung und in Übereinstimmung mit den für die Villa-Fit
-            GmbH geltenden landesspezifischen Datenschutzbestimmungen. Mittels dieser
-            Datenschutzerklärung möchte unser Unternehmen die Öffentlichkeit über Art, Umfang und
-            Zweck der von uns erhobenen, genutzten und verarbeiteten personenbezogenen Daten
-            informieren. Ferner werden betroffene Personen mittels dieser Datenschutzerklärung über
-            die ihnen zustehenden Rechte aufgeklärt.
+            Wir nehmen den Datenschutz sehr ernst und legen großen Wert auf den
+            verantwortungsvollen und sicheren Umgang mit personenbezogenen Daten. Die Beachtung
+            der Bestimmungen des Bundesdatenschutzgesetzes hat für uns die oberste Priorität.
           </p>
           <p>
-            Die Villa-Fit GmbH hat als für die Verarbeitung Verantwortlicher zahlreiche technische
-            und organisatorische Maßnahmen umgesetzt, um einen möglichst lückenlosen Schutz der
-            über diese Internetseite verarbeiteten personenbezogenen Daten sicherzustellen. Dennoch
-            können Internetbasierte Datenübertragungen grundsätzlich Sicherheitslücken aufweisen,
-            sodass ein absoluter Schutz nicht gewährleistet werden kann. Aus diesem Grund steht es
-            jeder betroffenen Person frei, personenbezogene Daten auch auf alternativen Wegen,
-            beispielsweise telefonisch, an uns zu übermitteln.
+            Dazu haben wir technische und organisatorische Maßnahmen getroffen, die sicherstellen,
+            dass die Vorschriften über den Datenschutz sowohl von uns als auch von den durch uns
+            beauftragten externen Dienstleistern beachtet werden.
           </p>
         </div>
 
-        <Section title="1. Begriffsbestimmungen">
+        <Section title="Gibt es Fragen?">
           <p>
-            Die Datenschutzerklärung der Villa-Fit GmbH beruht auf den Begrifflichkeiten, die durch
-            den Europäischen Richtlinien- und Verordnungsgeber beim Erlass der
-            Datenschutz-Grundverordnung (DS-GVO) verwendet wurden. Unsere Datenschutzerklärung soll
-            sowohl für die Öffentlichkeit als auch für unsere Kunden und Geschäftspartner einfach
-            lesbar und verständlich sein. Um dies zu gewährleisten, möchten wir vorab die
-            verwendeten Begrifflichkeiten erläutern.
-          </p>
-
-          <h3 className="text-display text-lg mt-6 mb-2 text-ink">a) Personenbezogene Daten</h3>
-          <p>
-            Personenbezogene Daten sind alle Informationen, die sich auf eine identifizierte oder
-            identifizierbare natürliche Person beziehen. Als identifizierbar wird eine natürliche
-            Person angesehen, die direkt oder indirekt, insbesondere mittels Zuordnung zu einer
-            Kennung wie einem Namen, zu einer Kennnummer, zu Standortdaten, zu einer Online-Kennung
-            oder zu einem oder mehreren besonderen Merkmalen, die Ausdruck der physischen,
-            physiologischen, genetischen, psychischen, wirtschaftlichen, kulturellen oder sozialen
-            Identität dieser natürlichen Person sind, identifiziert werden kann.
-          </p>
-
-          <h3 className="text-display text-lg mt-6 mb-2 text-ink">b) Betroffene Person</h3>
-          <p>
-            Betroffene Person ist jede identifizierte oder identifizierbare natürliche Person,
-            deren personenbezogene Daten von dem für die Verarbeitung Verantwortlichen verarbeitet
-            werden.
-          </p>
-
-          <h3 className="text-display text-lg mt-6 mb-2 text-ink">c) Verarbeitung</h3>
-          <p>
-            Verarbeitung ist jeder mit oder ohne Hilfe automatisierter Verfahren ausgeführte
-            Vorgang oder jede solche Vorgangsreihe im Zusammenhang mit personenbezogenen Daten wie
-            das Erheben, das Erfassen, die Organisation, das Ordnen, die Speicherung, die Anpassung
-            oder Veränderung, das Auslesen, das Abfragen, die Verwendung, die Offenlegung durch
-            Übermittlung, Verbreitung oder eine andere Form der Bereitstellung, den Abgleich oder
-            die Verknüpfung, die Einschränkung, das Löschen oder die Vernichtung.
-          </p>
-
-          <h3 className="text-display text-lg mt-6 mb-2 text-ink">
-            d) Einschränkung der Verarbeitung
-          </h3>
-          <p>
-            Einschränkung der Verarbeitung ist die Markierung gespeicherter personenbezogener Daten
-            mit dem Ziel, ihre künftige Verarbeitung einzuschränken.
-          </p>
-
-          <h3 className="text-display text-lg mt-6 mb-2 text-ink">e) Profiling</h3>
-          <p>
-            Profiling ist jede Art der automatisierten Verarbeitung personenbezogener Daten, die
-            darin besteht, dass diese personenbezogenen Daten verwendet werden, um bestimmte
-            persönliche Aspekte, die sich auf eine natürliche Person beziehen, zu bewerten,
-            insbesondere, um Aspekte bezüglich Arbeitsleistung, wirtschaftlicher Lage, Gesundheit,
-            persönlicher Vorlieben, Interessen, Zuverlässigkeit, Verhalten, Aufenthaltsort oder
-            Ortswechsel dieser natürlichen Person zu analysieren oder vorherzusagen.
-          </p>
-
-          <h3 className="text-display text-lg mt-6 mb-2 text-ink">f) Pseudonymisierung</h3>
-          <p>
-            Pseudonymisierung ist die Verarbeitung personenbezogener Daten in einer Weise, auf
-            welche die personenbezogenen Daten ohne Hinzuziehung zusätzlicher Informationen nicht
-            mehr einer spezifischen betroffenen Person zugeordnet werden können, sofern diese
-            zusätzlichen Informationen gesondert aufbewahrt werden und technischen und
-            organisatorischen Maßnahmen unterliegen.
-          </p>
-
-          <h3 className="text-display text-lg mt-6 mb-2 text-ink">
-            g) Verantwortlicher oder für die Verarbeitung Verantwortlicher
-          </h3>
-          <p>
-            Verantwortlicher oder für die Verarbeitung Verantwortlicher ist die natürliche oder
-            juristische Person, Behörde, Einrichtung oder andere Stelle, die allein oder gemeinsam
-            mit anderen über die Zwecke und Mittel der Verarbeitung von personenbezogenen Daten
-            entscheidet.
-          </p>
-
-          <h3 className="text-display text-lg mt-6 mb-2 text-ink">h) Auftragsverarbeiter</h3>
-          <p>
-            Auftragsverarbeiter ist eine natürliche oder juristische Person, Behörde, Einrichtung
-            oder andere Stelle, die personenbezogene Daten im Auftrag des Verantwortlichen
-            verarbeitet.
-          </p>
-
-          <h3 className="text-display text-lg mt-6 mb-2 text-ink">i) Empfänger</h3>
-          <p>
-            Empfänger ist eine natürliche oder juristische Person, Behörde, Einrichtung oder andere
-            Stelle, der personenbezogene Daten offengelegt werden, unabhängig davon, ob es sich bei
-            ihr um einen Dritten handelt oder nicht.
-          </p>
-
-          <h3 className="text-display text-lg mt-6 mb-2 text-ink">j) Dritter</h3>
-          <p>
-            Dritter ist eine natürliche oder juristische Person, Behörde, Einrichtung oder andere
-            Stelle außer der betroffenen Person, dem Verantwortlichen, dem Auftragsverarbeiter und
-            den Personen, die unter der unmittelbaren Verantwortung des Verantwortlichen oder des
-            Auftragsverarbeiters befugt sind, die personenbezogenen Daten zu verarbeiten.
-          </p>
-
-          <h3 className="text-display text-lg mt-6 mb-2 text-ink">k) Einwilligung</h3>
-          <p>
-            Einwilligung ist jede von der betroffenen Person freiwillig für den bestimmten Fall in
-            informierter Weise und unmissverständlich abgegebene Willensbekundung in Form einer
-            Erklärung oder einer sonstigen eindeutigen bestätigenden Handlung, mit der die
-            betroffene Person zu verstehen gibt, dass sie mit der Verarbeitung der sie betreffenden
-            personenbezogenen Daten einverstanden ist.
+            Fragen zum Thema Datenschutz bei Villa-Fit Ahaus können jederzeit per Mail an folgende
+            Adresse gesendet werden:{" "}
+            <a
+              href="mailto:club-ahaus@gesundheitscoaches.de"
+              className="underline underline-offset-2 hover:text-ink"
+            >
+              club-ahaus@gesundheitscoaches.de
+            </a>
           </p>
         </Section>
 
-        <Section title="2. Name und Anschrift des Verantwortlichen">
-          <p>
-            Verantwortlicher im Sinne der Datenschutz-Grundverordnung sind die:
-          </p>
-          <div className="mt-4 space-y-3">
-            <div>
-              <p className="font-medium text-ink">Villa-Fit GmbH</p>
-              <p>Erhardstr. 2 · 48683 Ahaus · Tel.: 02561 / 961166</p>
-            </div>
-            <div>
-              <p className="font-medium text-ink">Vital-Fit GmbH</p>
-              <p>Laurenzstr. 98 · 48607 Ochtrup · Tel.: 02553 / 7216466</p>
-            </div>
-            <div className="pt-3">
-              <p>
-                E-Mail:{" "}
-                <a
-                  href="mailto:mail@gesundheitscoaches.de"
-                  className="underline underline-offset-2 hover:text-ink"
-                >
-                  mail@gesundheitscoaches.de
-                </a>
-              </p>
-              <p>
-                Website:{" "}
-                <a
-                  href="https://www.gesundheitscoaches.de"
-                  className="underline underline-offset-2 hover:text-ink"
-                >
-                  https://www.gesundheitscoaches.de
-                </a>
-              </p>
-            </div>
+        <Section title="Verantwortlicher">
+          <div className="space-y-1">
+            <p className="font-medium text-ink">Villa-Fit</p>
+            <p>Erhardstr. 2, 48683 Ahaus</p>
+            <p>
+              Telefon:{" "}
+              <a href="tel:02561961166" className="underline underline-offset-2 hover:text-ink">
+                02561 961166
+              </a>
+            </p>
+            <p>
+              E-Mail:{" "}
+              <a
+                href="mailto:club-ahaus@gesundheitscoaches.de"
+                className="underline underline-offset-2 hover:text-ink"
+              >
+                club-ahaus@gesundheitscoaches.de
+              </a>
+            </p>
           </div>
+          <p className="mt-4">
+            Verantwortliche Stelle ist die natürliche oder juristische Person, die allein oder
+            gemeinsam mit anderen über die Zwecke und Mittel der Verarbeitung von
+            personenbezogenen Daten (z.B. Namen, E-Mail-Adressen o. Ä.) entscheidet.
+          </p>
         </Section>
 
-        <Section title="3. Cookies">
+        <Section title="1. Grundsätzliche Angaben zur Datenverarbeitung und Rechtsgrundlagen">
           <p>
-            Unsere Internetseiten verwenden Cookies. Cookies sind Textdateien, welche über einen
-            Internetbrowser auf einem Computersystem abgelegt und gespeichert werden. Viele Cookies
-            enthalten eine sogenannte Cookie-ID, eine eindeutige Kennung, durch welche
-            Internetseiten und Server dem konkreten Internetbrowser zugeordnet werden können.
+            <strong>1.1</strong> Diese Datenschutzerklärung klärt über die Art, den Umfang und
+            Zweck der Verarbeitung von personenbezogenen Daten innerhalb unseres Onlineangebotes
+            und der mit ihm verbundenen Webseiten, Funktionen und Inhalte (nachfolgend gemeinsam
+            bezeichnet als „Onlineangebot" oder „Website") auf. Die Datenschutzerklärung gilt
+            unabhängig von den verwendeten Domains, Systemen, Plattformen und Geräten (z.B.
+            Desktop oder Mobile) auf denen das Onlineangebot ausgeführt wird.
           </p>
           <p className="mt-4">
-            Durch den Einsatz von Cookies können wir den Nutzern dieser Internetseite
-            nutzerfreundlichere Services bereitstellen, die ohne die Cookie-Setzung nicht möglich
-            wären. Mittels eines Cookies können die Informationen und Angebote auf unserer
-            Internetseite im Sinne des Benutzers optimiert werden.
+            <strong>1.2</strong> Die verwendeten Begrifflichkeiten, wie z.B. „personenbezogene
+            Daten" oder deren „Verarbeitung" verweisen wir auf die Definitionen im Art. 4 der
+            Datenschutzgrundverordnung (DSGVO).
           </p>
           <p className="mt-4">
-            Die betroffene Person kann die Setzung von Cookies durch unsere Internetseite jederzeit
-            mittels einer entsprechenden Einstellung des genutzten Internetbrowsers verhindern und
-            damit der Setzung von Cookies dauerhaft widersprechen. Ferner können bereits gesetzte
-            Cookies jederzeit über einen Internetbrowser oder andere Softwareprogramme gelöscht
-            werden.
-          </p>
-        </Section>
-
-        <Section title="4. Erfassung von allgemeinen Daten und Informationen">
-          <p>
-            Unsere Internetseite erfasst mit jedem Aufruf eine Reihe von allgemeinen Daten und
-            Informationen, die in den Logfiles des Servers gespeichert werden. Erfasst werden
-            können: (1) verwendete Browsertypen und Versionen, (2) das vom zugreifenden System
-            verwendete Betriebssystem, (3) die Internetseite, von welcher ein zugreifendes System
-            auf unsere Internetseite gelangt (Referrer), (4) die Unterwebseiten, welche über ein
-            zugreifendes System auf unserer Internetseite angesteuert werden, (5) das Datum und
-            die Uhrzeit eines Zugriffs, (6) eine Internet-Protokoll-Adresse (IP-Adresse), (7) der
-            Internet-Service-Provider des zugreifenden Systems und (8) sonstige ähnliche Daten und
-            Informationen, die der Gefahrenabwehr im Falle von Angriffen auf unsere
-            informationstechnologischen Systeme dienen.
+            <strong>1.3</strong> Zu den im Rahmen dieses Onlineangebotes verarbeiteten
+            personenbezogenen Daten der Nutzer gehören Nutzungsdaten (z.B. die besuchten
+            Webseiten unseres Onlineangebotes, Interesse an unseren Produkten) und Inhaltsdaten
+            (z.B. Eingaben im Kontakt-/Teilnahmeformular).
           </p>
           <p className="mt-4">
-            Bei der Nutzung dieser allgemeinen Daten und Informationen ziehen wir keine
-            Rückschlüsse auf die betroffene Person. Diese Informationen werden vielmehr benötigt,
-            um (1) die Inhalte unserer Internetseite korrekt auszuliefern, (2) die Inhalte unserer
-            Internetseite sowie die Werbung für diese zu optimieren, (3) die dauerhafte
-            Funktionsfähigkeit unserer informationstechnologischen Systeme und der Technik unserer
-            Internetseite zu gewährleisten sowie (4) um Strafverfolgungsbehörden im Falle eines
-            Cyberangriffes die zur Strafverfolgung notwendigen Informationen bereitzustellen.
-          </p>
-        </Section>
-
-        <Section title="5. Registrierung auf unserer Internetseite">
-          <p>
-            Die betroffene Person hat die Möglichkeit, sich auf der Internetseite unter Angabe von
-            personenbezogenen Daten zu registrieren. Welche personenbezogenen Daten dabei
-            übermittelt werden, ergibt sich aus der jeweiligen Eingabemaske. Die eingegebenen
-            personenbezogenen Daten werden ausschließlich für die interne Verwendung und für
-            eigene Zwecke erhoben und gespeichert.
+            <strong>1.4</strong> Der Begriff „Nutzer" umfasst alle Kategorien von der
+            Datenverarbeitung betroffener Personen. Zu ihnen gehören Interessenten und sonstige
+            Besucher unseres Onlineangebotes. Die verwendeten Begrifflichkeiten, wie z.B.
+            „Nutzer" sind geschlechtsneutral zu verstehen.
           </p>
           <p className="mt-4">
-            Registrierten Personen steht die Möglichkeit frei, die bei der Registrierung
-            angegebenen personenbezogenen Daten jederzeit abzuändern oder vollständig aus dem
-            Datenbestand löschen zu lassen.
-          </p>
-        </Section>
-
-        <Section title="6. Abonnement unseres Newsletters">
-          <p>
-            Auf unserer Internetseite wird den Benutzern die Möglichkeit eingeräumt, den
-            Newsletter unseres Unternehmens zu abonnieren. An die erstmalig für den
-            Newsletterversand eingetragene E-Mail-Adresse wird aus rechtlichen Gründen eine
-            Bestätigungsmail im Double-Opt-In-Verfahren versendet. Diese Bestätigungsmail dient
-            der Überprüfung, ob der Inhaber der E-Mail-Adresse den Empfang des Newsletters
-            autorisiert hat.
+            <strong>1.5</strong> Wir verarbeiten personenbezogene Daten der Nutzer nur unter
+            Einhaltung der einschlägigen Datenschutzbestimmungen. Das bedeutet, die Daten der
+            Nutzer werden nur bei Vorliegen einer gesetzlichen Erlaubnis verarbeitet. D.h.,
+            insbesondere wenn die Datenverarbeitung zur Erbringung unserer vertraglichen
+            Leistungen (z.B. Bearbeitung von Aufträgen) sowie Online-Services erforderlich, bzw.
+            gesetzlich vorgeschrieben ist, eine Einwilligung der Nutzer vorliegt, als auch
+            aufgrund unserer berechtigten Interessen (d.h. Interesse an der Analyse, Optimierung
+            und wirtschaftlichem Betrieb und Sicherheit unseres Onlineangebotes im Sinne des Art.
+            6 Abs. 1 lit. f. DSGVO, insbesondere bei der Reichweitenmessung, Erstellung von
+            Profilen zu Werbe- und Marketingzwecken sowie Erhebung von Zugriffsdaten und Einsatz
+            der Dienste von Drittanbietern.
           </p>
           <p className="mt-4">
-            Die im Rahmen einer Anmeldung zum Newsletter erhobenen personenbezogenen Daten werden
-            ausschließlich zum Versand unseres Newsletters verwendet. Es erfolgt keine Weitergabe
-            der personenbezogenen Daten an Dritte. Das Abonnement kann jederzeit gekündigt werden
-            — entweder über den entsprechenden Link in jedem Newsletter oder durch Mitteilung an
-            uns.
+            <strong>1.6</strong> Wir weisen darauf hin, dass die Rechtsgrundlage der
+            Einwilligungen Art. 6 Abs. 1 lit. a. und Art. 7 DSGVO, die Rechtsgrundlage für die
+            Verarbeitung zur Erfüllung unserer Leistungen und Durchführung vertraglicher Maßnahmen
+            Art. 6 Abs. 1 lit. b. DSGVO, die Rechtsgrundlage für die Verarbeitung zur Erfüllung
+            unserer rechtlichen Verpflichtungen Art. 6 Abs. 1 lit. c. DSGVO, und die
+            Rechtsgrundlage für die Verarbeitung zur Wahrung unserer berechtigten Interessen Art.
+            6 Abs. 1 lit. f. DSGVO ist.
           </p>
         </Section>
 
-        <Section title="7. Kontaktmöglichkeit über die Internetseite">
+        <Section title="2. Sicherheitsmaßnahmen">
           <p>
-            Unsere Internetseite enthält Angaben, die eine schnelle elektronische Kontaktaufnahme
-            zu unserem Unternehmen ermöglichen, was eine allgemeine E-Mail-Adresse umfasst. Sofern
-            eine betroffene Person per E-Mail oder über ein Kontaktformular Kontakt mit uns
-            aufnimmt, werden die übermittelten personenbezogenen Daten automatisch gespeichert.
-            Solche Daten werden für Zwecke der Bearbeitung oder der Kontaktaufnahme zur betroffenen
-            Person gespeichert. Es erfolgt keine Weitergabe an Dritte.
-          </p>
-        </Section>
-
-        <Section title="8. Routinemäßige Löschung und Sperrung von personenbezogenen Daten">
-          <p>
-            Wir verarbeiten und speichern personenbezogene Daten der betroffenen Person nur für
-            den Zeitraum, der zur Erreichung des Speicherungszwecks erforderlich ist oder sofern
-            dies durch den Europäischen Richtlinien- und Verordnungsgeber oder einen anderen
-            Gesetzgeber in Gesetzen oder Vorschriften vorgesehen wurde.
+            <strong>2.1</strong> Wir treffen organisatorische, vertragliche und technische
+            Sicherheitsmaßnahmen entsprechend dem Stand der Technik, um sicherzustellen, dass die
+            Vorschriften der Datenschutzgesetze eingehalten werden und um damit die durch uns
+            verarbeiteten Daten gegen zufällige oder vorsätzliche Manipulationen, Verlust,
+            Zerstörung oder gegen den Zugriff unberechtigter Personen zu schützen.
           </p>
           <p className="mt-4">
-            Entfällt der Speicherungszweck oder läuft eine vorgeschriebene Speicherfrist ab,
-            werden die personenbezogenen Daten routinemäßig und entsprechend den gesetzlichen
-            Vorschriften gesperrt oder gelöscht.
+            <strong>2.2</strong> Zu den Sicherheitsmaßnahmen gehört insbesondere die
+            verschlüsselte Übertragung von Daten zwischen Browser des Nutzers und unserem Server
+            (SSL-Verschlüsselung).
           </p>
         </Section>
 
-        <Section title="9. Rechte der betroffenen Person">
+        <Section title="3. Weitergabe von Daten an Dritte und Drittanbieter">
           <p>
-            Als betroffene Person haben Sie nach DSGVO unter anderem folgende Rechte:
+            <strong>3.1</strong> Eine Weitergabe von Daten an Dritte erfolgt nur im Rahmen der
+            gesetzlichen Vorgaben. Wir geben die Daten der Nutzer an Dritte nur dann weiter, wenn
+            dies z.B. auf Grundlage des Art. 6 Abs. 1 lit. b) DSGVO für Vertragszwecke
+            erforderlich ist oder auf Grundlage berechtigter Interessen gem. Art. 6 Abs. 1 lit. f.
+            DSGVO an wirtschaftlichem und effektivem Betrieb unseres Geschäftsbetriebes.
           </p>
-          <ul className="mt-4 ml-6 space-y-2 list-disc">
+          <p className="mt-4">
+            <strong>3.2</strong> Sofern wir Subunternehmer einsetzen, um unsere Leistungen
+            bereitzustellen, ergreifen wir geeignete rechtliche Vorkehrungen sowie entsprechende
+            technische und organisatorische Maßnahmen, um für den Schutz der personenbezogenen
+            Daten gemäß den einschlägigen gesetzlichen Vorschriften zu sorgen.
+          </p>
+          <p className="mt-4">
+            <strong>3.3</strong> Sofern im Rahmen dieser Datenschutzerklärung Inhalte, Werkzeuge
+            oder sonstige Mittel von anderen Anbietern (nachfolgend gemeinsam bezeichnet als
+            „Drittanbieter") eingesetzt werden und deren genannter Sitz sich in einem Drittland
+            befindet, ist davon auszugehen, dass ein Datentransfer in die Sitzstaaten der
+            Drittanbieter stattfindet. Als Drittstaaten sind Länder zu verstehen, in denen die
+            DSGVO kein unmittelbar geltendes Recht ist, d.h. grundsätzlich Länder außerhalb der
+            EU, bzw. des Europäischen Wirtschaftsraums. Die Übermittlung von Daten in Drittstaaten
+            erfolgt entweder, wenn ein angemessenes Datenschutzniveau, eine Einwilligung der
+            Nutzer oder sonst eine gesetzliche Erlaubnis vorliegt.
+          </p>
+        </Section>
+
+        <Section title="4. Kontaktaufnahme">
+          <p>
+            <strong>4.1</strong> Bei der Kontaktaufnahme mit uns (per Kontaktformular oder
+            E-Mail) werden die Angaben des Nutzers zur Bearbeitung der Kontaktanfrage und deren
+            Abwicklung gem. Art. 6 Abs. 1 lit. b) DSGVO verarbeitet.
+          </p>
+          <p className="mt-4">
+            <strong>4.2</strong> Die Angaben der Nutzer können in unserem
+            Customer-Relationship-Management System („CRM System") oder vergleichbarer
+            Anfragenorganisation gespeichert werden.
+          </p>
+        </Section>
+
+        <Section title="5. Erhebung von Zugriffsdaten und Logfiles">
+          <p>
+            <strong>5.1</strong> Wir erheben auf Grundlage unserer berechtigten Interessen im
+            Sinne des Art. 6 Abs. 1 lit. f. DSGVO Daten über jeden Zugriff auf den Server, auf dem
+            sich dieser Dienst befindet (sogenannte Serverlogfiles). Zu den Zugriffsdaten gehören
+            Name der abgerufenen Webseite, Datei, Datum und Uhrzeit des Abrufs, übertragene
+            Datenmenge, Meldung über erfolgreichen Abruf, Browsertyp nebst Version, das
+            Betriebssystem des Nutzers, Referrer URL (die zuvor besuchte Seite), IP-Adresse und
+            der anfragende Provider.
+          </p>
+          <p className="mt-4">
+            <strong>5.2</strong> Logfile-Informationen werden aus Sicherheitsgründen (z.B. zur
+            Aufklärung von Missbrauchs- oder Betrugshandlungen) für die Dauer von maximal sieben
+            Tagen gespeichert und danach gelöscht. Daten, deren weitere Aufbewahrung zu
+            Beweiszwecken erforderlich ist, sind bis zur endgültigen Klärung des jeweiligen
+            Vorfalls von der Löschung ausgenommen.
+          </p>
+        </Section>
+
+        <Section title="6. Cookies & Reichweitenmessung">
+          <p>
+            <strong>6.1</strong> Cookies sind Informationen, die von unserem Webserver oder
+            Webservern Dritter an die Web-Browser der Nutzer übertragen und dort für einen
+            späteren Abruf gespeichert werden. Bei Cookies kann es sich um kleine Dateien oder
+            sonstige Arten der Informationsspeicherung handeln.
+          </p>
+          <p className="mt-4">
+            <strong>6.2</strong> Über den Einsatz von Cookies im Rahmen pseudonymer
+            Reichweitenmessung werden die Nutzer im Rahmen dieser Datenschutzerklärung informiert.
+          </p>
+          <p className="mt-4">
+            <strong>6.3</strong> Falls die Nutzer nicht möchten, dass Cookies auf ihrem Rechner
+            gespeichert werden, werden sie gebeten die entsprechende Option in den
+            Systemeinstellungen ihres Browsers zu deaktivieren. Gespeicherte Cookies können in den
+            Systemeinstellungen des Browsers gelöscht werden. Der Ausschluss von Cookies kann zu
+            Funktionseinschränkungen dieses Onlineangebotes führen.
+          </p>
+          <p className="mt-4">
+            <strong>6.4</strong> Sie können dem Einsatz von Cookies, die der Reichweitenmessung
+            und Werbezwecken dienen, über die Deaktivierungsseite der Netzwerkwerbeinitiative
+            (
+            <a
+              href="http://optout.networkadvertising.org/"
+              className="underline underline-offset-2 hover:text-ink"
+            >
+              optout.networkadvertising.org
+            </a>
+            ) und zusätzlich die US-amerikanische Webseite (
+            <a
+              href="http://www.aboutads.info/choices"
+              className="underline underline-offset-2 hover:text-ink"
+            >
+              aboutads.info/choices
+            </a>
+            ) oder die europäische Webseite (
+            <a
+              href="http://www.youronlinechoices.com/uk/your-ad-choices/"
+              className="underline underline-offset-2 hover:text-ink"
+            >
+              youronlinechoices.com
+            </a>
+            ) widersprechen.
+          </p>
+        </Section>
+
+        <Section title="7. Meta-, Custom Audiences und Meta-Marketing-Dienste">
+          <p>
+            <strong>7.1</strong> Innerhalb unseres Onlineangebotes wird aufgrund unserer
+            berechtigten Interessen an Analyse, Optimierung und wirtschaftlichem Betrieb unseres
+            Onlineangebotes und zu diesen Zwecken das sog. „Meta-Pixel" des sozialen Netzwerkes
+            Meta, welches von der Meta Inc., 1 Hacker Way, Menlo Park, CA 94025, USA, bzw. falls
+            Sie in der EU ansässig sind, Meta Ireland Ltd., 4 Grand Canal Square, Grand Canal
+            Harbour, Dublin 2, Irland betrieben wird („Meta"), eingesetzt.
+          </p>
+          <p className="mt-4">
+            <strong>7.2</strong> Meta ist unter dem Privacy-Shield-Abkommen zertifiziert und
+            bietet hierdurch eine Garantie, das europäische Datenschutzrecht einzuhalten.
+          </p>
+          <p className="mt-4">
+            <strong>7.3</strong> Mit Hilfe des Meta-Pixels ist es Meta zum einen möglich, die
+            Besucher unseres Onlineangebotes als Zielgruppe für die Darstellung von Anzeigen (sog.
+            „Meta-Ads") zu bestimmen. Dementsprechend setzen wir das Meta-Pixel ein, um die durch
+            uns geschalteten Meta-Ads nur solchen Meta-Nutzern anzuzeigen, die auch ein Interesse
+            an unserem Onlineangebot gezeigt haben oder die bestimmte Merkmale (z.B. Interessen
+            an bestimmten Themen oder Produkten, die anhand der besuchten Webseiten bestimmt
+            werden) aufweisen, die wir an Meta übermitteln (sog. „Custom Audiences"). Mit Hilfe
+            des Meta-Pixels möchten wir auch sicherstellen, dass unsere Meta-Ads dem potentiellen
+            Interesse der Nutzer entsprechen und nicht belästigend wirken. Mit Hilfe des
+            Meta-Pixels können wir ferner die Wirksamkeit der Meta-Werbeanzeigen für statistische
+            und Marktforschungszwecke nachvollziehen, in dem wir sehen ob Nutzer nachdem Klick auf
+            eine Meta-Werbeanzeige auf unsere Website weitergeleitet wurden (sog. „Conversion").
+          </p>
+          <p className="mt-4">
+            <strong>7.4</strong> Das Meta-Pixel wird beim Aufruf unserer Webseiten unmittelbar
+            durch Meta eingebunden und kann auf dem Gerät des Nutzers ein sog. Cookie, d.h. eine
+            kleine Datei abspeichern. Wenn der Nutzer sich anschließend bei Facebook einloggt oder
+            im eingeloggten Zustand Facebook besucht, wird der Besuch unseres Onlineangebotes im
+            Profil des Nutzers vermerkt. Die über den Nutzer erhobenen Daten sind für uns anonym,
+            bieten uns also keine Rückschlüsse auf die Identität der Nutzer. Allerdings werden die
+            Daten von Meta gespeichert und verarbeitet, sodass eine Verbindung zum jeweiligen
+            Nutzerprofil möglich ist und von Meta sowie zu eigenen Marktforschungs- und
+            Werbezwecken verwendet werden kann.
+          </p>
+          <p className="mt-4">
+            <strong>7.5</strong> Die Verarbeitung der Daten durch Meta erfolgt im Rahmen von Metas
+            Datenverwendungsrichtlinie. Generelle Hinweise zur Darstellung von Meta-Ads finden Sie
+            in der Datenverwendungsrichtlinie von Facebook:{" "}
+            <a
+              href="https://www.facebook.com/policy.php"
+              className="underline underline-offset-2 hover:text-ink"
+            >
+              facebook.com/policy.php
+            </a>
+            .
+          </p>
+          <p className="mt-4">
+            <strong>7.6</strong> Nutzer können der Erfassung durch den Meta-Pixel und Verwendung
+            der Nutzerdaten zur Darstellung von Meta-Ads widersprechen. Um einzustellen, welche
+            Arten von Werbeanzeigen Ihnen innerhalb von Meta angezeigt werden, können Sie die von
+            Meta eingerichtete Seite aufrufen:{" "}
+            <a
+              href="https://www.facebook.com/settings?tab=ads"
+              className="underline underline-offset-2 hover:text-ink"
+            >
+              facebook.com/settings?tab=ads
+            </a>
+            . Die Einstellungen erfolgen plattformunabhängig, d.h. sie werden für alle Geräte, wie
+            Desktopcomputer oder mobile Geräte übernommen.
+          </p>
+          <p className="mt-4">
+            <strong>7.7</strong> Um die Erfassung personenbezogener Daten mittels des Meta-Pixels
+            auf unserer Webseite zu verhindern, können Sie ein „Opt-Out"-Cookie auf Ihrem Gerät
+            speichern. Wenn Sie die Cookies in diesem Browser löschen, müssen Sie das Opt-Out
+            erneut setzen.
+          </p>
+          <p className="mt-4">
+            <strong>7.8</strong> Man kann dem Einsatz von Cookies, die der Reichweitenmessung und
+            Werbezwecken dienen, ferner über die Deaktivierungsseite der Netzwerkwerbeinitiative
+            (
+            <a
+              href="https://optout.networkadvertising.org/?c=1"
+              className="underline underline-offset-2 hover:text-ink"
+            >
+              optout.networkadvertising.org
+            </a>
+            ), die US-amerikanische Webseite (
+            <a
+              href="https://optout.aboutads.info/?c=2&lang=EN"
+              className="underline underline-offset-2 hover:text-ink"
+            >
+              optout.aboutads.info
+            </a>
+            ) oder die europäische Webseite (
+            <a
+              href="http://www.youronlinechoices.com/uk/your-ad-choices/"
+              className="underline underline-offset-2 hover:text-ink"
+            >
+              youronlinechoices.com
+            </a>
+            ) widersprechen.
+          </p>
+        </Section>
+
+        <Section title="8. Einbindung von Diensten und Inhalten Dritter">
+          <p>
+            <strong>8.1</strong> Wir setzen innerhalb unseres Onlineangebotes auf Grundlage
+            unserer berechtigten Interessen (d.h. Interesse an der Analyse, Optimierung und
+            wirtschaftlichem Betrieb unseres Onlineangebotes im Sinne des Art. 6 Abs. 1 lit. f.
+            DSGVO) Inhalts- oder Serviceangebote von Drittanbietern ein, um deren Inhalte und
+            Services, wie z.B. Videos oder Schriftarten einzubinden (nachfolgend einheitlich
+            bezeichnet als „Inhalte"). Dies setzt immer voraus, dass die Drittanbieter dieser
+            Inhalte, die IP-Adresse der Nutzer wahrnehmen, da sie ohne die IP-Adresse die Inhalte
+            nicht an deren Browser senden könnten. Die IP-Adresse ist damit für die Darstellung
+            dieser Inhalte erforderlich. Wir bemühen uns nur solche Inhalte zu verwenden, deren
+            jeweilige Anbieter die IP-Adresse lediglich zur Auslieferung der Inhalte verwenden.
+          </p>
+          <p className="mt-4">
+            <strong>8.2</strong> Übersicht eingesetzter Drittanbieter:
+          </p>
+          <ul className="mt-4 ml-6 space-y-3 list-disc">
             <li>
-              <span className="font-medium text-ink">Recht auf Bestätigung</span> darüber, ob Sie
-              betreffende personenbezogene Daten verarbeitet werden.
+              <span className="font-medium text-ink">Google Fonts</span> (Google Inc.) — externe
+              Schriftarten. Die Einbindung erfolgt durch einen Serveraufruf bei Google (in der
+              Regel in den USA).{" "}
+              <a
+                href="https://www.google.com/policies/privacy/"
+                className="underline underline-offset-2 hover:text-ink"
+              >
+                Datenschutzerklärung
+              </a>
+              .
             </li>
             <li>
-              <span className="font-medium text-ink">Recht auf Auskunft</span> über die
-              gespeicherten personenbezogenen Daten und eine Kopie dieser Auskunft.
+              <span className="font-medium text-ink">YouTube</span> (Google Inc.) — Videos.{" "}
+              <a
+                href="https://www.google.com/policies/privacy/"
+                className="underline underline-offset-2 hover:text-ink"
+              >
+                Datenschutzerklärung
+              </a>
+              .
             </li>
             <li>
-              <span className="font-medium text-ink">Recht auf Berichtigung</span> unrichtiger
-              personenbezogener Daten.
-            </li>
-            <li>
-              <span className="font-medium text-ink">Recht auf Löschung</span> („Recht auf
-              Vergessen werden"), sofern keine gesetzlichen Aufbewahrungspflichten entgegenstehen.
-            </li>
-            <li>
-              <span className="font-medium text-ink">Recht auf Einschränkung der Verarbeitung</span>{" "}
-              unter bestimmten Voraussetzungen.
-            </li>
-            <li>
-              <span className="font-medium text-ink">Recht auf Datenübertragbarkeit</span> in einem
-              strukturierten, gängigen und maschinenlesbaren Format.
-            </li>
-            <li>
-              <span className="font-medium text-ink">Recht auf Widerspruch</span> gegen die
-              Verarbeitung Ihrer personenbezogenen Daten.
-            </li>
-            <li>
-              <span className="font-medium text-ink">
-                Recht auf Widerruf einer datenschutzrechtlichen Einwilligung
-              </span>{" "}
-              jederzeit mit Wirkung für die Zukunft.
-            </li>
-            <li>
-              <span className="font-medium text-ink">Beschwerderecht</span> bei einer
-              Aufsichtsbehörde.
+              <span className="font-medium text-ink">jQuery</span> (jQuery Foundation) — externer
+              Code des JavaScript-Frameworks.
             </li>
           </ul>
-          <p className="mt-6">
-            Möchten Sie eines dieser Rechte in Anspruch nehmen, wenden Sie sich jederzeit an einen
-            Mitarbeiter der Villa-Fit GmbH oder Vital-Fit GmbH.
-          </p>
         </Section>
 
-        <Section title="10. Rechtsgrundlage der Verarbeitung">
+        <Section title="9. Rechte der Nutzer">
           <p>
-            Art. 6 I lit. a DS-GVO dient unserem Unternehmen als Rechtsgrundlage für
-            Verarbeitungsvorgänge, bei denen wir eine Einwilligung für einen bestimmten
-            Verarbeitungszweck einholen. Ist die Verarbeitung personenbezogener Daten zur
-            Erfüllung eines Vertrags, dessen Vertragspartei die betroffene Person ist,
-            erforderlich, so beruht die Verarbeitung auf Art. 6 I lit. b DS-GVO. Gleiches gilt für
-            Verarbeitungsvorgänge, die zur Durchführung vorvertraglicher Maßnahmen erforderlich
-            sind, etwa in Fällen von Anfragen zu unseren Produkten oder Leistungen.
+            <strong>9.1</strong> Nutzer haben das Recht, auf Antrag unentgeltlich Auskunft zu
+            erhalten über die personenbezogenen Daten, die von uns über sie gespeichert wurden.
           </p>
           <p className="mt-4">
-            Unterliegt unser Unternehmen einer rechtlichen Verpflichtung durch welche eine
-            Verarbeitung von personenbezogenen Daten erforderlich wird, so basiert die
-            Verarbeitung auf Art. 6 I lit. c DS-GVO. Letztlich könnten Verarbeitungsvorgänge auf
-            Art. 6 I lit. f DS-GVO beruhen, wenn die Verarbeitung zur Wahrung eines berechtigten
-            Interesses unseres Unternehmens oder eines Dritten erforderlich ist, sofern die
-            Interessen, Grundrechte und Grundfreiheiten des Betroffenen nicht überwiegen.
+            <strong>9.2</strong> Zusätzlich haben die Nutzer das Recht auf Berichtigung
+            unrichtiger Daten, Einschränkung der Verarbeitung und Löschung ihrer
+            personenbezogenen Daten, sofern zutreffend, ihre Rechte auf Datenportabilität geltend
+            zu machen und im Fall der Annahme einer unrechtmäßigen Datenverarbeitung, eine
+            Beschwerde bei der zuständigen Aufsichtsbehörde einzureichen.
+          </p>
+          <p className="mt-4">
+            <strong>9.3</strong> Ebenso können Nutzer Einwilligungen, grundsätzlich mit Auswirkung
+            für die Zukunft, widerrufen.
           </p>
         </Section>
 
-        <Section title="11. Dauer, für die die personenbezogenen Daten gespeichert werden">
+        <Section title="10. Löschung von Daten">
           <p>
-            Das Kriterium für die Dauer der Speicherung von personenbezogenen Daten ist die
-            jeweilige gesetzliche Aufbewahrungsfrist. Nach Ablauf der Frist werden die
-            entsprechenden Daten routinemäßig gelöscht, sofern sie nicht mehr zur Vertragserfüllung
-            oder Vertragsanbahnung erforderlich sind.
+            <strong>10.1</strong> Die bei uns gespeicherten Daten werden gelöscht, sobald sie für
+            ihre Zweckbestimmung nicht mehr erforderlich sind und der Löschung keine gesetzlichen
+            Aufbewahrungspflichten entgegenstehen. Sofern die Daten der Nutzer nicht gelöscht
+            werden, weil sie für andere und gesetzlich zulässige Zwecke erforderlich sind, wird
+            deren Verarbeitung eingeschränkt. D.h. die Daten werden gesperrt und nicht für andere
+            Zwecke verarbeitet. Das gilt z.B. für Daten der Nutzer, die aus handels- oder
+            steuerrechtlichen Gründen aufbewahrt werden müssen.
+          </p>
+          <p className="mt-4">
+            <strong>10.2</strong> Nach gesetzlichen Vorgaben erfolgt die Aufbewahrung für 6 Jahre
+            gemäß § 257 Abs. 1 HGB (Handelsbücher, Inventare, Eröffnungsbilanzen, Jahresabschlüsse,
+            Handelsbriefe, Buchungsbelege, etc.) sowie für 10 Jahre gemäß § 147 Abs. 1 AO (Bücher,
+            Aufzeichnungen, Lageberichte, Buchungsbelege, Handels- und Geschäftsbriefe, für
+            Besteuerung relevante Unterlagen, etc.).
           </p>
         </Section>
 
-        <Section title="12. Bestehen einer automatisierten Entscheidungsfindung">
+        <Section title="11. Widerspruchsrecht">
           <p>
-            Als verantwortungsbewusstes Unternehmen verzichten wir auf eine automatische
-            Entscheidungsfindung oder ein Profiling.
+            Nutzer können der künftigen Verarbeitung ihrer personenbezogenen Daten entsprechend
+            den gesetzlichen Vorgaben jederzeit widersprechen. Der Widerspruch kann insbesondere
+            gegen die Verarbeitung für Zwecke der Direktwerbung erfolgen.
           </p>
         </Section>
 
-        <div className="mt-16 border-t border-ink/15 pt-10 text-sm text-muted">
+        <Section title="12. Änderungen der Datenschutzerklärung">
           <p>
-            Diese Datenschutzerklärung wurde ursprünglich durch den Datenschutzerklärungs-Generator
-            der DGD Deutsche Gesellschaft für Datenschutz GmbH in Kooperation mit dem Datenschutz
-            Anwalt Christian Solmecke erstellt und für diese Seite angepasst.
+            <strong>12.1</strong> Wir behalten uns vor, die Datenschutzerklärung zu ändern, um sie
+            an geänderte Rechtslagen, oder bei Änderungen des Dienstes sowie der Datenverarbeitung
+            anzupassen. Dies gilt jedoch nur im Hinblick auf Erklärungen zur Datenverarbeitung.
+            Sofern Einwilligungen der Nutzer erforderlich sind oder Bestandteile der
+            Datenschutzerklärung Regelungen des Vertragsverhältnisses mit den Nutzern enthalten,
+            erfolgen die Änderungen nur mit Zustimmung der Nutzer.
           </p>
-        </div>
+          <p className="mt-4">
+            <strong>12.2</strong> Die Nutzer werden gebeten sich regelmäßig über den Inhalt der
+            Datenschutzerklärung zu informieren.
+          </p>
+        </Section>
+
+        <p className="mt-12 text-sm text-muted">Stand: 01.05.2018</p>
       </article>
 
-      {/* Footer */}
-      <footer className="border-t border-ink/15">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-6 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
-          <span>
-            © {new Date().getFullYear()} {STUDIO}
-          </span>
-          <nav className="flex gap-6">
-            <Link href="/impressum" className="hover:text-ink">
-              Impressum
-            </Link>
-            <Link href="/datenschutz" className="hover:text-ink">
-              Datenschutz
-            </Link>
-          </nav>
-        </div>
-      </footer>
+      <LegalFooter />
     </main>
   );
 }
@@ -426,5 +469,21 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h2 className="text-display text-xl md:text-2xl mb-4 text-ink">{title}</h2>
       <div className="text-display text-base leading-relaxed text-ink-soft">{children}</div>
     </section>
+  );
+}
+
+function LegalFooter() {
+  return (
+    <footer className="border-t border-ink/15">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-6 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+        <span>© {new Date().getFullYear()} {STUDIO}</span>
+        <nav className="flex flex-wrap gap-x-6 gap-y-2">
+          <Link href="/impressum" className="hover:text-ink">Impressum</Link>
+          <Link href="/datenschutz" className="hover:text-ink">Datenschutz</Link>
+          <Link href="/agb" className="hover:text-ink">AGB</Link>
+          <Link href="/teilnahmebedingungen" className="hover:text-ink">Teilnahmebedingungen</Link>
+        </nav>
+      </div>
+    </footer>
   );
 }

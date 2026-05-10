@@ -333,12 +333,18 @@ export default async function LandingPage() {
           <span>
             © {new Date().getFullYear()} {STUDIO}
           </span>
-          <nav className="flex gap-6">
+          <nav className="flex flex-wrap gap-x-6 gap-y-2">
             <a href="/impressum" className="hover:text-ink">
               Impressum
             </a>
             <a href="/datenschutz" className="hover:text-ink">
               Datenschutz
+            </a>
+            <a href="/agb" className="hover:text-ink">
+              AGB
+            </a>
+            <a href="/teilnahmebedingungen" className="hover:text-ink">
+              Teilnahmebedingungen
             </a>
           </nav>
         </div>
