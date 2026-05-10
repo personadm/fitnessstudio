@@ -1,6 +1,6 @@
 import { LeadForm } from "@/components/LeadForm";
 import { db } from "@/lib/db";
-import { TESTIMONIALS } from "@/lib/testimonials";
+import { getTestimonials } from "@/lib/testimonials";
 
 const STUDIO = process.env.STUDIO_NAME ?? "Studio Iron";
 
@@ -36,18 +36,21 @@ const LOGO_URL =
   "https://static.wixstatic.com/media/fe97c9_89b309723d40451699a7888dfac8593a~mv2.png/v1/fill/w_180,h_180,al_c,q_85,enc_avif,quality_auto/Logo-FB-NEU.png";
 
 export default async function LandingPage() {
-  const locations = await db.location.findMany({
-    where: { active: true },
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    select: {
-      id: true,
-      name: true,
-      city: true,
-      street: true,
-      postalCode: true,
-      phone: true,
-    },
-  });
+  const [locations, testimonials] = await Promise.all([
+    db.location.findMany({
+      where: { active: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        city: true,
+        street: true,
+        postalCode: true,
+        phone: true,
+      },
+    }),
+    getTestimonials(),
+  ]);
 
   return (
     <main className="min-h-screen bg-cream">
@@ -135,6 +138,37 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* ─── Testimonials (schwarz) ─── */}
+      <section className="bg-ink text-cream">
+        <div className="mx-auto max-w-7xl px-6 py-20 md:py-24">
+          <div className="mb-12 max-w-2xl">
+            <p className="label !text-acid mb-4">Das sagen unsere Kunden</p>
+            <h2 className="text-display-italic text-cream text-5xl leading-[0.95] md:text-7xl">
+              Echte
+              <br />
+              Erfolge.
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
+            {testimonials.map((t) => (
+              <article key={t.name} className="bg-cream text-ink p-4 flex flex-col">
+                <img
+                  src={t.imageUrl}
+                  alt={t.name}
+                  className="aspect-square w-full object-cover mb-4"
+                  loading="lazy"
+                />
+                <h3 className="text-display text-base font-medium leading-tight">{t.name}</h3>
+                <p className="mt-1 text-xs text-muted">
+                  Alter: {t.age} - {t.city}
+                </p>
+                <p className="mt-4 text-sm leading-relaxed text-display italic">„{t.quote}"</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ─── Cinematic Image Band ─── */}
       <section className="relative w-full overflow-hidden bg-ink">
         <div className="relative aspect-[16/9] md:aspect-[2/1]">
@@ -208,37 +242,6 @@ export default async function LandingPage() {
                 <h3 className="text-display text-cream text-3xl md:text-4xl mb-4">{p.title}</h3>
                 <p className="text-cream/90 leading-relaxed">{p.body}</p>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Testimonials (schwarz) ─── */}
-      <section className="bg-ink text-cream">
-        <div className="mx-auto max-w-7xl px-6 py-20 md:py-24">
-          <div className="mb-12 max-w-2xl">
-            <p className="label !text-acid mb-4">Das sagen unsere Kunden</p>
-            <h2 className="text-display-italic text-cream text-5xl leading-[0.95] md:text-7xl">
-              Echte
-              <br />
-              Erfolge.
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
-            {TESTIMONIALS.map((t) => (
-              <article key={t.name} className="bg-cream text-ink p-4 flex flex-col">
-                <img
-                  src={t.imageUrl}
-                  alt={t.name}
-                  className="aspect-square w-full object-cover mb-4"
-                  loading="lazy"
-                />
-                <h3 className="text-display text-base font-medium leading-tight">{t.name}</h3>
-                <p className="mt-1 text-xs text-muted">
-                  Alter: {t.age} - {t.city}
-                </p>
-                <p className="mt-4 text-sm leading-relaxed text-display italic">„{t.quote}"</p>
-              </article>
             ))}
           </div>
         </div>
