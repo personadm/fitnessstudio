@@ -86,9 +86,7 @@ export default async function FunnelDetailPage({ params }: PageProps) {
                       <div>
                         <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
                           Schritt {step.orderNum} · Wartezeit:{" "}
-                          {step.delayDays === 0
-                            ? "sofort"
-                            : `${step.delayDays} ${step.delayDays === 1 ? "Tag" : "Tage"}`}
+                          {formatWaitTime(step.delayDays, step.delayHours ?? 0)}
                         </p>
                         <p className="mt-1 text-base font-medium">{step.subject}</p>
                       </div>
@@ -265,4 +263,12 @@ export default async function FunnelDetailPage({ params }: PageProps) {
       </div>
     </div>
   );
+}
+
+function formatWaitTime(days: number, hours: number): string {
+  if (days === 0 && hours === 0) return "sofort";
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days} ${days === 1 ? "Tag" : "Tage"}`);
+  if (hours > 0) parts.push(`${hours} ${hours === 1 ? "Stunde" : "Stunden"}`);
+  return parts.join(" + ");
 }

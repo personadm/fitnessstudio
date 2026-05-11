@@ -357,7 +357,8 @@ export async function addFunnelStep(funnelId: string, formData: FormData) {
   await requireAdmin();
   const parsed = funnelStepSchema.parse({
     funnelId,
-    delayDays: formData.get("delayDays"),
+    delayDays: formData.get("delayDays") || 0,
+    delayHours: formData.get("delayHours") || 0,
     subject: formData.get("subject"),
     bodyHtml: formData.get("bodyHtml"),
   });
@@ -374,6 +375,7 @@ export async function addFunnelStep(funnelId: string, formData: FormData) {
       funnelId,
       orderNum,
       delayDays: parsed.delayDays,
+      delayHours: parsed.delayHours,
       subject: parsed.subject,
       bodyHtml: parsed.bodyHtml,
     },

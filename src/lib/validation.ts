@@ -120,6 +120,7 @@ export type FunnelInput = z.infer<typeof funnelSchema>;
 export const funnelStepSchema = z.object({
   funnelId: z.string().min(1),
   delayDays: z.coerce.number().int().min(0).max(3650),
+  delayHours: z.coerce.number().int().min(0).max(23),
   subject: z.string().trim().min(1, "Betreff fehlt.").max(200),
   bodyHtml: z.string().min(1, "Inhalt fehlt."),
 });

@@ -134,11 +134,12 @@ export async function processFunnels(
 
       const sentStepIds = new Set(enrollment.events.map((e) => e.stepId));
       const elapsedMs = Date.now() - enrollment.startedAt.getTime();
-      const elapsedDays = elapsedMs / (1000 * 60 * 60 * 24);
+      const elapsedHours = elapsedMs / (1000 * 60 * 60);
 
       for (const step of funnel.steps) {
         if (sentStepIds.has(step.id)) continue;
-        if (elapsedDays < step.delayDays) break;
+        const requiredHours = step.delayDays * 24 + (step.delayHours ?? 0);
+        if (elapsedHours < requiredHours) break;
 
         try {
           const subject = renderTemplate(step.subject, enrollment.contact);
