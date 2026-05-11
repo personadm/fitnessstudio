@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { LiveActivity } from "@/components/admin/LiveActivity";
+import { PushSubscribe } from "@/components/admin/PushSubscribe";
 
 export default async function AdminDashboard() {
   // Status-Statistiken
@@ -51,11 +53,22 @@ export default async function AdminDashboard() {
 
   const monthLabel = new Date().toLocaleDateString("de-DE", { month: "long", year: "numeric" });
 
+  // VAPID-Key fürs Frontend (nur Public, sicher)
+  const vapidPublicKey = process.env.VAPID_PUBLIC_KEY ?? null;
+
   return (
     <div className="p-8 md:p-12">
-      <div className="mb-12">
-        <p className="label">Übersicht</p>
-        <h1 className="mt-2 text-display text-5xl">Studio Dashboard</h1>
+      <div className="mb-12 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="label">Übersicht</p>
+          <h1 className="mt-2 text-display text-5xl">Studio Dashboard</h1>
+        </div>
+        <Link
+          href="/admin/club-anmeldung"
+          className="bg-ink text-cream px-5 py-3 font-mono text-xs uppercase tracking-[0.14em] hover:bg-ink/90"
+        >
+          + Club-Anmeldung
+        </Link>
       </div>
 
       {/* Status-Tiles */}
@@ -65,6 +78,16 @@ export default async function AdminDashboard() {
         <Stat label="Mitglieder" value={kunde} />
         <Stat label="Ehemalige" value={ehemaliger} />
       </div>
+
+      {/* Live-Activity + Push */}
+      <section className="mb-12 grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <LiveActivity />
+        </div>
+        <div>
+          <PushSubscribe vapidPublicKey={vapidPublicKey} />
+        </div>
+      </section>
 
       {/* Phase 6: Neuanmeldungen diesen Monat */}
       <section className="mb-12">

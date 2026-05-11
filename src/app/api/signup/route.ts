@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { signupSchema } from "@/lib/validation";
 import { sendSignupConfirmation } from "@/lib/mail";
 import { enrollIntoMatchingFunnels } from "@/lib/funnels";
+import { notifyOnlineSignup } from "@/lib/push";
 
 export const runtime = "nodejs";
 
@@ -115,6 +116,19 @@ export async function POST(req: NextRequest) {
     }
 
     await enrollIntoMatchingFunnels(contact.id, contact.status);
+
+    // 🎉 Push-Notification aufs Handy (silent skip wenn VAPID nicht konfiguriert)
+    try {
+      await notifyOnlineSignup({
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+        email: contact.email,
+        planName: plan.name,
+        contactId: contact.id,
+      });
+    } catch (err) {
+      console.error("[/api/signup] push notification failed", err);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {

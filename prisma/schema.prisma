@@ -268,7 +268,6 @@ model FunnelStep {
   funnel    Funnel   @relation(fields: [funnelId], references: [id], onDelete: Cascade)
   orderNum  Int
   delayDays Int
-  delayHours Int     @default(0)
   subject   String
   bodyHtml  String
   createdAt DateTime @default(now())
@@ -317,4 +316,15 @@ model AdminUser {
   passwordHash String
   name         String?
   createdAt    DateTime @default(now())
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }
