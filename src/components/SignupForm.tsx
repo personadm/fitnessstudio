@@ -68,17 +68,11 @@ export function SignupForm({
 
   const [pricingPlanId, setPricingPlanId] = useState(filteredPlans[0]?.id ?? "");
   const [gender, setGender] = useState<Gender | "">(prefilledGender ?? "");
-  const [planAgbAccepted, setPlanAgbAccepted] = useState(false);
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
   const selectedPlan = filteredPlans.find((p) => p.id === pricingPlanId) ?? null;
   const requiresPlanAgb = !!selectedPlan?.agb?.trim();
-
-  // Wenn der Tarif wechselt, Tarif-AGB-Zustimmung zurücksetzen
-  useEffect(() => {
-    setPlanAgbAccepted(false);
-  }, [pricingPlanId]);
 
   // Wenn Standort wechselt: aktuellen Plan ggf. zurücksetzen, falls nicht mehr verfügbar
   useEffect(() => {
@@ -90,11 +84,7 @@ export function SignupForm({
   }, [locationId]);
 
   const locationRequired = hasMultipleLocations;
-  const canSubmit =
-    !!gender &&
-    (!locationRequired || !!locationId) &&
-    !!pricingPlanId &&
-    (!requiresPlanAgb || planAgbAccepted);
+  const canSubmit = !!gender && (!locationRequired || !!locationId) && !!pricingPlanId;
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -251,24 +241,13 @@ export function SignupForm({
 
         {/* Tarif-spezifische AGB */}
         {requiresPlanAgb && selectedPlan && (
-          <div className="mt-6 border border-ink/20 bg-ink/5 p-5">
-            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted mb-2">
+          <div className="mt-4 border border-ink/15 bg-ink/5 p-3">
+            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted mb-1.5">
               AGB · {selectedPlan.name}
             </p>
-            <div className="max-h-64 overflow-y-auto pr-2 text-sm leading-relaxed text-ink-soft whitespace-pre-wrap">
+            <div className="max-h-32 overflow-y-auto pr-2 text-[11px] leading-snug text-ink-soft whitespace-pre-wrap">
               {selectedPlan.agb}
             </div>
-            <label className="mt-4 flex items-start gap-3 text-xs leading-relaxed text-ink cursor-pointer">
-              <input
-                type="checkbox"
-                checked={planAgbAccepted}
-                onChange={(e) => setPlanAgbAccepted(e.target.checked)}
-                className="mt-0.5 h-4 w-4 accent-ink"
-              />
-              <span>
-                Ich habe die <strong>AGB für den Tarif „{selectedPlan.name}"</strong> gelesen und akzeptiere sie.
-              </span>
-            </label>
           </div>
         )}
       </div>
