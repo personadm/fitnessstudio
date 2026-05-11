@@ -57,22 +57,22 @@ export default async function AdminDashboard() {
   const vapidPublicKey = process.env.VAPID_PUBLIC_KEY ?? null;
 
   return (
-    <div className="p-8 md:p-12">
-      <div className="mb-12 flex flex-wrap items-end justify-between gap-4">
+    <div className="p-4 md:p-12">
+      <div className="mb-8 flex flex-col items-start gap-4 md:mb-12 md:flex-row md:flex-wrap md:items-end md:justify-between">
         <div>
           <p className="label">Übersicht</p>
-          <h1 className="mt-2 text-display text-5xl">Studio Dashboard</h1>
+          <h1 className="mt-2 text-display text-3xl md:text-5xl">Studio Dashboard</h1>
         </div>
         <Link
           href="/admin/club-anmeldung"
-          className="bg-ink text-cream px-5 py-3 font-mono text-xs uppercase tracking-[0.14em] hover:bg-ink/90"
+          className="w-full bg-ink text-cream px-5 py-3 text-center font-mono text-xs uppercase tracking-[0.14em] hover:bg-ink/90 md:w-auto"
         >
           + Club-Anmeldung
         </Link>
       </div>
 
       {/* Status-Tiles */}
-      <div className="mb-12 grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="mb-8 grid grid-cols-2 gap-3 md:mb-12 md:gap-4 md:grid-cols-4">
         <Stat label="Interessenten" value={interessent} />
         <Stat label="Neukunden" value={neukunde} />
         <Stat label="Mitglieder" value={kunde} />
@@ -80,7 +80,7 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Live-Activity + Push */}
-      <section className="mb-12 grid grid-cols-1 gap-8 lg:grid-cols-3">
+      <section className="mb-8 grid grid-cols-1 gap-6 md:mb-12 md:gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <LiveActivity />
         </div>
@@ -90,7 +90,7 @@ export default async function AdminDashboard() {
       </section>
 
       {/* Phase 6: Neuanmeldungen diesen Monat */}
-      <section className="mb-12">
+      <section className="mb-8 md:mb-12">
         <div className="mb-4 flex items-end justify-between">
           <div>
             <p className="label">Neuanmeldungen — {monthLabel}</p>
@@ -114,13 +114,13 @@ export default async function AdminDashboard() {
                   <li key={c.id}>
                     <Link
                       href={`/admin/contacts/${c.id}`}
-                      className="flex flex-wrap items-center justify-between gap-3 p-4 hover:bg-ink/5"
+                      className="flex flex-col gap-2 p-4 hover:bg-ink/5 md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-3"
                     >
                       <div className="min-w-0">
                         <p className="text-base">{fullName}</p>
                         <p className="font-mono text-xs text-muted truncate">{c.email}</p>
                       </div>
-                      <div className="flex items-center gap-6">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 md:gap-6">
                         <p className="font-mono text-xs uppercase tracking-[0.1em] text-muted">
                           {c.pricingPlan?.name ?? "—"}
                         </p>
@@ -141,7 +141,7 @@ export default async function AdminDashboard() {
       </section>
 
       {/* Letzte Kontakte */}
-      <section className="mb-12">
+      <section className="mb-8 md:mb-12">
         <div className="mb-4 flex items-end justify-between">
           <p className="label">Letzte Kontakte</p>
           <Link
@@ -165,13 +165,13 @@ export default async function AdminDashboard() {
                 <li key={c.id}>
                   <Link
                     href={`/admin/contacts/${c.id}`}
-                    className="flex items-center justify-between gap-4 p-4 hover:bg-ink/5"
+                    className="flex flex-col gap-1 p-4 hover:bg-ink/5 md:flex-row md:items-center md:justify-between md:gap-4"
                   >
                     <div className="min-w-0">
                       <p className="text-sm">{fullName}</p>
                       <p className="font-mono text-xs text-muted truncate">{c.email}</p>
                     </div>
-                    <div className="flex items-center gap-6">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 md:gap-6">
                       <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
                         {c.status}
                       </p>
@@ -190,7 +190,7 @@ export default async function AdminDashboard() {
       {/* Schnellzugriff */}
       <section>
         <p className="label mb-4">Verwaltung</p>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-4">
           <QuickLink href="/admin/plans" label="Tarife" count={planCount} />
           <QuickLink href="/admin/lists" label="Listen" count={listCount} />
           <QuickLink href="/admin/campaigns" label="Kampagnen" count={campaignCount} />
@@ -203,9 +203,9 @@ export default async function AdminDashboard() {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="border border-ink/15 p-6">
-      <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted">{label}</p>
-      <p className="mt-3 text-display text-4xl">{value}</p>
+    <div className="border border-ink/15 p-4 md:p-6">
+      <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted md:text-[11px]">{label}</p>
+      <p className="mt-2 text-display text-3xl md:mt-3 md:text-4xl">{value}</p>
     </div>
   );
 }
@@ -214,10 +214,10 @@ function QuickLink({ href, label, count }: { href: string; label: string; count:
   return (
     <Link
       href={href}
-      className="border border-ink/15 p-6 hover:border-ink/40 hover:bg-ink/5 transition-colors"
+      className="border border-ink/15 p-4 hover:border-ink/40 hover:bg-ink/5 transition-colors md:p-6"
     >
-      <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted">{label}</p>
-      <p className="mt-3 text-display text-3xl">{count}</p>
+      <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted md:text-[11px]">{label}</p>
+      <p className="mt-2 text-display text-2xl md:mt-3 md:text-3xl">{count}</p>
       <p className="mt-3 font-mono text-xs uppercase tracking-[0.12em] text-acid_dark">öffnen →</p>
     </Link>
   );
