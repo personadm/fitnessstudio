@@ -32,6 +32,7 @@ enum BillingInterval {
   QUARTALSWEISE
   HALBJAEHRLICH
   JAEHRLICH
+  EINMALIG
 }
 
 enum Gender {

@@ -10,6 +10,18 @@ function formatPrice(cents: number) {
   return (cents / 100).toLocaleString("de-DE", { style: "currency", currency: "EUR" });
 }
 
+const BILLING_LABELS: Record<string, string> = {
+  MONATLICH: "Monatlich",
+  QUARTALSWEISE: "Quartalsweise",
+  HALBJAEHRLICH: "Halbjährlich",
+  JAEHRLICH: "Jährlich",
+  EINMALIG: "Einmalig",
+};
+
+function billingLabel(interval: string) {
+  return BILLING_LABELS[interval] ?? interval;
+}
+
 export default async function PlansPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const editingId = sp.edit;
@@ -129,7 +141,7 @@ export default async function PlansPage({ searchParams }: PageProps) {
                         )}
                       </td>
                       <td className="px-4 py-3 font-mono">{formatPrice(p.priceCents)}</td>
-                      <td className="px-4 py-3 text-xs">{p.billingInterval}</td>
+                      <td className="px-4 py-3 text-xs">{billingLabel(p.billingInterval)}</td>
                       <td className="px-4 py-3">
                         <form action={togglePlanActive.bind(null, p.id)}>
                           <button className="font-mono text-xs underline underline-offset-2">
@@ -215,7 +227,7 @@ function PlanForm({
 
       <div className="grid grid-cols-2 gap-4">
         <Field
-          label="Preis (€/Monat)"
+          label="Preis (€)"
           name="priceEur"
           type="number"
           step="0.01"
@@ -234,6 +246,7 @@ function PlanForm({
             <option value="QUARTALSWEISE">Quartalsweise</option>
             <option value="HALBJAEHRLICH">Halbjährlich</option>
             <option value="JAEHRLICH">Jährlich</option>
+            <option value="EINMALIG">Einmalig</option>
           </select>
         </label>
       </div>
