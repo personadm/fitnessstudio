@@ -182,12 +182,12 @@ export default async function LandingPage() {
           <div className="relative z-10 flex h-full items-end">
             <div className="mx-auto w-full max-w-7xl px-6 pb-8 md:pb-16">
               <p className="font-mono text-xs uppercase tracking-[0.14em] text-cream/80 mb-4">
-                Seit 2008 · Persönlich vor Ort
+                Seit 2008 · Persönlich, herzlich, kompetent
               </p>
-              <p className="text-display-italic text-cream text-3xl leading-[1] md:text-7xl">
-                Tina &amp; Erik.
+              <p className="text-display-italic text-cream text-4xl leading-[1] md:text-7xl">
+                Tina &amp; Erik Bodon.
                 <br />
-                Eure Gesundheitscoaches.
+                Deine Gesundheitscoaches.
               </p>
             </div>
           </div>
@@ -210,9 +210,9 @@ export default async function LandingPage() {
             </div>
             <div className="col-span-12 md:col-span-6 md:col-start-7 flex items-end">
               <p className="text-cream/95 text-lg md:text-xl leading-relaxed text-display">
-                Unsere Methode verbindet Ernährung, Bewegung, Entgiftung und Regeneration. Damit
-                du leichter abnimmst, schmerzfrei durch den Alltag kommst und wieder Energie für
-                Beruf, Familie und Freizeit hast.
+                Unsere Methode verbindet Ernährung, Bewegung, Stressregulation und Regeneration.
+                Damit du leichter abnimmst, schmerzfrei durch den Alltag kommst und wieder
+                Energie für Beruf, Familie und Freizeit hast.
               </p>
             </div>
           </div>
@@ -222,17 +222,17 @@ export default async function LandingPage() {
               {
                 num: "№ 01",
                 title: "Ganzheitlich",
-                body: "Vier Säulen, die zusammen wirken: Ernährung, Bewegung, Entgiftung, Regeneration. Wir ziehen alle gleichzeitig durch — nicht nur eine.",
+                body: "Vier Säulen, die zusammen wirken: Ernährung, Bewegung, Stressregulation, Regeneration. Angepasst auf deine Bedürfnisse.",
               },
               {
                 num: "№ 02",
                 title: "Persönlich",
-                body: "Echte Coaches, die mit dir trainieren, beraten und an deiner Seite bleiben. Statt App im Vakuum bekommst du einen Plan, der zu dir passt.",
+                body: "Echte Gesundheitscoaches unterstützen dich dort wo du Hilfe benötigst – alltagstauglich, einfach und sinnvoll. Menschen helfen Menschen.",
               },
               {
                 num: "№ 03",
-                title: "Lokal",
-                body: "Zwei Studios im Westmünsterland: Villa-Fit Ahaus und Vital-Fit Ochtrup. Komm vorbei, statt nur online zu klicken.",
+                title: "Kompetent",
+                body: "Von der Analyse bis zur kompletten Umsetzung. Immer gut betreut, immer ansprechbar — wir sind für dich da.",
               },
             ].map((p) => (
               <div key={p.title}>
@@ -281,49 +281,21 @@ export default async function LandingPage() {
 
       {/* ─── Standorte + CTA ─── */}
       <section className="bg-cream">
-        <div className="mx-auto max-w-7xl px-6 py-16 md:py-20">
-          <div className="grid grid-cols-1 gap-12 md:grid-cols-3 md:items-center">
-            <div className="md:text-left">
-              {locations[0] ? (
-                <LocationBlock loc={locations[0]} />
-              ) : (
-                <div className="text-sm text-muted">— kein Standort angelegt —</div>
-              )}
-            </div>
-
-            <div className="text-center">
-              <p className="label mb-6">Letzter Schritt</p>
-              <p className="text-display text-3xl leading-[1.1] md:text-4xl">
-                Mail rein.
-                <br />
-                Tarife raus.
-                <br />
-                <span className="text-display-italic">Jetzt starten.</span>
-              </p>
-              <a
-                href="#email"
-                className="mt-8 inline-block border-b-2 border-ink pb-1 font-mono text-xs uppercase tracking-[0.14em] hover:text-ink-soft"
-              >
-                Zum Formular ↑
-              </a>
-            </div>
-
-            <div className="md:text-right">
-              {locations[1] ? (
-                <LocationBlock loc={locations[1]} alignRight />
-              ) : (
-                <div className="text-sm text-muted">— zweiten Standort im Admin anlegen —</div>
-              )}
-            </div>
-          </div>
-
-          {locations.length > 2 && (
-            <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-3 border-t border-ink/15 pt-12">
-              {locations.slice(2).map((loc) => (
-                <LocationBlock key={loc.id} loc={loc} />
-              ))}
-            </div>
-          )}
+        <div className="mx-auto max-w-2xl px-6 py-20 md:py-28 text-center">
+          <p className="label mb-6">Letzter Schritt</p>
+          <p className="text-display text-4xl leading-[1.1] md:text-5xl">
+            Mail rein,
+            <br />
+            Angebot raus,
+            <br />
+            <span className="text-display-italic">los geht's.</span>
+          </p>
+          <a
+            href="#email"
+            className="mt-10 inline-block border-b-2 border-ink pb-1 font-mono text-xs uppercase tracking-[0.14em] hover:text-ink-soft"
+          >
+            Zum Formular ↑
+          </a>
         </div>
       </section>
 
@@ -331,7 +303,7 @@ export default async function LandingPage() {
       <footer className="border-t border-ink/15 bg-cream">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-6 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
           <span>
-            © {new Date().getFullYear()} {STUDIO}
+            © {new Date().getFullYear()} DEINE GESUNDHEITSCOACHES
           </span>
           <nav className="flex flex-wrap gap-x-6 gap-y-2">
             <a href="/impressum" className="hover:text-ink">
