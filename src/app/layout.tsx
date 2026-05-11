@@ -4,6 +4,13 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Fitnessstudio – Stronger every day.",
   description: "Trag dich ein und erhalte unsere aktuellen Tarife per Mail.",
+  manifest: "/manifest.webmanifest",
+  themeColor: "#1A1A1A",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Coaches",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
