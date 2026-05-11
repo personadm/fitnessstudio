@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 
 export type ActivityKind =
   | "LEAD"
@@ -21,9 +21,8 @@ export type ActivityItem = {
 };
 
 export async function GET() {
-  try {
-    await requireAdmin();
-  } catch {
+  const session = await getSession();
+  if (!session) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 

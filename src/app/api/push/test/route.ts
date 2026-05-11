@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { sendPushToAll } from "@/lib/push";
 
 export async function POST() {
-  try {
-    await requireAdmin();
-  } catch {
+  const session = await getSession();
+  if (!session) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 

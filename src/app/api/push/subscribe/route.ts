@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 
 // POST: subscribe (oder existing upserten)
 export async function POST(req: NextRequest) {
-  try {
-    await requireAdmin();
-  } catch {
+  const session = await getSession();
+  if (!session) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 
@@ -36,9 +35,8 @@ export async function POST(req: NextRequest) {
 
 // DELETE: unsubscribe
 export async function DELETE(req: NextRequest) {
-  try {
-    await requireAdmin();
-  } catch {
+  const session = await getSession();
+  if (!session) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 

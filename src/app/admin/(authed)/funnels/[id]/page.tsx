@@ -86,7 +86,10 @@ export default async function FunnelDetailPage({ params }: PageProps) {
                       <div>
                         <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
                           Schritt {step.orderNum} · Wartezeit:{" "}
-                          {formatWaitTime(step.delayDays, step.delayHours ?? 0)}
+                          {formatWaitTime(
+                            step.delayDays,
+                            (step as { delayHours?: number }).delayHours ?? 0,
+                          )}
                         </p>
                         <p className="mt-1 text-base font-medium">{step.subject}</p>
                       </div>
