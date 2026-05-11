@@ -140,6 +140,7 @@ model PricingPlan {
   priceCents      Int
   billingInterval BillingInterval @default(MONATLICH)
   highlights      String[]
+  agb             String? // Tarif-spezifischer AGB-Text, wird auf Anmeldeseite gezeigt
   active          Boolean         @default(true)
   sortOrder       Int             @default(0)
 

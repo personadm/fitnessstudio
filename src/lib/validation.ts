@@ -49,6 +49,7 @@ export const planSchema = z.object({
   priceCents: z.coerce.number().int().min(0),
   billingInterval: z.enum(["MONATLICH", "QUARTALSWEISE", "HALBJAEHRLICH", "JAEHRLICH"]),
   highlights: z.array(z.string()).default([]),
+  agb: z.string().optional().or(z.literal("")),
   active: z.boolean().default(true),
   sortOrder: z.coerce.number().int().default(0),
   locationId: z.string().optional().nullable(),

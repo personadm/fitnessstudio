@@ -73,6 +73,7 @@ export default async function AnmeldenPage({ searchParams }: PageProps) {
               description: p.description,
               priceCents: p.priceCents,
               highlights: p.highlights,
+              agb: p.agb,
               locationId: p.locationId,
             }))}
             locations={locations}

@@ -249,6 +249,22 @@ function PlanForm({
         />
       </label>
 
+      <label className="block">
+        <span className="label mb-2 block">
+          AGB für diesen Tarif (optional)
+        </span>
+        <textarea
+          name="agb"
+          rows={8}
+          defaultValue={plan?.agb ?? ""}
+          placeholder="Spezielle Vertragsbedingungen, Mindestlaufzeit, Kündigungsfristen etc. Wird auf der Anmeldeseite unter dem gewählten Tarif angezeigt."
+          className="w-full border border-ink/20 bg-transparent p-3 text-sm outline-none focus:border-ink"
+        />
+        <span className="mt-1 block text-xs text-muted">
+          Wird auf /anmelden zusammen mit einer separaten Zustimmungs-Checkbox angezeigt, sobald der Kunde diesen Tarif wählt.
+        </span>
+      </label>
+
       <div className="grid grid-cols-2 gap-4">
         <Field
           label="Sortierung"
