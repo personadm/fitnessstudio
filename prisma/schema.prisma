@@ -145,6 +145,8 @@ model PricingPlan {
   billingInterval BillingInterval @default(MONATLICH)
   highlights      String[]
   agb             String? // Tarif-spezifischer AGB-Text, wird auf Anmeldeseite gezeigt
+  availableOnline  Boolean @default(true)  // Sichtbar im Online-Formular /anmelden
+  availableOffline Boolean @default(true)  // Sichtbar im Club-Formular /admin/club-anmeldung
   active          Boolean         @default(true)
   sortOrder       Int             @default(0)
 

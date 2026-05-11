@@ -12,6 +12,8 @@ type Plan = {
   description: string | null;
   priceCents: number;
   billingInterval: string;
+  highlights: string[];
+  agb: string | null;
   locationId: string | null;
 };
 
@@ -44,6 +46,16 @@ export function ClubSignupForm({ plans, locations }: { plans: Plan[]; locations:
     (p) => !p.locationId || p.locationId === locationId || !locationId,
   );
   const [pricingPlanId, setPricingPlanId] = useState<string>(filteredPlans[0]?.id ?? "");
+  const [expandedPlans, setExpandedPlans] = useState<Set<string>>(new Set());
+
+  const toggleExpanded = (id: string) => {
+    setExpandedPlans((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const [result, setResult] = useState<ClubSignupResult | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -280,30 +292,71 @@ export function ClubSignupForm({ plans, locations }: { plans: Plan[]; locations:
             ) : (
               filteredPlans.map((p) => {
                 const selected = pricingPlanId === p.id;
+                const expanded = expandedPlans.has(p.id);
+                const hasDetails = !!p.description || p.highlights.length > 0;
                 return (
                   <label
                     key={p.id}
                     className={
-                      "cursor-pointer border-2 p-4 flex items-start gap-3 " +
+                      "cursor-pointer border-2 p-4 " +
                       (selected
                         ? "bg-ink text-cream border-ink"
                         : "border-ink/30 hover:border-ink")
                     }
                   >
-                    <input
-                      type="radio"
-                      name="pricingPlanId"
-                      value={p.id}
-                      checked={selected}
-                      onChange={() => setPricingPlanId(p.id)}
-                      className="mt-1 accent-current"
-                    />
-                    <span className="flex-1">
-                      <span className="block text-display text-lg leading-tight">{p.name}</span>
-                      <span className="block font-mono text-xs mt-1 opacity-80">
-                        {formatPrice(p.priceCents)} {BILLING_LABEL[p.billingInterval] ?? ""}
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="radio"
+                        name="pricingPlanId"
+                        value={p.id}
+                        checked={selected}
+                        onChange={() => setPricingPlanId(p.id)}
+                        className="mt-1 accent-current"
+                      />
+                      <span className="flex-1">
+                        <span className="block text-display text-lg leading-tight">{p.name}</span>
+                        <span className="block font-mono text-xs mt-1 opacity-80">
+                          {formatPrice(p.priceCents)} {BILLING_LABEL[p.billingInterval] ?? ""}
+                        </span>
                       </span>
-                    </span>
+                    </div>
+
+                    {hasDetails && expanded && (
+                      <div className={"mt-3 border-t pt-3 " + (selected ? "border-cream/20" : "border-ink/15")}>
+                        {p.description && (
+                          <p className={"text-sm leading-relaxed " + (selected ? "text-cream/80" : "text-ink-soft")}>
+                            {p.description}
+                          </p>
+                        )}
+                        {p.highlights.length > 0 && (
+                          <ul className={"mt-2 space-y-1 text-sm " + (selected ? "text-cream/85" : "text-ink-soft")}>
+                            {p.highlights.map((h, i) => (
+                              <li key={i} className="flex gap-2">
+                                <span className={selected ? "text-acid" : "text-ink/40"}>✓</span>
+                                <span>{h}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+
+                    {hasDetails && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleExpanded(p.id);
+                        }}
+                        className={
+                          "mt-2 font-mono text-[10px] uppercase tracking-[0.14em] underline underline-offset-4 " +
+                          (selected ? "text-cream/80 hover:text-cream" : "text-ink-soft hover:text-ink")
+                        }
+                      >
+                        {expanded ? "Weniger ▲" : "Details ▼"}
+                      </button>
+                    )}
                   </label>
                 );
               })
@@ -328,8 +381,24 @@ export function ClubSignupForm({ plans, locations }: { plans: Plan[]; locations:
         />
       </section>
 
-      {/* ─── Submit ─── */}
+      {/* ─── Rechtsgültigkeit & Submit ─── */}
       <div className="border-t border-ink/15 pt-8">
+        <div className="mb-6 border border-ink/15 bg-ink/5 p-5">
+          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted mb-3">
+            Rechtsgültigkeit
+          </p>
+          <p className="text-[13px] leading-relaxed text-ink-soft">
+            Mit dem Anlegen der Anmeldung bestätigt die anmeldende Person als Bevollmächtigte:r,
+            dass alle Angaben des Kunden korrekt erfasst wurden und der Kunde der Mitgliedschaft
+            sowie den geltenden AGB und Datenschutzbestimmungen ausdrücklich zugestimmt hat. Die
+            digitale Erfassung am Laptop oder Tablet erfüllt die Textform nach{" "}
+            <strong className="text-ink">§ 126b BGB</strong> und ist als Vertragsschluss nach{" "}
+            <strong className="text-ink">§ 311 BGB</strong> rechtswirksam. Der Kunde erhält die
+            Vertragsunterlagen sowie AGB und Datenschutzerklärung im Anschluss in Textform per
+            E-Mail oder als Ausdruck.
+          </p>
+        </div>
+
         {errorMsg && (
           <p className="mb-4 border-2 border-red-700 bg-red-50 p-4 text-sm text-red-900">
             {errorMsg}

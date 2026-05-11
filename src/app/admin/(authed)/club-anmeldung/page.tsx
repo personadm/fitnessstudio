@@ -8,7 +8,7 @@ export const metadata = {
 export default async function ClubAnmeldungPage() {
   const [plans, locations] = await Promise.all([
     db.pricingPlan.findMany({
-      where: { active: true },
+      where: { active: true, availableOffline: true },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     }),
     db.location.findMany({
@@ -47,6 +47,8 @@ export default async function ClubAnmeldungPage() {
             description: p.description,
             priceCents: p.priceCents,
             billingInterval: p.billingInterval,
+            highlights: p.highlights,
+            agb: p.agb,
             locationId: p.locationId,
           }))}
           locations={locations}

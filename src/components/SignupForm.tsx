@@ -8,9 +8,18 @@ type Plan = {
   name: string;
   description: string | null;
   priceCents: number;
+  billingInterval: string;
   highlights: string[];
   agb: string | null;
   locationId: string | null; // null = Allgemein
+};
+
+const BILLING_SUFFIX: Record<string, string> = {
+  MONATLICH: "/ Monat",
+  QUARTALSWEISE: "/ Quartal",
+  HALBJAEHRLICH: "/ Halbjahr",
+  JAEHRLICH: "/ Jahr",
+  EINMALIG: "einmalig",
 };
 
 type Location = {
@@ -68,8 +77,18 @@ export function SignupForm({
 
   const [pricingPlanId, setPricingPlanId] = useState(filteredPlans[0]?.id ?? "");
   const [gender, setGender] = useState<Gender | "">(prefilledGender ?? "");
+  const [expandedPlans, setExpandedPlans] = useState<Set<string>>(new Set());
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+
+  const toggleExpanded = (id: string) => {
+    setExpandedPlans((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const selectedPlan = filteredPlans.find((p) => p.id === pricingPlanId) ?? null;
   const requiresPlanAgb = !!selectedPlan?.agb?.trim();
@@ -183,6 +202,9 @@ export function SignupForm({
           ) : (
             filteredPlans.map((p) => {
               const selected = p.id === pricingPlanId;
+              const expanded = expandedPlans.has(p.id);
+              const hasDetails = !!p.description || p.highlights.length > 0;
+              const suffix = BILLING_SUFFIX[p.billingInterval] ?? "";
               return (
                 <label
                   key={p.id}
@@ -208,30 +230,65 @@ export function SignupForm({
                         {selected ? "✓ gewählt" : "Tarif"}
                       </p>
                       <p className="mt-2 text-display text-2xl leading-tight">{p.name}</p>
+                    </div>
+                    <div className="text-right whitespace-nowrap">
+                      <p className="text-display text-3xl leading-none">
+                        {formatPrice(p.priceCents)}
+                      </p>
+                      {suffix && (
+                        <p
+                          className={`mt-1 font-mono text-[11px] ${
+                            selected ? "text-cream/70" : "text-muted"
+                          }`}
+                        >
+                          {suffix}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {hasDetails && expanded && (
+                    <div className={`mt-4 border-t pt-4 ${selected ? "border-cream/20" : "border-ink/15"}`}>
                       {p.description && (
                         <p
-                          className={`mt-2 text-sm leading-relaxed ${
+                          className={`text-sm leading-relaxed ${
                             selected ? "text-cream/80" : "text-ink-soft"
                           }`}
                         >
                           {p.description}
                         </p>
                       )}
+                      {p.highlights.length > 0 && (
+                        <ul
+                          className={`mt-3 space-y-1.5 text-sm ${
+                            selected ? "text-cream/85" : "text-ink-soft"
+                          }`}
+                        >
+                          {p.highlights.map((h, i) => (
+                            <li key={i} className="flex gap-2">
+                              <span className={selected ? "text-acid" : "text-ink/40"}>✓</span>
+                              <span>{h}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
-                    <p className="text-display text-3xl whitespace-nowrap">
-                      {formatPrice(p.priceCents)}
-                    </p>
-                  </div>
-                  {p.highlights.length > 0 && (
-                    <ul
-                      className={`mt-4 space-y-1 text-sm ${
-                        selected ? "text-cream/80" : "text-ink-soft"
+                  )}
+
+                  {hasDetails && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleExpanded(p.id);
+                      }}
+                      className={`mt-3 font-mono text-[11px] uppercase tracking-[0.14em] underline underline-offset-4 ${
+                        selected ? "text-cream/80 hover:text-cream" : "text-ink-soft hover:text-ink"
                       }`}
                     >
-                      {p.highlights.map((h, i) => (
-                        <li key={i}>· {h}</li>
-                      ))}
-                    </ul>
+                      {expanded ? "Weniger anzeigen ▲" : "Details & Vorteile ▼"}
+                    </button>
                   )}
                 </label>
               );

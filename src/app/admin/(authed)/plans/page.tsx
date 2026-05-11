@@ -118,6 +118,9 @@ export default async function PlansPage({ searchParams }: PageProps) {
                       Intervall
                     </th>
                     <th className="px-4 py-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
+                      Sichtbar
+                    </th>
+                    <th className="px-4 py-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
                       Aktiv
                     </th>
                     <th className="px-4 py-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
@@ -142,6 +145,17 @@ export default async function PlansPage({ searchParams }: PageProps) {
                       </td>
                       <td className="px-4 py-3 font-mono">{formatPrice(p.priceCents)}</td>
                       <td className="px-4 py-3 text-xs">{billingLabel(p.billingInterval)}</td>
+                      <td className="px-4 py-3 text-xs">
+                        <span className="font-mono">
+                          {p.availableOnline && p.availableOffline
+                            ? "Online + Club"
+                            : p.availableOnline
+                              ? "Nur Online"
+                              : p.availableOffline
+                                ? "Nur Club"
+                                : <span className="text-muted">—</span>}
+                        </span>
+                      </td>
                       <td className="px-4 py-3">
                         <form action={togglePlanActive.bind(null, p.id)}>
                           <button className="font-mono text-xs underline underline-offset-2">
@@ -294,6 +308,38 @@ function PlanForm({
           />
           <span className="text-sm">Aktiv (in Mails sichtbar)</span>
         </label>
+      </div>
+
+      <div className="border border-ink/15 bg-ink/5 p-4">
+        <p className="label mb-3">Wo soll dieser Tarif erscheinen?</p>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              name="availableOnline"
+              defaultChecked={plan?.availableOnline ?? true}
+              className="mt-1 h-4 w-4 accent-ink"
+            />
+            <span className="text-sm leading-snug">
+              <strong>Online-Anmeldung</strong>
+              <br />
+              <span className="text-muted">Tarif erscheint auf der öffentlichen Anmeldeseite</span>
+            </span>
+          </label>
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              name="availableOffline"
+              defaultChecked={plan?.availableOffline ?? true}
+              className="mt-1 h-4 w-4 accent-ink"
+            />
+            <span className="text-sm leading-snug">
+              <strong>Club-Anmeldung</strong>
+              <br />
+              <span className="text-muted">Tarif erscheint im internen Formular für Mitarbeiter</span>
+            </span>
+          </label>
+        </div>
       </div>
 
       <div className="flex gap-3 pt-4">

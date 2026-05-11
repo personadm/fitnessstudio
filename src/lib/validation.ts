@@ -76,6 +76,8 @@ export const planSchema = z.object({
   billingInterval: z.enum(["MONATLICH", "QUARTALSWEISE", "HALBJAEHRLICH", "JAEHRLICH", "EINMALIG"]),
   highlights: z.array(z.string()).default([]),
   agb: z.string().optional().or(z.literal("")),
+  availableOnline: z.boolean().default(true),
+  availableOffline: z.boolean().default(true),
   active: z.boolean().default(true),
   sortOrder: z.coerce.number().int().default(0),
   locationId: z.string().optional().nullable(),

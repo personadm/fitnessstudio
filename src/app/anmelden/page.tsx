@@ -16,7 +16,7 @@ export default async function AnmeldenPage({ searchParams }: PageProps) {
 
   const [allPlans, locations] = await Promise.all([
     db.pricingPlan.findMany({
-      where: { active: true },
+      where: { active: true, availableOnline: true },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     }),
     db.location.findMany({
@@ -72,6 +72,7 @@ export default async function AnmeldenPage({ searchParams }: PageProps) {
               name: p.name,
               description: p.description,
               priceCents: p.priceCents,
+              billingInterval: p.billingInterval,
               highlights: p.highlights,
               agb: p.agb,
               locationId: p.locationId,
