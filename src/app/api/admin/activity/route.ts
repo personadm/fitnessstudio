@@ -76,19 +76,29 @@ export async function GET() {
       take: 50,
     }),
     db.campaignEvent.findMany({
-      where: { sentAt: { gte: since } },
+      where: { createdAt: { gte: since }, event: "SENT" },
       select: {
         id: true,
-        sentAt: true,
+        contactId: true,
+        createdAt: true,
         campaign: { select: { subject: true } },
-        contact: {
-          select: { id: true, firstName: true, lastName: true, email: true },
-        },
       },
-      orderBy: { sentAt: "desc" },
+      orderBy: { createdAt: "desc" },
       take: 50,
     }),
   ]);
+
+  // Contacts für CampaignEvents separat (keine direkte Relation im Schema)
+  const campaignContactIds = Array.from(
+    new Set(campaignEvents.map((ce) => ce.contactId)),
+  );
+  const campaignContacts = campaignContactIds.length
+    ? await db.contact.findMany({
+        where: { id: { in: campaignContactIds } },
+        select: { id: true, firstName: true, lastName: true, email: true },
+      })
+    : [];
+  const campaignContactMap = new Map(campaignContacts.map((c) => [c.id, c]));
 
   const items: ActivityItem[] = [];
   const displayName = (c: { firstName: string | null; lastName: string | null; email: string }) =>
@@ -153,15 +163,16 @@ export async function GET() {
   }
 
   for (const ce of campaignEvents) {
-    if (!ce.contact) continue;
+    const c = campaignContactMap.get(ce.contactId);
+    if (!c) continue;
     items.push({
       id: `campaign-${ce.id}`,
       kind: "CAMPAIGN_MAIL",
-      at: ce.sentAt.toISOString(),
-      title: `Newsletter an ${displayName(ce.contact)}`,
+      at: ce.createdAt.toISOString(),
+      title: `Newsletter an ${displayName(c)}`,
       subtitle: ce.campaign.subject,
-      contactId: ce.contact.id,
-      href: `/admin/contacts/${ce.contact.id}`,
+      contactId: c.id,
+      href: `/admin/contacts/${c.id}`,
     });
   }
 
