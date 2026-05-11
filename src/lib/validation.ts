@@ -37,6 +37,32 @@ export const signupSchema = z.object({
 });
 export type SignupInput = z.infer<typeof signupSchema>;
 
+// Club-interne Anmeldung durch Mitarbeiter:in am Laptop.
+// Kein DOI, Status direkt NEUKUNDE.
+export const clubSignupSchema = z.object({
+  staff: z.string().trim().min(1, "Mitarbeitername fehlt.").max(80),
+  signupMode: z.enum(["OFFLINE", "ONLINE"], {
+    errorMap: () => ({ message: "Bitte angeben: im Club oder online." }),
+  }),
+  email: z.string().trim().toLowerCase().email("Bitte gültige E-Mail-Adresse angeben."),
+  firstName: z.string().trim().min(1, "Vorname fehlt."),
+  lastName: z.string().trim().min(1, "Nachname fehlt."),
+  gender: z.enum(["MAENNLICH", "WEIBLICH", "DIVERS"], {
+    errorMap: () => ({ message: "Bitte Geschlecht angeben." }),
+  }),
+  phone: z.string().trim().optional().or(z.literal("")),
+  birthDate: z.string().trim().optional().or(z.literal("")),
+  street: z.string().trim().optional().or(z.literal("")),
+  postalCode: z.string().trim().optional().or(z.literal("")),
+  city: z.string().trim().optional().or(z.literal("")),
+  iban: z.string().trim().optional().or(z.literal("")),
+  contractStartDate: z.string().trim().optional().or(z.literal("")),
+  pricingPlanId: z.string().optional().or(z.literal("")),
+  locationId: z.string().optional().or(z.literal("")),
+  notes: z.string().trim().optional().or(z.literal("")),
+});
+export type ClubSignupInput = z.infer<typeof clubSignupSchema>;
+
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
   password: z.string().min(1, "Passwort fehlt."),

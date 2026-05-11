@@ -10,6 +10,7 @@ import {
   funnelSchema,
   funnelStepSchema,
   locationSchema,
+  clubSignupSchema,
 } from "@/lib/validation";
 import { enrollIntoMatchingFunnels, processFunnels } from "@/lib/funnels";
 import type { ContactStatus, FunnelTrigger } from "@prisma/client";
@@ -387,6 +388,101 @@ export async function runFunnelProcessing() {
   await processFunnels({ force: true });
   revalidatePath("/admin/funnels");
   revalidatePath("/admin");
+}
+
+// ─────────────────────────────────────────────────────────────
+// CLUB-ANMELDUNG (intern, durch Mitarbeiter:in)
+// ─────────────────────────────────────────────────────────────
+
+export type ClubSignupResult =
+  | { ok: true; contactId: string; firstName: string; lastName: string; existing: boolean }
+  | { ok: false; error: string };
+
+export async function createClubContact(formData: FormData): Promise<ClubSignupResult> {
+  await requireAdmin();
+
+  try {
+    const raw = {
+      staff: formData.get("staff"),
+      signupMode: formData.get("signupMode"),
+      email: formData.get("email"),
+      firstName: formData.get("firstName"),
+      lastName: formData.get("lastName"),
+      gender: formData.get("gender"),
+      phone: formData.get("phone") || "",
+      birthDate: formData.get("birthDate") || "",
+      street: formData.get("street") || "",
+      postalCode: formData.get("postalCode") || "",
+      city: formData.get("city") || "",
+      iban: formData.get("iban") || "",
+      contractStartDate: formData.get("contractStartDate") || "",
+      pricingPlanId: formData.get("pricingPlanId") || "",
+      locationId: formData.get("locationId") || "",
+      notes: formData.get("notes") || "",
+    };
+
+    const parsed = clubSignupSchema.parse(raw);
+    const source = parsed.signupMode === "OFFLINE" ? "CLUB_OFFLINE" : "CLUB_ONLINE";
+
+    // Upsert: falls Mail schon existiert → updaten und Status anheben
+    const existing = await db.contact.findUnique({
+      where: { email: parsed.email },
+      select: { id: true, status: true },
+    });
+
+    const data = {
+      email: parsed.email,
+      firstName: parsed.firstName,
+      lastName: parsed.lastName,
+      gender: parsed.gender,
+      phone: parsed.phone || null,
+      birthDate: parsed.birthDate ? new Date(parsed.birthDate) : null,
+      street: parsed.street || null,
+      postalCode: parsed.postalCode || null,
+      city: parsed.city || null,
+      iban: parsed.iban || null,
+      contractStartDate: parsed.contractStartDate ? new Date(parsed.contractStartDate) : null,
+      pricingPlanId: parsed.pricingPlanId || null,
+      locationId: parsed.locationId || null,
+      notes: parsed.notes || null,
+      signupStaff: parsed.staff,
+      status: "NEUKUNDE" as const,
+      source: source as "CLUB_OFFLINE" | "CLUB_ONLINE",
+      signupAt: new Date(),
+      memberSince: new Date(),
+    };
+
+    const contact = existing
+      ? await db.contact.update({ where: { id: existing.id }, data })
+      : await db.contact.create({ data });
+
+    // Funnels für NEUKUNDE direkt einreihen (passt zum normalen Signup-Flow)
+    try {
+      await enrollIntoMatchingFunnels(contact.id, "NEUKUNDE" as FunnelTrigger);
+    } catch (e) {
+      console.error("[club-signup] funnel enroll failed", e);
+    }
+
+    revalidatePath("/admin");
+    revalidatePath("/admin/contacts");
+
+    return {
+      ok: true,
+      contactId: contact.id,
+      firstName: contact.firstName ?? "",
+      lastName: contact.lastName ?? "",
+      existing: !!existing,
+    };
+  } catch (e: unknown) {
+    console.error("[createClubContact]", e);
+    const msg =
+      e instanceof Error
+        ? e.message.includes("Unique constraint")
+          ? "E-Mail-Adresse existiert bereits."
+          : e.message
+        : "Unbekannter Fehler.";
+    return { ok: false, error: msg };
+  }
 }
 
 export type { FunnelTrigger };

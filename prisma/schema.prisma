@@ -25,6 +25,8 @@ enum ContactSource {
   DIRECT
   MANUAL
   IMPORT
+  CLUB_OFFLINE
+  CLUB_ONLINE
 }
 
 enum BillingInterval {
@@ -112,6 +114,7 @@ model Contact {
   iban              String?
   contractStartDate DateTime?    @db.Date
   signupAt          DateTime?
+  signupStaff       String? // Name des Mitarbeiters bei Club-Anmeldung
 
   notes String?
 
