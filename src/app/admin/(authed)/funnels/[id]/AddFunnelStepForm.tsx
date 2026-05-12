@@ -8,9 +8,10 @@ import { EmailPreview } from "@/components/admin/EmailPreview";
 interface Props {
   funnelId: string;
   isFirst: boolean;
+  scheduleEnabled?: boolean;
 }
 
-export function AddFunnelStepForm({ funnelId, isFirst }: Props) {
+export function AddFunnelStepForm({ funnelId, isFirst, scheduleEnabled }: Props) {
   const [subject, setSubject] = useState("");
   const [bodyHtml, setBodyHtml] = useState("");
 
@@ -35,6 +36,13 @@ export function AddFunnelStepForm({ funnelId, isFirst }: Props) {
       >
         <div>
           <span className="label mb-2 block">Wartezeit nach Eintragung</span>
+          {scheduleEnabled && (
+            <p className="mb-3 border border-acid_dark/30 bg-acid/10 p-3 font-mono text-[11px] text-ink">
+              ℹ Dieser Funnel läuft im <strong>Wochenplan-Modus</strong> — die Wartezeit
+              unten wird ignoriert. Schritte werden automatisch zum konfigurierten Wochentag
+              versendet.
+            </p>
+          )}
           <div className="flex flex-wrap items-end gap-4">
             <label className="block">
               <input
@@ -44,7 +52,8 @@ export function AddFunnelStepForm({ funnelId, isFirst }: Props) {
                 max={3650}
                 defaultValue={isFirst ? 0 : 3}
                 required
-                className="w-24 border-b-2 border-ink bg-transparent py-2 text-base outline-none focus:border-acid_dark"
+                disabled={scheduleEnabled}
+                className="w-24 border-b-2 border-ink bg-transparent py-2 text-base outline-none focus:border-acid_dark disabled:opacity-40"
               />
               <span className="ml-2 font-mono text-xs text-muted">Tage</span>
             </label>
@@ -56,15 +65,18 @@ export function AddFunnelStepForm({ funnelId, isFirst }: Props) {
                 max={23}
                 defaultValue={0}
                 required
-                className="w-24 border-b-2 border-ink bg-transparent py-2 text-base outline-none focus:border-acid_dark"
+                disabled={scheduleEnabled}
+                className="w-24 border-b-2 border-ink bg-transparent py-2 text-base outline-none focus:border-acid_dark disabled:opacity-40"
               />
               <span className="ml-2 font-mono text-xs text-muted">Stunden</span>
             </label>
           </div>
-          <span className="mt-2 block font-mono text-[11px] text-muted">
-            0 / 0 = sofort beim nächsten Verarbeitungslauf. Beispiel: 0 Tage + 4 Stunden = nach 4
-            Stunden. Oder 3 Tage + 12 Stunden = 84 Stunden später.
-          </span>
+          {!scheduleEnabled && (
+            <span className="mt-2 block font-mono text-[11px] text-muted">
+              0 / 0 = sofort beim nächsten Verarbeitungslauf. Beispiel: 0 Tage + 4 Stunden = nach 4
+              Stunden. Oder 3 Tage + 12 Stunden = 84 Stunden später.
+            </span>
+          )}
         </div>
 
         <label className="block">

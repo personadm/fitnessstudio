@@ -133,13 +133,37 @@ export async function processFunnels(
       }
 
       const sentStepIds = new Set(enrollment.events.map((e) => e.stepId));
-      const elapsedMs = Date.now() - enrollment.startedAt.getTime();
+      const now = Date.now();
+      const scheduleEnabled =
+        funnel.scheduleWeekday !== null && funnel.scheduleWeekday !== undefined;
+      const firstScheduled = scheduleEnabled
+        ? nextWeekdayOccurrence(
+            enrollment.startedAt,
+            funnel.scheduleWeekday as number,
+            funnel.scheduleHour,
+            funnel.scheduleMinute,
+          )
+        : null;
+      const elapsedMs = now - enrollment.startedAt.getTime();
       const elapsedHours = elapsedMs / (1000 * 60 * 60);
 
       for (const step of funnel.steps) {
         if (sentStepIds.has(step.id)) continue;
-        const requiredHours = step.delayDays * 24 + (step.delayHours ?? 0);
-        if (elapsedHours < requiredHours) break;
+
+        let dueAt: number;
+        if (scheduleEnabled && firstScheduled) {
+          // Wochenplan: Schritt N = firstScheduled + (N-1) * Intervall * 7 Tage
+          const stepIndex = step.orderNum - 1;
+          dueAt =
+            firstScheduled.getTime() +
+            stepIndex * funnel.scheduleWeekInterval * 7 * 24 * 60 * 60 * 1000;
+        } else {
+          // Klassischer Modus: delayDays + delayHours nach Funnel-Start
+          const requiredHours = step.delayDays * 24 + (step.delayHours ?? 0);
+          dueAt = enrollment.startedAt.getTime() + requiredHours * 60 * 60 * 1000;
+        }
+
+        if (now < dueAt) break;
 
         try {
           const subject = renderTemplate(step.subject, enrollment.contact);
@@ -243,4 +267,25 @@ export async function enrollIntoMatchingFunnels(
       console.warn("[funnels] enroll skip", err);
     }
   }
+}
+
+/**
+ * Findet das nächste Vorkommen eines Wochentags ab/nach `after`.
+ * targetWeekday: 0=So, 1=Mo, 2=Di, 3=Mi, 4=Do, 5=Fr, 6=Sa (JS Date.getDay())
+ * Wenn `after` am gewünschten Wochentag UND vor Uhrzeit → heute, sonst nächste Woche.
+ */
+export function nextWeekdayOccurrence(
+  after: Date,
+  targetWeekday: number,
+  hour: number,
+  minute: number,
+): Date {
+  const result = new Date(after);
+  result.setHours(hour, minute, 0, 0);
+  // Iteriere Tag für Tag, bis Wochentag passt UND result > after
+  for (let i = 0; i < 8; i++) {
+    if (result.getDay() === targetWeekday && result > after) return result;
+    result.setDate(result.getDate() + 1);
+  }
+  return result;
 }

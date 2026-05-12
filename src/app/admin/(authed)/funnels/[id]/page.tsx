@@ -85,11 +85,16 @@ export default async function FunnelDetailPage({ params }: PageProps) {
                     <div className="mb-3 flex items-start justify-between gap-3">
                       <div>
                         <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
-                          Schritt {step.orderNum} · Wartezeit:{" "}
-                          {formatWaitTime(
-                            step.delayDays,
-                            (step as { delayHours?: number }).delayHours ?? 0,
-                          )}
+                          Schritt {step.orderNum} ·{" "}
+                          {funnel.scheduleWeekday !== null
+                            ? formatScheduledStep(
+                                step.orderNum,
+                                funnel.scheduleWeekday,
+                                funnel.scheduleWeekInterval,
+                                funnel.scheduleHour,
+                                funnel.scheduleMinute,
+                              )
+                            : `Wartezeit: ${formatWaitTime(step.delayDays, (step as { delayHours?: number }).delayHours ?? 0)}`}
                         </p>
                         <p className="mt-1 text-base font-medium">{step.subject}</p>
                       </div>
@@ -118,7 +123,11 @@ export default async function FunnelDetailPage({ params }: PageProps) {
 
           <section>
             <p className="label mb-4">Schritt hinzufügen</p>
-            <AddFunnelStepForm funnelId={funnel.id} isFirst={funnel.steps.length === 0} />
+            <AddFunnelStepForm
+              funnelId={funnel.id}
+              isFirst={funnel.steps.length === 0}
+              scheduleEnabled={funnel.scheduleWeekday !== null}
+            />
           </section>
 
           {funnel.enrollments.length > 0 && (
@@ -242,6 +251,85 @@ export default async function FunnelDetailPage({ params }: PageProps) {
               <span>Auto-Stop bei Status-/Standort-Wechsel</span>
             </label>
 
+            {/* Wochenplan */}
+            <div className="border-t border-ink/15 pt-5">
+              <label className="flex items-start gap-2 text-sm cursor-pointer mb-4">
+                <input
+                  type="checkbox"
+                  name="scheduleEnabled"
+                  defaultChecked={funnel.scheduleWeekday !== null}
+                  className="mt-0.5 h-4 w-4 accent-ink"
+                />
+                <span>
+                  <strong>Wochenplan-Modus</strong>
+                  <br />
+                  <span className="font-mono text-[11px] text-muted">
+                    Schritte werden an festem Wochentag versendet, nicht nach Tagen/Stunden
+                  </span>
+                </span>
+              </label>
+
+              <div className="space-y-3 ml-6">
+                <label className="block">
+                  <span className="label mb-2 block">Wochentag</span>
+                  <select
+                    name="scheduleWeekday"
+                    defaultValue={funnel.scheduleWeekday ?? 3}
+                    className="w-full border border-ink/20 bg-transparent p-2 text-sm outline-none focus:border-ink"
+                  >
+                    <option value={1}>Montag</option>
+                    <option value={2}>Dienstag</option>
+                    <option value={3}>Mittwoch</option>
+                    <option value={4}>Donnerstag</option>
+                    <option value={5}>Freitag</option>
+                    <option value={6}>Samstag</option>
+                    <option value={0}>Sonntag</option>
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="label mb-2 block">Alle wie viele Wochen?</span>
+                  <input
+                    type="number"
+                    name="scheduleWeekInterval"
+                    min={1}
+                    max={52}
+                    defaultValue={funnel.scheduleWeekInterval}
+                    className="w-24 border-b-2 border-ink bg-transparent py-2 text-sm outline-none focus:border-acid_dark"
+                  />
+                  <span className="ml-2 font-mono text-xs text-muted">
+                    1 = jede Woche · 2 = alle 2 Wochen · …
+                  </span>
+                </label>
+
+                <div className="flex gap-3">
+                  <label className="block">
+                    <span className="label mb-2 block">Stunde</span>
+                    <input
+                      type="number"
+                      name="scheduleHour"
+                      min={0}
+                      max={23}
+                      defaultValue={funnel.scheduleHour}
+                      className="w-20 border-b-2 border-ink bg-transparent py-2 text-sm outline-none focus:border-acid_dark"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="label mb-2 block">Minute</span>
+                    <input
+                      type="number"
+                      name="scheduleMinute"
+                      min={0}
+                      max={59}
+                      step={5}
+                      defaultValue={funnel.scheduleMinute}
+                      className="w-20 border-b-2 border-ink bg-transparent py-2 text-sm outline-none focus:border-acid_dark"
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+
             <button
               type="submit"
               className="w-full bg-ink py-2.5 font-mono text-xs uppercase tracking-[0.12em] text-acid hover:bg-ink-soft"
@@ -274,4 +362,30 @@ function formatWaitTime(days: number, hours: number): string {
   if (days > 0) parts.push(`${days} ${days === 1 ? "Tag" : "Tage"}`);
   if (hours > 0) parts.push(`${hours} ${hours === 1 ? "Stunde" : "Stunden"}`);
   return parts.join(" + ");
+}
+
+const WEEKDAY_LABELS: Record<number, string> = {
+  0: "Sonntag",
+  1: "Montag",
+  2: "Dienstag",
+  3: "Mittwoch",
+  4: "Donnerstag",
+  5: "Freitag",
+  6: "Samstag",
+};
+
+function formatScheduledStep(
+  orderNum: number,
+  weekday: number,
+  weekInterval: number,
+  hour: number,
+  minute: number,
+): string {
+  const day = WEEKDAY_LABELS[weekday] ?? "?";
+  const time = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  if (orderNum === 1) {
+    return `nächster ${day} ab Anmeldung, ${time} Uhr`;
+  }
+  const weeks = (orderNum - 1) * weekInterval;
+  return `${weeks} ${weeks === 1 ? "Woche" : "Wochen"} nach Schritt 1 (${day} ${time} Uhr)`;
 }

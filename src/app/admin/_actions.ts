@@ -293,13 +293,21 @@ export async function deleteCampaign(campaignId: string) {
 export async function createFunnel(formData: FormData) {
   await requireAdmin();
   const locationIdRaw = formData.get("locationId") as string | null;
+  const scheduleEnabled = formData.get("scheduleEnabled") === "on";
+  const weekdayRaw = formData.get("scheduleWeekday");
+
   const parsed = funnelSchema.parse({
     name: formData.get("name"),
     trigger: formData.get("trigger"),
     active: formData.get("active") === "on",
     autoStop: formData.get("autoStop") === "on",
     locationId: locationIdRaw || null,
+    scheduleWeekday: scheduleEnabled && weekdayRaw !== null && weekdayRaw !== "" ? weekdayRaw : null,
+    scheduleWeekInterval: formData.get("scheduleWeekInterval") || 1,
+    scheduleHour: formData.get("scheduleHour") || 9,
+    scheduleMinute: formData.get("scheduleMinute") || 0,
   });
+
   const f = await db.funnel.create({
     data: {
       name: parsed.name,
@@ -307,6 +315,10 @@ export async function createFunnel(formData: FormData) {
       active: parsed.active,
       autoStop: parsed.autoStop,
       locationId: parsed.locationId || null,
+      scheduleWeekday: parsed.scheduleWeekday ?? null,
+      scheduleWeekInterval: parsed.scheduleWeekInterval,
+      scheduleHour: parsed.scheduleHour,
+      scheduleMinute: parsed.scheduleMinute,
     },
   });
   revalidatePath("/admin/funnels");
@@ -316,13 +328,21 @@ export async function createFunnel(formData: FormData) {
 export async function updateFunnel(funnelId: string, formData: FormData) {
   await requireAdmin();
   const locationIdRaw = formData.get("locationId") as string | null;
+  const scheduleEnabled = formData.get("scheduleEnabled") === "on";
+  const weekdayRaw = formData.get("scheduleWeekday");
+
   const parsed = funnelSchema.parse({
     name: formData.get("name"),
     trigger: formData.get("trigger"),
     active: formData.get("active") === "on",
     autoStop: formData.get("autoStop") === "on",
     locationId: locationIdRaw || null,
+    scheduleWeekday: scheduleEnabled && weekdayRaw !== null && weekdayRaw !== "" ? weekdayRaw : null,
+    scheduleWeekInterval: formData.get("scheduleWeekInterval") || 1,
+    scheduleHour: formData.get("scheduleHour") || 9,
+    scheduleMinute: formData.get("scheduleMinute") || 0,
   });
+
   await db.funnel.update({
     where: { id: funnelId },
     data: {
@@ -331,6 +351,10 @@ export async function updateFunnel(funnelId: string, formData: FormData) {
       active: parsed.active,
       autoStop: parsed.autoStop,
       locationId: parsed.locationId || null,
+      scheduleWeekday: parsed.scheduleWeekday ?? null,
+      scheduleWeekInterval: parsed.scheduleWeekInterval,
+      scheduleHour: parsed.scheduleHour,
+      scheduleMinute: parsed.scheduleMinute,
     },
   });
   revalidatePath("/admin/funnels");
@@ -357,7 +381,8 @@ export async function addFunnelStep(funnelId: string, formData: FormData) {
   await requireAdmin();
   const parsed = funnelStepSchema.parse({
     funnelId,
-    delayDays: formData.get("delayDays"),
+    delayDays: formData.get("delayDays") || 0,
+    delayHours: formData.get("delayHours") || 0,
     subject: formData.get("subject"),
     bodyHtml: formData.get("bodyHtml"),
   });
@@ -374,6 +399,7 @@ export async function addFunnelStep(funnelId: string, formData: FormData) {
       funnelId,
       orderNum,
       delayDays: parsed.delayDays,
+      delayHours: parsed.delayHours,
       subject: parsed.subject,
       bodyHtml: parsed.bodyHtml,
     },

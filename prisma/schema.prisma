@@ -252,6 +252,15 @@ model Funnel {
   locationId String?
   location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
 
+  // Wochenplan-Modus: wenn scheduleWeekday gesetzt, werden Schritte
+  // nicht nach delayDays/delayHours berechnet, sondern nach Wochenplan:
+  // jeder Schritt fällig am Wochentag X, alle Y Wochen, um Z Uhr.
+  // 0=So, 1=Mo, 2=Di, 3=Mi, 4=Do, 5=Fr, 6=Sa (entspricht JS Date.getDay())
+  scheduleWeekday      Int?
+  scheduleWeekInterval Int    @default(1)
+  scheduleHour         Int    @default(9)
+  scheduleMinute       Int    @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
