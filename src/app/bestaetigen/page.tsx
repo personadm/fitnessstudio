@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { generateToken } from "@/lib/tokens";
 import { sendPricingMail } from "@/lib/mail";
+import { RedirectingSuccess } from "./RedirectingSuccess";
 
 interface PageProps {
   searchParams: Promise<{ token?: string }>;
@@ -9,19 +10,24 @@ interface PageProps {
 /**
  * /bestaetigen?token=xxx
  *
- * Server-Component: führt die DOI-Bestätigung direkt durch
- * und zeigt dem User das Ergebnis. Kein clientseitiger Round-Trip nötig.
+ * Server-Component: führt die DOI-Bestätigung durch.
+ * Bei Erfolg → Countdown + automatische Weiterleitung zu /anmelden?ref=...
+ * Bei Fehler → Hinweis-Seite
  */
 export default async function BestaetigenPage({ searchParams }: PageProps) {
   const { token } = await searchParams;
 
   if (!token) {
-    return <Result variant="error" title="Kein Token gefunden." body="Der Link ist unvollständig." />;
+    return (
+      <Result variant="error" title="Kein Token gefunden." body="Der Link ist unvollständig." />
+    );
   }
 
   const contact = await db.contact.findUnique({ where: { doiToken: token } });
 
   if (!contact) {
+    // Kein offener DOI-Token mehr — vielleicht schon bestätigt.
+    // Versuch via refToken zu finden (wenn der DOI-Token Reuse ist).
     return (
       <Result
         variant="error"
@@ -31,7 +37,11 @@ export default async function BestaetigenPage({ searchParams }: PageProps) {
     );
   }
 
+  // Bereits bestätigt? → Trotzdem zur Anmelde-Seite weiterleiten
   if (contact.doiConfirmedAt) {
+    if (contact.refToken) {
+      return <RedirectingSuccess redirectUrl={`/anmelden?ref=${contact.refToken}`} seconds={5} />;
+    }
     return (
       <Result
         variant="success"
@@ -41,7 +51,7 @@ export default async function BestaetigenPage({ searchParams }: PageProps) {
     );
   }
 
-  // Bestätigen
+  // Frische Bestätigung
   const refToken = contact.refToken ?? generateToken();
   await db.contact.update({
     where: { id: contact.id },
@@ -52,7 +62,9 @@ export default async function BestaetigenPage({ searchParams }: PageProps) {
     data: { contactId: contact.id, type: "DOI_CONFIRMED" },
   });
 
-  // Preis-Mail im Hintergrund schicken (Fehler nicht an User durchreichen)
+  // Preis-Mail im Hintergrund schicken (Fehler nicht an User durchreichen).
+  // User wird ohnehin sofort zur Anmelde-Seite weitergeleitet, die Mail ist
+  // dann eher als Backup / "nochmal nachlesen"-Option.
   try {
     await sendPricingMail({
       to: contact.email,
@@ -66,13 +78,7 @@ export default async function BestaetigenPage({ searchParams }: PageProps) {
     console.error("[bestaetigen] sendPricingMail failed", err);
   }
 
-  return (
-    <Result
-      variant="success"
-      title="Bestätigt."
-      body="Wir haben dir gerade die Tarife in dein Postfach geschickt. In wenigen Minuten ist sie da."
-    />
-  );
+  return <RedirectingSuccess redirectUrl={`/anmelden?ref=${refToken}`} seconds={5} />;
 }
 
 function Result({

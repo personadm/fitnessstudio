@@ -14,7 +14,7 @@ interface Props {
  * Zeigt dem User die Erfolgsmeldung und leitet nach `seconds` Sekunden
  * automatisch zur Anmelde-Seite weiter. Manueller Klick-Fallback ist auch da.
  */
-export function RedirectingSuccess({ redirectUrl, seconds = 3 }: Props) {
+export function RedirectingSuccess({ redirectUrl, seconds = 5 }: Props) {
   const router = useRouter();
   const [remaining, setRemaining] = useState(seconds);
 

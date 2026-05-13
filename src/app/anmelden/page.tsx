@@ -68,8 +68,7 @@ export default async function AnmeldenPage({ searchParams }: PageProps) {
           <span className="text-display-italic">starten.</span>
         </h1>
         <p className="mt-6 max-w-2xl text-base leading-relaxed text-ink-soft">
-          Trag dich hier ein und wir bereiten alles für dich vor. Vertrag bekommst du in den
-          nächsten Werktagen per Mail – nichts wird automatisch abgebucht.
+          Wir benötigen die notwendigen Daten für die Anmeldung.
         </p>
 
         <div className="mt-12">

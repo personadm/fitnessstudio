@@ -410,7 +410,11 @@ export function SignupForm({
           className="mt-8 w-full bg-ink py-4 text-acid disabled:opacity-50 hover:bg-ink-soft transition-colors"
         >
           <span className="font-mono text-sm uppercase tracking-[0.14em]">
-            {state === "loading" ? "Wird gesendet…" : "Mitgliedsantrag absenden"}
+            {state === "loading"
+              ? "Wird gesendet…"
+              : selectedPlan
+                ? `Jetzt für ${formatPrice(selectedPlan.priceCents)} bestellen`
+                : "Jetzt bestellen"}
           </span>
           <span className="ml-2">→</span>
         </button>
