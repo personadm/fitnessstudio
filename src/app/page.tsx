@@ -2,6 +2,10 @@ import { LeadForm } from "@/components/LeadForm";
 import { db } from "@/lib/db";
 import { getTestimonials } from "@/lib/testimonials";
 
+// Landing-Page nicht statisch beim Build vorrendern — DB-Pool reicht nicht für 33 parallele Pages.
+// Wird stattdessen bei jedem Request frisch gerendert (Supabase eu-west liefert in <100ms).
+export const dynamic = "force-dynamic";
+
 const STUDIO = process.env.STUDIO_NAME ?? "Deine Gesundheitscoaches";
 
 // Etwas tiefer/refiner als das Neon-Grün vorher
