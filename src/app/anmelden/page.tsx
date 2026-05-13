@@ -1,11 +1,12 @@
 import { db } from "@/lib/db";
 import { SignupForm } from "@/components/SignupForm";
+import { computeScarcity } from "@/lib/scarcity";
 
 interface PageProps {
   searchParams: Promise<{ ref?: string }>;
 }
 
-const STUDIO = process.env.STUDIO_NAME ?? "Studio Iron";
+const STUDIO = process.env.STUDIO_NAME ?? "Deine Gesundheitscoaches";
 
 export default async function AnmeldenPage({ searchParams }: PageProps) {
   const { ref } = await searchParams;
@@ -13,6 +14,12 @@ export default async function AnmeldenPage({ searchParams }: PageProps) {
   const existingContact = ref
     ? await db.contact.findUnique({ where: { refToken: ref } })
     : null;
+
+  // Verknappung berechnen (deterministisch pro Kunde, stabil bei Reload)
+  const scarcity =
+    ref && existingContact
+      ? computeScarcity(ref, existingContact.doiConfirmedAt ?? existingContact.createdAt)
+      : null;
 
   const [allPlans, locations] = await Promise.all([
     db.pricingPlan.findMany({
@@ -84,6 +91,8 @@ export default async function AnmeldenPage({ searchParams }: PageProps) {
             prefilledLastName={existingContact?.lastName ?? undefined}
             prefilledGender={existingContact?.gender ?? null}
             prefilledLocationId={existingContact?.locationId ?? null}
+            scarcityPlaces={scarcity?.placesLeft ?? null}
+            scarcityDeadlineIso={scarcity?.deadlineIso ?? null}
           />
         </div>
       </section>

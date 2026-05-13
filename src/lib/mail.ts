@@ -64,7 +64,7 @@ export async function sendPricingMail(opts: {
   return resend.emails.send({
     from: FROM,
     to: opts.to,
-    subject: `Willkommen bei ${STUDIO_NAME} – unsere aktuellen Angebote`,
+    subject: `Dein persönliches Sonderangebot — nur für dich`,
     html: pricingTemplate({ plans, signupUrl, greeting }),
     text: pricingTextFallback({ plans, signupUrl, greeting }),
   });
@@ -233,8 +233,8 @@ function pricingTemplate({
         <tr><td style="padding:8px 40px 24px;">
           <p style="font-family:'Courier New',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8A857E;margin:0 0 24px;">${STUDIO_NAME}</p>
           <p style="font-size:16px;line-height:1.6;margin:0 0 12px;">${greeting}</p>
-          <h1 style="font-size:34px;line-height:1.1;margin:0 0 16px;font-weight:400;letter-spacing:-0.02em;">schön, dass du da bist.</h1>
-          <p style="font-size:16px;line-height:1.6;margin:0;">Hier sind unsere aktuellen Angebote. Wenn dir eins zusagt, klick unten auf <em>Hier anmelden</em>.</p>
+          <h1 style="font-size:34px;line-height:1.1;margin:0 0 16px;font-weight:400;letter-spacing:-0.02em;">Dein Sonderangebot.</h1>
+          <p style="font-size:16px;line-height:1.6;margin:0 0 12px;"><strong>Nur für dich</strong> — exklusiv zusammengestellt nach deiner Anfrage. Schau dir an, was wir dir anbieten können. Wenn dir etwas zusagt, klick unten auf <em>Hier anmelden</em>. Das Angebot ist zeitlich begrenzt.</p>
         </td></tr>
         ${planRows}
         <tr><td style="padding:40px;border-top:1px solid #D8D2C7;text-align:center;">
@@ -265,7 +265,7 @@ function pricingTextFallback({
         `${p.name} – ${formatPrice(p.priceCents)} ${billingSuffix(p.billingInterval)}\n  ${p.highlights.join("\n  ")}${p.agb ? `\n\n  AGB: ${p.agb.slice(0, 200)}${p.agb.length > 200 ? "…" : ""}` : ""}`,
     )
     .join("\n\n");
-  return `${greeting}\n\nschön, dass du da bist.\n\nUnsere aktuellen Angebote:\n\n${planText}\n\nHier anmelden: ${signupUrl}\n\n— ${STUDIO_NAME}`;
+  return `${greeting}\n\nhier ist dein persönliches Sonderangebot — exklusiv für dich zusammengestellt. Das Angebot ist zeitlich begrenzt.\n\n${planText}\n\nHier anmelden: ${signupUrl}\n\n— ${STUDIO_NAME}`;
 }
 
 function signupConfirmTemplate(opts: {

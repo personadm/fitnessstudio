@@ -45,6 +45,8 @@ interface Props {
   prefilledLastName?: string;
   prefilledGender?: Gender | null;
   prefilledLocationId?: string | null;
+  scarcityPlaces?: number | null;
+  scarcityDeadlineIso?: string | null;
 }
 
 function formatPrice(cents: number) {
@@ -60,6 +62,8 @@ export function SignupForm({
   prefilledLastName,
   prefilledGender,
   prefilledLocationId,
+  scarcityPlaces,
+  scarcityDeadlineIso,
 }: Props) {
   const router = useRouter();
 
@@ -149,7 +153,14 @@ export function SignupForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid grid-cols-1 gap-12 md:grid-cols-12">
+    <>
+      {(scarcityPlaces || scarcityDeadlineIso) && (
+        <ScarcityBanner
+          places={scarcityPlaces ?? null}
+          deadlineIso={scarcityDeadlineIso ?? null}
+        />
+      )}
+      <form onSubmit={onSubmit} className="grid grid-cols-1 gap-12 md:grid-cols-12">
       {/* Standort-Auswahl + Tarif-Auswahl */}
       <div className="md:col-span-5">
         {/* Standort */}
@@ -410,6 +421,80 @@ export function SignupForm({
         </p>
       </div>
     </form>
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Verknappungs-Banner mit Live-Countdown
+// ─────────────────────────────────────────────────────────────
+
+function ScarcityBanner({
+  places,
+  deadlineIso,
+}: {
+  places: number | null;
+  deadlineIso: string | null;
+}) {
+  const [now, setNow] = useState<number>(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const deadline = deadlineIso ? new Date(deadlineIso).getTime() : null;
+  const remaining = deadline ? Math.max(0, deadline - now) : 0;
+
+  const days = Math.floor(remaining / (24 * 60 * 60 * 1000));
+  const hours = Math.floor((remaining % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+  const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+  const seconds = Math.floor((remaining % (60 * 1000)) / 1000);
+
+  const expired = deadline !== null && remaining === 0;
+
+  return (
+    <div className="mb-10 border-2 border-acid_dark bg-acid/10 p-5 md:p-7">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-acid_dark">
+            ⚡ Dein Sonderangebot — nur für dich
+          </p>
+          {places !== null && !expired && (
+            <p className="mt-2 text-display text-2xl leading-tight md:text-3xl">
+              Noch <span className="text-acid_dark">{places}</span>{" "}
+              {places === 1 ? "Platz" : "Plätze"} verfügbar
+            </p>
+          )}
+          {expired && (
+            <p className="mt-2 text-display text-2xl leading-tight md:text-3xl">
+              Angebot abgelaufen
+            </p>
+          )}
+        </div>
+        {deadline !== null && !expired && (
+          <div className="flex gap-2 md:gap-3">
+            <CountdownCell value={days} label={days === 1 ? "Tag" : "Tage"} />
+            <CountdownCell value={hours} label="Std" />
+            <CountdownCell value={minutes} label="Min" />
+            <CountdownCell value={seconds} label="Sek" />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CountdownCell({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="flex min-w-[52px] flex-col items-center border border-ink/20 bg-cream px-2 py-2 md:min-w-[64px] md:px-3 md:py-3">
+      <span className="text-display text-2xl leading-none md:text-3xl">
+        {String(value).padStart(2, "0")}
+      </span>
+      <span className="mt-1 font-mono text-[9px] uppercase tracking-[0.1em] text-muted md:text-[10px]">
+        {label}
+      </span>
+    </div>
   );
 }
 
