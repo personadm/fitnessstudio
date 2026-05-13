@@ -116,13 +116,24 @@ export function SignupForm({
     setErrorMsg("");
 
     const fd = new FormData(e.currentTarget);
+
+    // Geburtsdatum von TT.MM.JJJJ in ISO YYYY-MM-DD umwandeln
+    const birthDateRaw = String(fd.get("birthDate") ?? "").trim();
+    const birthMatch = birthDateRaw.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    if (!birthMatch) {
+      setState("error");
+      setErrorMsg("Bitte Geburtsdatum im Format TT.MM.JJJJ angeben (z. B. 15.03.1985).");
+      return;
+    }
+    const birthDateIso = `${birthMatch[3]}-${birthMatch[2]}-${birthMatch[1]}`;
+
     const payload = {
       email: fd.get("email"),
       firstName: fd.get("firstName"),
       lastName: fd.get("lastName"),
       gender,
       phone: fd.get("phone") || "",
-      birthDate: fd.get("birthDate"),
+      birthDate: birthDateIso,
       street: fd.get("street"),
       postalCode: fd.get("postalCode"),
       city: fd.get("city"),
@@ -366,7 +377,19 @@ export function SignupForm({
           </fieldset>
 
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Geburtsdatum" name="birthDate" type="date" required />
+            <label className="block">
+              <span className="label mb-2 block">Geburtsdatum</span>
+              <input
+                type="text"
+                name="birthDate"
+                required
+                placeholder="TT.MM.JJJJ"
+                inputMode="numeric"
+                pattern="\d{2}\.\d{2}\.\d{4}"
+                maxLength={10}
+                className="w-full border-b-2 border-ink bg-transparent py-2 text-base outline-none focus:border-ink"
+              />
+            </label>
             <Field label="Telefon (mobil)" name="phone" type="tel" required />
           </div>
           <Field label="Straße & Hausnummer" name="street" required />
@@ -385,8 +408,7 @@ export function SignupForm({
             <a href="/datenschutz" className="underline underline-offset-2">
               Datenschutzerklärung
             </a>{" "}
-            gelesen und stimme der Verarbeitung meiner Daten zur Vertragsabwicklung zu. Widerruf
-            jederzeit möglich.
+            gelesen und stimme zu.
           </span>
         </label>
 
@@ -450,15 +472,15 @@ function ScarcityBanner({
   const expired = deadline !== null && remaining === 0;
 
   return (
-    <div className="mb-10 border-2 border-acid_dark bg-acid/10 p-5 md:p-7">
+    <div className="mb-10 border-2 border-ink/30 bg-ink/5 p-5 md:p-7">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-acid_dark">
+          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink">
             ⚡ Dein Sonderangebot — nur für dich
           </p>
           {places !== null && !expired && (
             <p className="mt-2 text-display text-2xl leading-tight md:text-3xl">
-              Noch <span className="text-acid_dark">{places}</span>{" "}
+              Noch <span className="font-semibold">{places}</span>{" "}
               {places === 1 ? "Platz" : "Plätze"} verfügbar
             </p>
           )}
