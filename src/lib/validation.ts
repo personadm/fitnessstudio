@@ -21,12 +21,11 @@ export const signupSchema = z.object({
   gender: z.enum(["MAENNLICH", "WEIBLICH", "DIVERS"], {
     errorMap: () => ({ message: "Bitte Geschlecht angeben." }),
   }),
-  phone: z.string().trim().optional().or(z.literal("")),
+  phone: z.string().trim().min(6, "Bitte Mobilnummer angeben."),
   birthDate: z.string().trim().min(1, "Geburtsdatum fehlt."),
   street: z.string().trim().min(1, "Straße fehlt."),
   postalCode: z.string().trim().min(4, "PLZ fehlt."),
   city: z.string().trim().min(1, "Stadt fehlt."),
-  iban: z.string().trim().min(15, "IBAN fehlt.").max(34),
   pricingPlanId: z.string().min(1, "Bitte einen Tarif auswählen."),
   locationId: z.string().optional(),
   ref: z.string().optional(),

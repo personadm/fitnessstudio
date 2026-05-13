@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type State = "idle" | "loading" | "success" | "error";
 type Gender = "MAENNLICH" | "WEIBLICH" | "DIVERS";
@@ -34,6 +34,16 @@ export function LeadForm({ locations = [] }: Props) {
   const [locationId, setLocationId] = useState<string>(onlyOne ? locations[0].id : "");
   const [state, setState] = useState<State>("idle");
   const [message, setMessage] = useState("");
+  const successRef = useRef<HTMLDivElement>(null);
+
+  // Nach erfolgreichem Submit zum Erfolgs-Hinweis scrollen.
+  // Auf Mobile ist die Form weit unten, der Hinweis würde sonst
+  // außerhalb des Sichtbereichs erscheinen.
+  useEffect(() => {
+    if (state === "success" && successRef.current) {
+      successRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [state]);
 
   const locationRequired = hasMany;
   const canSubmit = !!gender && consent && (!locationRequired || !!locationId);
@@ -74,7 +84,10 @@ export function LeadForm({ locations = [] }: Props) {
 
   if (state === "success") {
     return (
-      <div className="border border-ink/20 bg-ink text-cream p-8 max-w-xl">
+      <div
+        ref={successRef}
+        className="border border-ink/20 bg-ink text-cream p-8 max-w-xl scroll-mt-24"
+      >
         <p className="label text-acid mb-4">✓ Eingetragen</p>
         <p className="text-display text-3xl leading-tight mb-3">Schau in dein Postfach.</p>
         <p className="text-sm leading-relaxed text-cream/80">{message}</p>

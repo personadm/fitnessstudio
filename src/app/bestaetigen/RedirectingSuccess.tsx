@@ -30,7 +30,7 @@ export function RedirectingSuccess({ redirectUrl, seconds = 5 }: Props) {
   return (
     <main className="grid min-h-screen place-items-center px-6">
       <div className="max-w-xl text-center">
-        <p className="label mb-6 !text-acid_dark">✓ Bestätigt</p>
+        <p className="label mb-6">✓ Bestätigt</p>
         <h1 className="text-display text-5xl leading-[0.95] md:text-7xl">
           Mail bestätigt.
         </h1>

@@ -126,7 +126,6 @@ export function SignupForm({
       street: fd.get("street"),
       postalCode: fd.get("postalCode"),
       city: fd.get("city"),
-      iban: fd.get("iban"),
       pricingPlanId,
       locationId: locationId || undefined,
       ref: ref_ ?? undefined,
@@ -368,20 +367,13 @@ export function SignupForm({
 
           <div className="grid grid-cols-2 gap-4">
             <Field label="Geburtsdatum" name="birthDate" type="date" required />
-            <Field label="Telefon (optional)" name="phone" type="tel" />
+            <Field label="Telefon (mobil)" name="phone" type="tel" required />
           </div>
           <Field label="Straße & Hausnummer" name="street" required />
           <div className="grid grid-cols-3 gap-4">
             <Field label="PLZ" name="postalCode" required />
             <div className="col-span-2">
               <Field label="Stadt" name="city" required />
-            </div>
-          </div>
-
-          <div className="border-t border-ink/15 pt-6">
-            <p className="label mb-4">Vertrag</p>
-            <div className="space-y-6">
-              <Field label="IBAN" name="iban" required placeholder="DE..." />
             </div>
           </div>
         </div>
@@ -413,15 +405,15 @@ export function SignupForm({
             {state === "loading"
               ? "Wird gesendet…"
               : selectedPlan
-                ? `Jetzt für ${formatPrice(selectedPlan.priceCents)} bestellen`
-                : "Jetzt bestellen"}
+                ? `Jetzt für ${formatPrice(selectedPlan.priceCents)} bestellen *`
+                : "Jetzt bestellen *"}
           </span>
           <span className="ml-2">→</span>
         </button>
 
         <p className="mt-3 text-center text-xs text-muted">
-          Kein Geld wird automatisch abgebucht. Wir senden dir den Vertrag in den nächsten
-          Werktagen.
+          * Es gelten die AGB des gewählten Tarifs. Wir melden uns für deinen persönlichen Start
+          bei dir.
         </p>
       </div>
     </form>
