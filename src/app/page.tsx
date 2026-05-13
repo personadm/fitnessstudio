@@ -82,14 +82,14 @@ export default async function LandingPage() {
             />
           </div>
 
-          <div className="grid grid-cols-12 gap-x-10 gap-y-10 md:gap-x-16 md:gap-y-12">
+          <div className="grid grid-cols-12 gap-x-4 gap-y-10 md:gap-x-16 md:gap-y-12">
             {/* Left */}
             <div className="col-span-12 lg:col-span-7 text-center md:text-left">
               <p className="label mb-4 md:mb-6" style={{ color: GREEN }}>
                 Ganzheitlich Fit
               </p>
               <h1
-                className="text-display-italic text-5xl leading-[1] sm:text-6xl md:text-[110px] md:leading-[0.95]"
+                className="text-display-italic text-4xl leading-[1.05] sm:text-5xl md:text-[110px] md:leading-[0.95]"
                 style={{ color: GREEN }}
               >
                 Unser Angebot
