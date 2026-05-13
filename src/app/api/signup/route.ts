@@ -76,7 +76,6 @@ export async function POST(req: NextRequest) {
       postalCode: data.postalCode,
       city: data.city,
       iban: data.iban,
-      contractStartDate: new Date(data.contractStartDate),
       signupAt: new Date(),
       pricingPlanId: data.pricingPlanId,
       locationId: resolvedLocationId,

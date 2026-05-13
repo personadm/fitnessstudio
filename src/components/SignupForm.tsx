@@ -123,7 +123,6 @@ export function SignupForm({
       postalCode: fd.get("postalCode"),
       city: fd.get("city"),
       iban: fd.get("iban"),
-      contractStartDate: fd.get("contractStartDate"),
       pricingPlanId,
       locationId: locationId || undefined,
       ref: ref_ ?? undefined,
@@ -372,7 +371,6 @@ export function SignupForm({
             <p className="label mb-4">Vertrag</p>
             <div className="space-y-6">
               <Field label="IBAN" name="iban" required placeholder="DE..." />
-              <Field label="Vertragsstart" name="contractStartDate" type="date" required />
             </div>
           </div>
         </div>

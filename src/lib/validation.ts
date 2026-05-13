@@ -27,7 +27,6 @@ export const signupSchema = z.object({
   postalCode: z.string().trim().min(4, "PLZ fehlt."),
   city: z.string().trim().min(1, "Stadt fehlt."),
   iban: z.string().trim().min(15, "IBAN fehlt.").max(34),
-  contractStartDate: z.string().trim().min(1, "Vertragsstart fehlt."),
   pricingPlanId: z.string().min(1, "Bitte einen Tarif auswählen."),
   locationId: z.string().optional(),
   ref: z.string().optional(),
@@ -114,17 +113,12 @@ export const funnelSchema = z.object({
   active: z.boolean().default(true),
   autoStop: z.boolean().default(true),
   locationId: z.string().optional().nullable(),
-  scheduleWeekday: z.coerce.number().int().min(0).max(6).nullable().optional(),
-  scheduleWeekInterval: z.coerce.number().int().min(1).max(52).default(1),
-  scheduleHour: z.coerce.number().int().min(0).max(23).default(9),
-  scheduleMinute: z.coerce.number().int().min(0).max(59).default(0),
 });
 export type FunnelInput = z.infer<typeof funnelSchema>;
 
 export const funnelStepSchema = z.object({
   funnelId: z.string().min(1),
   delayDays: z.coerce.number().int().min(0).max(3650),
-  delayHours: z.coerce.number().int().min(0).max(23),
   subject: z.string().trim().min(1, "Betreff fehlt.").max(200),
   bodyHtml: z.string().min(1, "Inhalt fehlt."),
 });
