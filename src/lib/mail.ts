@@ -74,7 +74,7 @@ export async function sendPricingMail(opts: {
 // 3) Anmeldebestätigung
 // ─────────────────────────────────────────────────────────────
 
-export async function sendSignupConfirmMail(opts: {
+export async function sendSignupConfirmation(opts: {
   to: string;
   firstName: string;
   planName: string;
@@ -100,6 +100,24 @@ export async function sendSignupConfirmMail(opts: {
 // ─────────────────────────────────────────────────────────────
 
 export async function sendCampaignMail(opts: {
+  to: string;
+  subject: string;
+  bodyHtml: string;
+}) {
+  const wrappedHtml = campaignWrapperTemplate({ bodyHtml: opts.bodyHtml });
+  return resend.emails.send({
+    from: FROM,
+    to: opts.to,
+    subject: opts.subject,
+    html: wrappedHtml,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// 5) Funnel-Mail (automatische Schritt-Mails aus Funnels)
+// ─────────────────────────────────────────────────────────────
+
+export async function sendFunnelMail(opts: {
   to: string;
   subject: string;
   bodyHtml: string;
