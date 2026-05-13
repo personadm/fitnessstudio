@@ -86,7 +86,7 @@ export function LeadForm({ locations = [] }: Props) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="max-w-xl space-y-5" id="email">
+    <form onSubmit={onSubmit} className="w-full max-w-full sm:max-w-xl space-y-5" id="anmelde-bereich">
       {/* Standort-Auswahl, nur wenn mehrere */}
       {hasMany && (
         <fieldset>
@@ -129,7 +129,7 @@ export function LeadForm({ locations = [] }: Props) {
         </fieldset>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label className="block">
           <span className="label mb-2 block">Vorname</span>
           <input

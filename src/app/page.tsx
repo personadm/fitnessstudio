@@ -1,4 +1,5 @@
 import { LeadForm } from "@/components/LeadForm";
+import { ScrollToTop } from "@/components/ScrollToTop";
 import { db } from "@/lib/db";
 import { getTestimonials } from "@/lib/testimonials";
 
@@ -58,12 +59,13 @@ export default async function LandingPage() {
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-cream">
+      <ScrollToTop />
       {/* ─── Top Bar ─── */}
       <header className="border-b border-ink/10">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 md:px-6 md:py-4 text-[11px] uppercase tracking-[0.14em]">
           <span className="font-mono">{STUDIO}</span>
           <a
-            href="#email"
+            href="#anmelde-bereich"
             className="font-mono underline underline-offset-4 hover:text-ink-soft -my-2 py-2 -mx-2 px-2"
           >
             Direkt anmelden →
@@ -308,7 +310,7 @@ export default async function LandingPage() {
             <span className="text-display-italic">los geht's.</span>
           </p>
           <a
-            href="#email"
+            href="#anmelde-bereich"
             className="mt-10 inline-block border-b-2 border-ink pb-1 font-mono text-xs uppercase tracking-[0.14em] hover:text-ink-soft -mx-2 px-2 md:mt-10"
           >
             Zum Formular ↑
