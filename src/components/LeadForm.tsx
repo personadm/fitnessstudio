@@ -18,7 +18,7 @@ interface Location {
 }
 
 interface Props {
-  locations?: Location[];
+  locations?: Location[]; // aktive Standorte, optional — falls leer keine Auswahl
 }
 
 export function LeadForm({ locations = [] }: Props) {
@@ -30,6 +30,7 @@ export function LeadForm({ locations = [] }: Props) {
   const [gender, setGender] = useState<Gender | "">("");
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
+  // Bei genau einem Standort vorbelegen
   const [locationId, setLocationId] = useState<string>(onlyOne ? locations[0].id : "");
   const [state, setState] = useState<State>("idle");
   const [message, setMessage] = useState("");
@@ -78,28 +79,28 @@ export function LeadForm({ locations = [] }: Props) {
         <p className="text-display text-3xl leading-tight mb-3">Schau in dein Postfach.</p>
         <p className="text-sm leading-relaxed text-cream/80">{message}</p>
         <p className="mt-4 text-xs text-cream/60">
-          Nach der Bestätigung schicken wir dir die Tarife per Mail.
+          Nach der Bestätigung schicken wir dir die Angebote per Mail.
         </p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-5" id="email">
-      {/* Standort-Auswahl */}
+    <form onSubmit={onSubmit} className="max-w-xl space-y-5" id="email">
+      {/* Standort-Auswahl, nur wenn mehrere */}
       {hasMany && (
         <fieldset>
-          <legend className="label mb-3">Standort</legend>
-          <div className="grid grid-cols-2 gap-3">
+          <legend className="label mb-3">Welcher Standort?</legend>
+          <div className="grid grid-cols-2 gap-2">
             {locations.map((l) => {
               const selected = locationId === l.id;
               return (
                 <label
                   key={l.id}
-                  className={`cursor-pointer border px-4 py-3 font-mono text-xs uppercase tracking-[0.14em] text-center transition-colors ${
+                  className={`cursor-pointer border px-3 py-2.5 text-center font-mono text-xs uppercase tracking-[0.1em] transition-colors ${
                     selected
                       ? "border-ink bg-ink text-acid"
-                      : "border-ink/25 hover:border-ink/50"
+                      : "border-ink/20 hover:border-ink/40"
                   }`}
                 >
                   <input
@@ -111,7 +112,16 @@ export function LeadForm({ locations = [] }: Props) {
                     required
                     className="sr-only"
                   />
-                  {l.name.toUpperCase()}
+                  <span className="block leading-tight">{l.name}</span>
+                  {l.city && (
+                    <span
+                      className={`block text-[10px] mt-0.5 ${
+                        selected ? "text-cream/70" : "text-muted"
+                      }`}
+                    >
+                      {l.city}
+                    </span>
+                  )}
                 </label>
               );
             })}
@@ -154,8 +164,8 @@ export function LeadForm({ locations = [] }: Props) {
             return (
               <label
                 key={g.value}
-                className={`cursor-pointer border px-3 py-2.5 font-mono text-xs uppercase tracking-[0.14em] text-center transition-colors ${
-                  selected ? "border-ink bg-ink text-acid" : "border-ink/25 hover:border-ink/50"
+                className={`cursor-pointer border px-2 py-2 text-center font-mono text-[11px] uppercase tracking-[0.1em] transition-colors ${
+                  selected ? "border-ink bg-ink text-acid" : "border-ink/20 hover:border-ink/40"
                 }`}
               >
                 <input
@@ -187,7 +197,7 @@ export function LeadForm({ locations = [] }: Props) {
         />
       </label>
 
-      <label className="flex items-start gap-3 text-xs leading-relaxed text-ink-soft cursor-pointer pt-2">
+      <label className="flex items-start gap-3 text-xs leading-relaxed text-ink-soft cursor-pointer">
         <input
           type="checkbox"
           checked={consent}
@@ -196,8 +206,8 @@ export function LeadForm({ locations = [] }: Props) {
           required
         />
         <span>
-          Ich willige ein, dass meine Daten zur Zusendung der Tarife verarbeitet werden. Widerruf
-          jederzeit möglich. Mehr in der{" "}
+          Ich willige ein, dass meine Daten zur Zusendung der Angebote verarbeitet werden. Widerruf
+          jederzeit per Klick auf den Abmelde-Link in jeder Mail. Mehr in der{" "}
           <a href="/datenschutz" className="underline underline-offset-2 hover:text-ink">
             Datenschutzerklärung
           </a>
@@ -208,10 +218,10 @@ export function LeadForm({ locations = [] }: Props) {
       <button
         type="submit"
         disabled={state === "loading" || !canSubmit}
-        className="group w-full bg-ink/40 hover:bg-ink py-4 text-cream disabled:bg-ink/20 disabled:cursor-not-allowed transition-all"
+        className="group w-full bg-ink py-4 text-acid disabled:bg-ink/40 disabled:text-cream disabled:cursor-not-allowed transition-all hover:bg-ink-soft"
       >
-        <span className="font-mono text-xs uppercase tracking-[0.14em]">
-          {state === "loading" ? "Sendet…" : "Tarife per Mail anfordern"}
+        <span className="font-mono text-xs uppercase tracking-[0.12em]">
+          {state === "loading" ? "Sendet…" : "Angebote per Mail anfordern"}
         </span>
         <span className="ml-2 inline-block transition-transform group-hover:translate-x-1">→</span>
       </button>

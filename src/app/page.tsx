@@ -2,7 +2,7 @@ import { LeadForm } from "@/components/LeadForm";
 import { db } from "@/lib/db";
 import { getTestimonials } from "@/lib/testimonials";
 
-const STUDIO = process.env.STUDIO_NAME ?? "Studio Iron";
+const STUDIO = process.env.STUDIO_NAME ?? "Deine Gesundheitscoaches";
 
 // Etwas tiefer/refiner als das Neon-Grün vorher
 const GREEN = "#7CAE2D";
@@ -53,7 +53,7 @@ export default async function LandingPage() {
   ]);
 
   return (
-    <main className="min-h-screen bg-cream">
+    <main className="min-h-screen overflow-x-hidden bg-cream">
       {/* ─── Top Bar ─── */}
       <header className="border-b border-ink/10">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 md:px-6 md:py-4 text-[11px] uppercase tracking-[0.14em]">
@@ -139,7 +139,7 @@ export default async function LandingPage() {
                 <div className="text-center md:text-left">
                   <p className="label mb-2 md:mb-3">Was passiert</p>
                   <p className="mx-auto max-w-md text-[15px] leading-relaxed text-ink-soft md:mx-0 md:max-w-none md:text-base">
-                    Trag deine Mail ein. Du bekommst sofort unsere aktuellen Tarife in dein
+                    Trag deine Mail ein. Du bekommst sofort unsere aktuellen Angebote in dein
                     Postfach – inklusive direktem Anmelde-Button mit einem tollen Angebot für
                     deinen Gratis-Start. Kein Spam, kein Verkaufsdruck, keine versteckten Kosten.
                   </p>
