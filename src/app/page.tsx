@@ -1,11 +1,17 @@
 import { LeadForm } from "@/components/LeadForm";
 import { ScrollToTop } from "@/components/ScrollToTop";
+import { TrackPageView } from "@/components/TrackPageView";
 import { db } from "@/lib/db";
 import { getTestimonials } from "@/lib/testimonials";
 
 // Landing-Page nicht statisch beim Build vorrendern — DB-Pool reicht nicht für 33 parallele Pages.
 // Wird stattdessen bei jedem Request frisch gerendert (Supabase eu-west liefert in <100ms).
 export const dynamic = "force-dynamic";
+
+export const metadata = {
+  title: "Deine Gesundheitscoaches – JETZT GRATIS STARTEN!",
+  description: "Hier bekommst du dein Gratis-Start-Angebot!",
+};
 
 const STUDIO = process.env.STUDIO_NAME ?? "Deine Gesundheitscoaches";
 
@@ -60,6 +66,7 @@ export default async function LandingPage() {
   return (
     <main className="min-h-screen overflow-x-hidden bg-cream">
       <ScrollToTop />
+      <TrackPageView path="/" />
       {/* ─── Top Bar ─── */}
       <header className="border-b border-ink/10">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 md:px-6 md:py-4 text-[11px] uppercase tracking-[0.14em]">
@@ -95,10 +102,12 @@ export default async function LandingPage() {
                 Ganzheitlich Fit
               </p>
               <h1
-                className="text-display-italic text-4xl leading-[1.05] sm:text-5xl md:text-[110px] md:leading-[0.95]"
+                className="text-display-italic text-4xl leading-[1.05] sm:text-5xl md:text-[88px] md:leading-[0.95]"
                 style={{ color: GREEN }}
               >
-                Unser Angebot
+                Dein Gratis
+                <br />
+                Start-Angebot
                 <br />
                 per Email
               </h1>

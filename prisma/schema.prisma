@@ -338,3 +338,20 @@ model PushSubscription {
 
   @@index([createdAt])
 }
+
+// ─────────────────────────────────────────────────────────────
+// ANALYTICS / TRACKING
+// ─────────────────────────────────────────────────────────────
+
+model PageView {
+  id        String   @id @default(cuid())
+  path      String
+  sessionId String?
+  referrer  String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([path, createdAt])
+  @@index([sessionId])
+}

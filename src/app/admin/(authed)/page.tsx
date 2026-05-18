@@ -53,6 +53,36 @@ export default async function AdminDashboard() {
 
   const monthLabel = new Date().toLocaleDateString("de-DE", { month: "long", year: "numeric" });
 
+  // ─── CONVERSION-FUNNEL (letzte 30 Tage) ───────────────────
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+  const [pageViews30, uniqueVisitors30Raw, leads30, signups30] = await Promise.all([
+    db.pageView.count({
+      where: { path: "/", createdAt: { gte: thirtyDaysAgo } },
+    }),
+    db.pageView.findMany({
+      where: { path: "/", createdAt: { gte: thirtyDaysAgo }, sessionId: { not: null } },
+      select: { sessionId: true },
+      distinct: ["sessionId"],
+    }),
+    db.contact.count({
+      where: { source: "LANDING", createdAt: { gte: thirtyDaysAgo } },
+    }),
+    db.contact.count({
+      where: {
+        signupAt: { gte: thirtyDaysAgo, not: null },
+        source: { in: ["LANDING", "DIRECT"] },
+      },
+    }),
+  ]);
+
+  const uniqueVisitors30 = uniqueVisitors30Raw.length;
+  const leadRate =
+    uniqueVisitors30 > 0 ? ((leads30 / uniqueVisitors30) * 100).toFixed(1) : "—";
+  const signupRate = leads30 > 0 ? ((signups30 / leads30) * 100).toFixed(1) : "—";
+  const totalRate =
+    uniqueVisitors30 > 0 ? ((signups30 / uniqueVisitors30) * 100).toFixed(1) : "—";
+
   // VAPID-Key fürs Frontend (nur Public, sicher)
   const vapidPublicKey = process.env.VAPID_PUBLIC_KEY ?? null;
 
@@ -78,6 +108,40 @@ export default async function AdminDashboard() {
         <Stat label="Mitglieder" value={kunde} />
         <Stat label="Ehemalige" value={ehemaliger} />
       </div>
+
+      {/* Conversion-Funnel (letzte 30 Tage) */}
+      <section className="mb-8 md:mb-12">
+        <div className="mb-4 flex flex-col items-start gap-1 md:flex-row md:items-end md:justify-between">
+          <p className="label">Conversion-Funnel · letzte 30 Tage</p>
+          <p className="font-mono text-[11px] text-muted">
+            Landing-Page → Lead → Mitglied
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
+          <FunnelStat
+            label="Besucher"
+            value={uniqueVisitors30}
+            subline={`${pageViews30} Page-Views`}
+          />
+          <FunnelStat
+            label="Leads"
+            value={leads30}
+            subline={`${leadRate}% Conversion`}
+            highlight
+          />
+          <FunnelStat
+            label="Anmeldungen"
+            value={signups30}
+            subline={`${signupRate}% von Leads`}
+            highlight
+          />
+          <FunnelStat
+            label="Gesamt-Rate"
+            value={`${totalRate}%`}
+            subline="Besucher → Mitglied"
+          />
+        </div>
+      </section>
 
       {/* Live-Activity + Push */}
       <section className="mb-8 grid grid-cols-1 gap-6 md:mb-12 md:gap-8 lg:grid-cols-3">
@@ -220,5 +284,31 @@ function QuickLink({ href, label, count }: { href: string; label: string; count:
       <p className="mt-2 text-display text-2xl md:mt-3 md:text-3xl">{count}</p>
       <p className="mt-3 font-mono text-xs uppercase tracking-[0.12em] text-acid_dark">öffnen →</p>
     </Link>
+  );
+}
+
+function FunnelStat({
+  label,
+  value,
+  subline,
+  highlight,
+}: {
+  label: string;
+  value: number | string;
+  subline: string;
+  highlight?: boolean;
+}) {
+  return (
+    <div
+      className={`border p-4 md:p-6 ${
+        highlight ? "border-ink/40 bg-ink/5" : "border-ink/15"
+      }`}
+    >
+      <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted md:text-[11px]">
+        {label}
+      </p>
+      <p className="mt-2 text-display text-3xl md:mt-3 md:text-4xl">{value}</p>
+      <p className="mt-2 font-mono text-[10px] text-muted md:text-[11px]">{subline}</p>
+    </div>
   );
 }
