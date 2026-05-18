@@ -132,16 +132,16 @@ Antworte AUSSCHLIESSLICH mit einem JSON-Objekt. Kein Markdown-Codeblock, kein Vo
     throw new Error("Keine Text-Antwort von der KI bekommen.");
   }
 
-  // JSON parsen — falls die KI doch mal einen Codeblock drum baut, wegputzen
+  // JSON parsen — die KI baut leider gerne Code-Fences drum (```json ... ```)
+  // und packt teilweise echte Newlines in String-Values, was kein gültiges JSON ist.
+  // Wir putzen beides weg, mit einem zweistufigen Versuch.
   let parsed: { subject?: string; bodyHtml?: string };
   try {
-    const cleaned = textBlock.text
-      .trim()
-      .replace(/^```(?:json)?\s*/i, "")
-      .replace(/\s*```\s*$/, "");
+    const cleaned = sanitizeJsonResponse(textBlock.text);
     parsed = JSON.parse(cleaned);
   } catch (err) {
     console.error("[ai] JSON-Parse fehlgeschlagen. Roh:", textBlock.text);
+    console.error("[ai] Fehler:", err);
     throw new Error("KI-Antwort konnte nicht gelesen werden. Versuch's nochmal.");
   }
 
@@ -150,4 +150,79 @@ Antworte AUSSCHLIESSLICH mit einem JSON-Objekt. Kein Markdown-Codeblock, kein Vo
   }
 
   return { subject: parsed.subject, bodyHtml: parsed.bodyHtml };
+}
+
+// ─────────────────────────────────────────────────────────────
+// JSON-Sanitizer
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Bereitet eine KI-Antwort für JSON.parse vor:
+ *  1. Entfernt Markdown-Code-Fences (```json ... ```)
+ *  2. Escaped literale Newlines INNERHALB von String-Werten
+ *
+ * Beides nötig, weil das Modell — trotz expliziter Aufforderung —
+ * gerne beides verschickt.
+ */
+function sanitizeJsonResponse(raw: string): string {
+  let cleaned = raw.trim();
+
+  // 1) Code-Fences am Anfang und Ende entfernen
+  cleaned = cleaned.replace(/^```(?:json|JSON)?\s*\n?/i, "");
+  cleaned = cleaned.replace(/\n?\s*```\s*$/i, "");
+
+  // 2) Falls noch Müll vor dem ersten { oder nach dem letzten } ist (z.B. "Hier ist das JSON:"),
+  //    auf den JSON-Bereich beschränken
+  const firstBrace = cleaned.indexOf("{");
+  const lastBrace = cleaned.lastIndexOf("}");
+  if (firstBrace > 0 || (lastBrace >= 0 && lastBrace < cleaned.length - 1)) {
+    if (firstBrace >= 0 && lastBrace > firstBrace) {
+      cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+    }
+  }
+
+  // 3) Literale Newlines/Tabs in String-Values escapen
+  //    char-by-char durch, wir tracken ob wir innerhalb eines Strings sind
+  let out = "";
+  let inString = false;
+  let escapeNext = false;
+  for (let i = 0; i < cleaned.length; i++) {
+    const c = cleaned[i];
+
+    if (escapeNext) {
+      out += c;
+      escapeNext = false;
+      continue;
+    }
+    if (c === "\\") {
+      out += c;
+      escapeNext = true;
+      continue;
+    }
+    if (c === '"') {
+      out += c;
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) {
+      // Innerhalb eines Strings: literale Steuerzeichen escapen
+      if (c === "\n") {
+        out += "\\n";
+        continue;
+      }
+      if (c === "\r") {
+        out += "\\r";
+        continue;
+      }
+      if (c === "\t") {
+        out += "\\t";
+        continue;
+      }
+    }
+
+    out += c;
+  }
+
+  return out;
 }
