@@ -49,28 +49,21 @@ export async function generateEmailContent(input: {
 
   const systemPrompt = `Du bist ein erfahrener E-Mail-Marketing-Texter für ${STUDIO_NAME}, ein Fitnessstudio.
 
-Aus einem Briefing und ggf. Fotos baust du eine fertige Marketing-Mail.
+Aus einem Briefing und ggf. Fotos baust du eine fertige Marketing-Mail. Du rufst dazu IMMER das Tool "create_email" auf — niemals normalen Text als Antwort.
 
 REGELN:
 - Sprache: Deutsch.
 - Ton: ${TONE_DESCRIPTIONS[input.tone]}
 - Anrede: ${
     isFunnel
-      ? 'Verwende {{firstName}} als Platzhalter — z.B. "Hallo {{firstName}}," oder "Hi {{firstName}},". Wird beim Versand automatisch durch den echten Vornamen ersetzt.'
-      : 'Allgemeine Anrede ("Hallo zusammen,", "Hi,", "Liebe Mitglieder," — passend zum Ton).'
+      ? `Verwende {{firstName}} als Platzhalter — z.B. „Hallo {{firstName}}," oder „Hi {{firstName}},". Wird beim Versand automatisch durch den echten Vornamen ersetzt.`
+      : `Allgemeine Anrede („Hallo zusammen,", „Hi,", „Liebe Mitglieder," — passend zum Ton).`
   }
 - HTML: NUR diese Tags sind erlaubt: <p>, <strong>, <em>, <a href="..."> (mit echtem Link!), <br>, <ul>, <li>, <h2>, <h3>. KEIN <html>, <head>, <body>, <div>, <span>. KEIN style-Attribut, KEINE class. Das Studio-Layout (Header mit Studio-Name etc.) wird automatisch drumherum gebaut.
 ${imageInstruction}
 - Länge: passend zum Ton. Bei "kurz und knapp" maximal 4 Sätze. Sonst: Aufmacher, Hauptteil (1-3 Absätze), klares Call-to-Action.
 - Keine Unterschrift hinten ("— Studio XYZ" o.ä.) — die wird automatisch hinzugefügt.
-- Kein "Liebe Grüße"/"Bis bald" am Ende, es sei denn der Ton verlangt es ausdrücklich.
-
-ANTWORTFORMAT:
-Antworte AUSSCHLIESSLICH mit einem JSON-Objekt. Kein Markdown-Codeblock, kein Vortext, kein Nachtext. Genau dieses Format:
-{
-  "subject": "Betreffzeile, max. 70 Zeichen, knackig",
-  "bodyHtml": "<p>...</p><!--IMAGE-1--><p>...</p>"
-}`;
+- Kein "Liebe Grüße"/"Bis bald" am Ende, es sei denn der Ton verlangt es ausdrücklich.`;
 
   // User-Message mit Bildern und Briefing zusammenbauen
   const userContent: Array<
@@ -111,8 +104,34 @@ Antworte AUSSCHLIESSLICH mit einem JSON-Objekt. Kein Markdown-Codeblock, kein Vo
     },
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 2000,
+      max_tokens: 3000,
       system: systemPrompt,
+      // Wir zwingen das Modell zur strukturierten Antwort via Tool-Use.
+      // Damit umgehen wir das JSON-Roulette mit unescaped Quotes & Newlines —
+      // die API garantiert valides Schema-Eingabe-Format.
+      tools: [
+        {
+          name: "create_email",
+          description: "Erstellt die fertige Marketing-E-Mail aus dem Briefing.",
+          input_schema: {
+            type: "object",
+            properties: {
+              subject: {
+                type: "string",
+                description:
+                  "Betreffzeile der Mail. Maximal 70 Zeichen, knackig, ohne Emoji am Anfang.",
+              },
+              bodyHtml: {
+                type: "string",
+                description:
+                  "HTML-Body der Mail. Nur erlaubte Tags: <p>, <strong>, <em>, <a href>, <br>, <ul>, <li>, <h2>, <h3>. KEINE style-Attribute, KEINE class. Bild-Platzhalter <!--IMAGE-1-->, <!--IMAGE-2-->, <!--IMAGE-3--> jeweils in eigener Zeile zwischen Absätzen.",
+              },
+            },
+            required: ["subject", "bodyHtml"],
+          },
+        },
+      ],
+      tool_choice: { type: "tool", name: "create_email" },
       messages: [{ role: "user", content: userContent }],
     }),
   });
@@ -124,17 +143,34 @@ Antworte AUSSCHLIESSLICH mit einem JSON-Objekt. Kein Markdown-Codeblock, kein Vo
   }
 
   const data = (await response.json()) as {
-    content?: Array<{ type: string; text?: string }>;
+    content?: Array<{
+      type: string;
+      text?: string;
+      name?: string;
+      input?: { subject?: string; bodyHtml?: string };
+    }>;
   };
 
-  const textBlock = data.content?.find((b) => b.type === "text");
-  if (!textBlock?.text) {
-    throw new Error("Keine Text-Antwort von der KI bekommen.");
+  // Tool-Use-Block aus der Antwort fischen
+  const toolUse = data.content?.find(
+    (b) => b.type === "tool_use" && b.name === "create_email",
+  );
+
+  if (toolUse?.input?.subject && toolUse.input.bodyHtml) {
+    return {
+      subject: toolUse.input.subject,
+      bodyHtml: toolUse.input.bodyHtml,
+    };
   }
 
-  // JSON parsen — die KI baut leider gerne Code-Fences drum (```json ... ```)
-  // und packt teilweise echte Newlines in String-Values, was kein gültiges JSON ist.
-  // Wir putzen beides weg, mit einem zweistufigen Versuch.
+  // Fallback: falls die KI doch mit Text antwortet (sollte mit tool_choice nicht passieren,
+  // aber zur Sicherheit), versuchen wir das alte JSON-Parsing
+  const textBlock = data.content?.find((b) => b.type === "text");
+  if (!textBlock?.text) {
+    console.error("[ai] Weder tool_use noch text in Antwort:", JSON.stringify(data.content));
+    throw new Error("Keine verwertbare Antwort von der KI bekommen.");
+  }
+
   let parsed: { subject?: string; bodyHtml?: string };
   try {
     const cleaned = sanitizeJsonResponse(textBlock.text);
