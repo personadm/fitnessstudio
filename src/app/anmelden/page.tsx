@@ -63,12 +63,12 @@ export default async function AnmeldenPage({ searchParams }: PageProps) {
       <section className="mx-auto max-w-5xl px-6 py-16 md:py-24">
         <p className="label mb-6">№ 03 — Anmelden</p>
         <h1 className="text-display text-5xl leading-[0.95] md:text-7xl">
-          Mitgliedschaft
+          Jetzt starten
           <br />
-          <span className="text-display-italic">starten.</span>
+          <span className="text-display-italic">— deine Krankenkasse zahlt.</span>
         </h1>
         <p className="mt-6 max-w-2xl text-base leading-relaxed text-ink-soft">
-          Wir benötigen die notwendigen Daten für die Anmeldung.
+          Für deine Anmeldung brauchen wir deine vollständigen Daten:
         </p>
 
         <div className="mt-12">

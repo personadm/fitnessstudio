@@ -81,7 +81,12 @@ export function SignupForm({
 
   const [pricingPlanId, setPricingPlanId] = useState(filteredPlans[0]?.id ?? "");
   const [gender, setGender] = useState<Gender | "">(prefilledGender ?? "");
-  const [expandedPlans, setExpandedPlans] = useState<Set<string>>(new Set());
+  // Bei genau einem verfügbaren Tarif: direkt ausgeklappt zeigen — keine Klick-
+  // Verschachtelung nötig. Bei mehreren Tarifen: alle eingeklappt, User wählt
+  // bewusst aus.
+  const [expandedPlans, setExpandedPlans] = useState<Set<string>>(
+    () => new Set(filteredPlans.length === 1 ? [filteredPlans[0].id] : []),
+  );
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -295,7 +300,7 @@ export function SignupForm({
                     </div>
                   )}
 
-                  {hasDetails && (
+                  {hasDetails && filteredPlans.length > 1 && (
                     <button
                       type="button"
                       onClick={(e) => {
