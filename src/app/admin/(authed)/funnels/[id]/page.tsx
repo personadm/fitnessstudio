@@ -98,14 +98,22 @@ export default async function FunnelDetailPage({ params }: PageProps) {
                         </p>
                         <p className="mt-1 text-base font-medium">{step.subject}</p>
                       </div>
-                      <form action={deleteFunnelStep.bind(null, step.id, funnel.id)}>
-                        <button
-                          type="submit"
-                          className="font-mono text-[11px] uppercase tracking-[0.1em] text-red-700 hover:underline"
+                      <div className="flex items-center gap-4">
+                        <Link
+                          href={`/admin/funnels/${funnel.id}/steps/${step.id}`}
+                          className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink hover:underline"
                         >
-                          Löschen
-                        </button>
-                      </form>
+                          Bearbeiten
+                        </Link>
+                        <form action={deleteFunnelStep.bind(null, step.id, funnel.id)}>
+                          <button
+                            type="submit"
+                            className="font-mono text-[11px] uppercase tracking-[0.1em] text-red-700 hover:underline"
+                          >
+                            Löschen
+                          </button>
+                        </form>
+                      </div>
                     </div>
                     <details className="mt-3">
                       <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-[0.1em] text-muted hover:text-ink">

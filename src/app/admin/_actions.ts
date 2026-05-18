@@ -312,11 +312,7 @@ export async function createFunnel(formData: FormData) {
     data: {
       name: parsed.name,
       trigger: parsed.trigger,
-      // Neu angelegte Funnels sind IMMER inaktiv — User muss
-      // sie explizit über den Toggle in der Liste scharfschalten.
-      // So gehen keine Mails versehentlich raus, bevor alle Schritte
-      // fertig konfiguriert sind.
-      active: false,
+      active: parsed.active,
       autoStop: parsed.autoStop,
       locationId: parsed.locationId || null,
       scheduleWeekday: parsed.scheduleWeekday ?? null,
@@ -415,6 +411,40 @@ export async function deleteFunnelStep(stepId: string, funnelId: string) {
   await requireAdmin();
   await db.funnelStep.delete({ where: { id: stepId } });
   revalidatePath(`/admin/funnels/${funnelId}`);
+}
+
+/**
+ * Aktualisiert einen bestehenden Funnel-Schritt.
+ * Anwendung: User korrigiert nachträglich Links, Betreff oder ganzen Body.
+ * Reihenfolge (orderNum) bleibt unverändert.
+ */
+export async function updateFunnelStep(
+  stepId: string,
+  funnelId: string,
+  formData: FormData,
+) {
+  await requireAdmin();
+
+  const parsed = funnelStepSchema.parse({
+    funnelId,
+    delayDays: formData.get("delayDays") || 0,
+    delayHours: formData.get("delayHours") || 0,
+    subject: formData.get("subject"),
+    bodyHtml: formData.get("bodyHtml"),
+  });
+
+  await db.funnelStep.update({
+    where: { id: stepId },
+    data: {
+      delayDays: parsed.delayDays,
+      delayHours: parsed.delayHours,
+      subject: parsed.subject,
+      bodyHtml: parsed.bodyHtml,
+    },
+  });
+
+  revalidatePath(`/admin/funnels/${funnelId}`);
+  redirect(`/admin/funnels/${funnelId}`);
 }
 
 export async function runFunnelProcessing() {
