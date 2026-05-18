@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { addFunnelStep } from "@/app/admin/_actions";
-import { AIEmailComposer } from "@/components/admin/AIEmailComposer";
+import { EmailComposer } from "@/components/admin/EmailComposer";
 import { EmailPreview } from "@/components/admin/EmailPreview";
 
 interface Props {
@@ -17,7 +17,7 @@ export function AddFunnelStepForm({ funnelId, isFirst, scheduleEnabled }: Props)
 
   return (
     <div>
-      <AIEmailComposer
+      <EmailComposer
         kind="funnel"
         onGenerated={(s, h) => {
           setSubject(s);
