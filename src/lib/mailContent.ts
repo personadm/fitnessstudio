@@ -124,7 +124,7 @@ export function editableTextToHtml(
         const idx = parseInt(onlyImage[1], 10) - 1;
         const img = images[idx];
         if (!img) return "";
-        return `<p style="margin:24px 0;text-align:center;"><img src="data:${img.mediaType};base64,${img.base64}" alt="" style="max-width:100%;height:auto;display:inline-block;" /></p>`;
+        return `<p><img src="data:${img.mediaType};base64,${img.base64}" alt="" style="max-width:100%;height:auto;" /></p>`;
       }
 
       // Headings
@@ -148,7 +148,7 @@ export function editableTextToHtml(
       p = formatInline(p, images);
       // Einzelne Newlines → <br>
       p = p.replace(/\n/g, "<br>");
-      return `<p style="margin:0 0 16px 0;line-height:1.6;">${p}</p>`;
+      return `<p>${p}</p>`;
     })
     .filter(Boolean);
 
@@ -172,7 +172,7 @@ function formatInline(s: string, images: (UploadedImage | null)[]): string {
     const idx = parseInt(n, 10) - 1;
     const img = images[idx];
     if (!img) return "";
-    return `<img src="data:${img.mediaType};base64,${img.base64}" alt="" style="max-width:100%;height:auto;display:block;margin:16px 0;" />`;
+    return `<img src="data:${img.mediaType};base64,${img.base64}" alt="" style="max-width:100%;height:auto;" />`;
   });
 
   // **fett**
@@ -183,7 +183,7 @@ function formatInline(s: string, images: (UploadedImage | null)[]): string {
   // URLs auto-link (außer wenn die schon in href stecken)
   out = out.replace(
     /(https?:\/\/[^\s<)]+)/g,
-    '<a href="$1" style="color:#1A1815;text-decoration:underline;">$1</a>',
+    '<a href="$1">$1</a>',
   );
 
   return out;
