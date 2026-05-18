@@ -312,7 +312,11 @@ export async function createFunnel(formData: FormData) {
     data: {
       name: parsed.name,
       trigger: parsed.trigger,
-      active: parsed.active,
+      // Neu angelegte Funnels sind IMMER inaktiv — User muss
+      // sie explizit über den Toggle in der Liste scharfschalten.
+      // So gehen keine Mails versehentlich raus, bevor alle Schritte
+      // fertig konfiguriert sind.
+      active: false,
       autoStop: parsed.autoStop,
       locationId: parsed.locationId || null,
       scheduleWeekday: parsed.scheduleWeekday ?? null,
