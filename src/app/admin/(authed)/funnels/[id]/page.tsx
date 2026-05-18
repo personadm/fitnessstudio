@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { updateFunnel, deleteFunnel, deleteFunnelStep } from "@/app/admin/_actions";
 import { AddFunnelStepForm } from "./AddFunnelStepForm";
+import { TestMailForm } from "@/components/admin/TestMailForm";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -123,6 +124,7 @@ export default async function FunnelDetailPage({ params }: PageProps) {
                         {step.bodyHtml}
                       </div>
                     </details>
+                    <TestMailForm stepId={step.id} />
                   </div>
                 ))}
               </div>
