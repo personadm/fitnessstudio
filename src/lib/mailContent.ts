@@ -63,13 +63,13 @@ export function htmlToEditableText(html: string): {
   text = text.replace(/<em[^>]*>([\s\S]*?)<\/em>/gi, "*$1*");
   text = text.replace(/<i[^>]*>([\s\S]*?)<\/i>/gi, "*$1*");
 
-  // 6) Links: <a href="X">Y</a> → wenn X === Y nur die URL, sonst "Y (X)"
+  // 6) Links: <a href="X">Y</a> → wenn X === Y nur die URL, sonst [Y](X)
   text = text.replace(
     /<a\s+[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi,
     (_match, href: string, inner: string) => {
       const clean = inner.replace(/<[^>]+>/g, "").trim();
       if (!clean || clean === href) return href;
-      return `${clean} (${href})`;
+      return `[${clean}](${href})`;
     },
   );
 
@@ -175,14 +175,23 @@ function formatInline(s: string, images: (UploadedImage | null)[]): string {
     return `<img src="data:${img.mediaType};base64,${img.base64}" alt="" style="max-width:100%;height:auto;" />`;
   });
 
+  // Markdown-Links: [Text](URL) → <a href="URL">Text</a>
+  // (vor auto-link für nakte URLs, sonst würde die URL in der Klammer zuerst gematcht)
+  out = out.replace(
+    /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+    (_match, text: string, url: string) => `<a href="${url}">${text}</a>`,
+  );
+
   // **fett**
   out = out.replace(/\*\*([^*]+?)\*\*/g, "<strong>$1</strong>");
   // *kursiv* (nicht ** zweimal hintereinander)
   out = out.replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, "$1<em>$2</em>");
 
-  // URLs auto-link (außer wenn die schon in href stecken)
+  // Nackte URLs auto-linken — nur wenn sie NICHT schon in einem href stecken
+  // (durch [Text](URL)-Konvertierung oben). Wir nutzen einen Negativ-Lookbehind
+  // auf href=" und auf > (das schließt URLs als href und als Linktext aus).
   out = out.replace(
-    /(https?:\/\/[^\s<)]+)/g,
+    /(?<!href=["'])(?<!>)(https?:\/\/[^\s<)]+)/g,
     '<a href="$1">$1</a>',
   );
 
