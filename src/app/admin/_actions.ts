@@ -550,3 +550,31 @@ export async function createClubContact(formData: FormData): Promise<ClubSignupR
 }
 
 export type { FunnelTrigger };
+
+/**
+ * Massenlöschung mehrerer Kontakte. Verwendet in der Bulk-Auswahl-Toolbar
+ * der Kontakte-Liste.
+ *
+ * Sicherheits-Limit: max. 1000 IDs pro Aufruf, um nicht versehentlich
+ * eine ganze DB leer zu räumen.
+ *
+ * Cascades: zugehörige ContactEvents, FunnelEnrollments und CampaignEvents
+ * werden durch Prisma onDelete=Cascade im Schema mit entfernt.
+ */
+export async function bulkDeleteContacts(ids: string[]) {
+  await requireAdmin();
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { ok: false, message: "Keine Kontakte ausgewählt." };
+  }
+  if (ids.length > 1000) {
+    return { ok: false, message: "Maximal 1000 Kontakte pro Aktion." };
+  }
+
+  const result = await db.contact.deleteMany({
+    where: { id: { in: ids } },
+  });
+
+  revalidatePath("/admin/contacts");
+  return { ok: true, deleted: result.count };
+}

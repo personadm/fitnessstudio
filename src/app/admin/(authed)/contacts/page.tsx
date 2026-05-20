@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import type { ContactStatus } from "@prisma/client";
+import { ContactsTable } from "./ContactsTable";
 
 interface PageProps {
   searchParams: Promise<{ status?: string; q?: string; location?: string }>;
@@ -166,60 +167,20 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       </form>
 
       {/* Tabelle */}
-      <div className="border border-ink/15">
-        <table className="w-full text-sm">
-          <thead className="border-b border-ink/15 bg-ink/5">
-            <tr className="text-left">
-              <Th>Name / E-Mail</Th>
-              <Th>Status</Th>
-              {locations.length > 0 && <Th>Standort</Th>}
-              <Th>Tarif</Th>
-              <Th>Quelle</Th>
-              <Th>Eingetragen</Th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-ink/10">
-            {contacts.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={locations.length > 0 ? 6 : 5}
-                  className="p-8 text-center text-sm text-muted"
-                >
-                  Keine Einträge gefunden.
-                </td>
-              </tr>
-            ) : (
-              contacts.map((c) => (
-                <tr key={c.id} className="hover:bg-ink/5">
-                  <Td>
-                    <Link href={`/admin/contacts/${c.id}`} className="block">
-                      <p className="font-medium">
-                        {c.firstName || c.lastName
-                          ? `${c.firstName ?? ""} ${c.lastName ?? ""}`.trim()
-                          : "—"}
-                      </p>
-                      <p className="font-mono text-[11px] text-muted">{c.email}</p>
-                    </Link>
-                  </Td>
-                  <Td>
-                    <StatusBadge status={c.status} />
-                  </Td>
-                  {locations.length > 0 && (
-                    <Td className="text-xs">
-                      {c.location?.name ?? <span className="text-muted">—</span>}
-                    </Td>
-                  )}
-                  <Td>{c.pricingPlan?.name ?? "—"}</Td>
-                  <Td className="font-mono text-[10px] uppercase text-muted">{c.source}</Td>
-                  <Td className="font-mono text-[11px] text-muted">
-                    {c.createdAt.toLocaleDateString("de-DE")}
-                  </Td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <ContactsTable
+        contacts={contacts.map((c) => ({
+          id: c.id,
+          email: c.email,
+          firstName: c.firstName,
+          lastName: c.lastName,
+          status: c.status,
+          source: c.source,
+          createdAt: c.createdAt.toISOString(),
+          pricingPlan: c.pricingPlan,
+          location: c.location,
+        }))}
+        showLocationColumn={locations.length > 0}
+      />
     </div>
   );
 }

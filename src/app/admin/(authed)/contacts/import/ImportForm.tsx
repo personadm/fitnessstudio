@@ -63,6 +63,9 @@ const LASTNAME_KEYWORDS = [
   "familienname",
 ];
 const GENDER_KEYWORDS = ["geschlecht", "gender", "sex", "anrede"];
+const BIRTHDATE_KEYWORDS = ["geburtsdatum", "geburtstag", "birthdate", "birth_date", "dateofbirth", "dob"];
+const CITY_KEYWORDS = ["wohnort", "stadt", "ort", "city"];
+const PHONE_KEYWORDS = ["telefon", "tel", "phone", "handy", "mobil", "mobile"];
 
 interface ParsedFile {
   headers: string[];
@@ -75,6 +78,18 @@ interface ColumnMapping {
   firstName: string | null;
   lastName: string | null;
   gender: string | null;
+  birthDate: string | null;
+  city: string | null;
+  phone: string | null;
+}
+
+interface LocationOption {
+  id: string;
+  name: string;
+}
+
+interface ImportFormProps {
+  locations: LocationOption[];
 }
 
 function autoDetectColumn(headers: string[], keywords: string[]): string | null {
@@ -85,7 +100,7 @@ function autoDetectColumn(headers: string[], keywords: string[]): string | null 
   return null;
 }
 
-export function ImportForm() {
+export function ImportForm({ locations }: ImportFormProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
@@ -95,8 +110,12 @@ export function ImportForm() {
     firstName: null,
     lastName: null,
     gender: null,
+    birthDate: null,
+    city: null,
+    phone: null,
   });
   const [targetStatus, setTargetStatus] = useState<Status>("KUNDE");
+  const [locationId, setLocationId] = useState<string>("");
   const [strategy, setStrategy] = useState<Strategy>("skip");
   const [parseError, setParseError] = useState("");
   const [importing, setImporting] = useState(false);
@@ -156,6 +175,9 @@ export function ImportForm() {
         firstName: autoDetectColumn(headers, FIRSTNAME_KEYWORDS),
         lastName: autoDetectColumn(headers, LASTNAME_KEYWORDS),
         gender: autoDetectColumn(headers, GENDER_KEYWORDS),
+        birthDate: autoDetectColumn(headers, BIRTHDATE_KEYWORDS),
+        city: autoDetectColumn(headers, CITY_KEYWORDS),
+        phone: autoDetectColumn(headers, PHONE_KEYWORDS),
       };
 
       setParsed({ headers, rows: json, fileName: file.name });
@@ -170,7 +192,15 @@ export function ImportForm() {
 
   function reset() {
     setParsed(null);
-    setMapping({ email: null, firstName: null, lastName: null, gender: null });
+    setMapping({
+      email: null,
+      firstName: null,
+      lastName: null,
+      gender: null,
+      birthDate: null,
+      city: null,
+      phone: null,
+    });
     setResult(null);
     setParseError("");
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -186,6 +216,9 @@ export function ImportForm() {
       firstName: mapping.firstName ? String(r[mapping.firstName] ?? "") : undefined,
       lastName: mapping.lastName ? String(r[mapping.lastName] ?? "") : undefined,
       gender: mapping.gender ? String(r[mapping.gender] ?? "") : undefined,
+      birthDate: mapping.birthDate ? String(r[mapping.birthDate] ?? "") : undefined,
+      city: mapping.city ? String(r[mapping.city] ?? "") : undefined,
+      phone: mapping.phone ? String(r[mapping.phone] ?? "") : undefined,
     }));
 
     try {
@@ -195,6 +228,7 @@ export function ImportForm() {
         body: JSON.stringify({
           rows,
           targetStatus,
+          locationId: locationId || null,
           duplicateStrategy: strategy,
         }),
       });
@@ -353,6 +387,24 @@ export function ImportForm() {
                   value={mapping.gender}
                   onChange={(v) => setMapping({ ...mapping, gender: v })}
                 />
+                <ColumnSelector
+                  label="Geburtsdatum"
+                  headers={parsed.headers}
+                  value={mapping.birthDate}
+                  onChange={(v) => setMapping({ ...mapping, birthDate: v })}
+                />
+                <ColumnSelector
+                  label="Wohnort"
+                  headers={parsed.headers}
+                  value={mapping.city}
+                  onChange={(v) => setMapping({ ...mapping, city: v })}
+                />
+                <ColumnSelector
+                  label="Telefon"
+                  headers={parsed.headers}
+                  value={mapping.phone}
+                  onChange={(v) => setMapping({ ...mapping, phone: v })}
+                />
               </div>
               {!mapping.email && (
                 <p className="mt-3 text-xs text-red-700">
@@ -391,6 +443,62 @@ export function ImportForm() {
                 })}
               </div>
             </section>
+
+            {/* Standort (nur wenn Standorte angelegt sind) */}
+            {locations.length > 0 && (
+              <section>
+                <p className="label mb-3">Schritt 4b — Standort zuordnen</p>
+                <p className="mb-3 text-sm text-muted">
+                  Alle importierten Kontakte werden diesem Standort zugeordnet.
+                </p>
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+                  <label
+                    className={`cursor-pointer border p-3 transition-colors ${
+                      locationId === ""
+                        ? "border-ink bg-ink text-cream"
+                        : "border-ink/20 hover:border-ink/40"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="locationId"
+                      value=""
+                      checked={locationId === ""}
+                      onChange={() => setLocationId("")}
+                      className="sr-only"
+                    />
+                    <p className="font-mono text-xs uppercase tracking-[0.1em]">
+                      {locationId === "" ? "✓ " : ""}
+                      Kein Standort
+                    </p>
+                  </label>
+                  {locations.map((loc) => {
+                    const sel = locationId === loc.id;
+                    return (
+                      <label
+                        key={loc.id}
+                        className={`cursor-pointer border p-3 transition-colors ${
+                          sel ? "border-ink bg-ink text-cream" : "border-ink/20 hover:border-ink/40"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="locationId"
+                          value={loc.id}
+                          checked={sel}
+                          onChange={() => setLocationId(loc.id)}
+                          className="sr-only"
+                        />
+                        <p className="font-mono text-xs uppercase tracking-[0.1em]">
+                          {sel ? "✓ " : ""}
+                          {loc.name}
+                        </p>
+                      </label>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
             <section>
               <p className="label mb-3">Schritt 5 — Was, wenn ein Kontakt schon existiert?</p>
