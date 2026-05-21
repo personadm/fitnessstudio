@@ -125,12 +125,20 @@ model Contact {
   events            ContactEvent[]
   funnelEnrollments FunnelEnrollment[]
 
+  // Abmeldung (Newsletter-Opt-out)
+  // unsubscribeToken: bei neuen Kontakten via @default(cuid()) automatisch erzeugt.
+  // Bestehende Kontakte haben hier null und bekommen ihren Token erst beim
+  // nächsten Mail-Versand (Backfill in src/lib/funnels.ts).
+  unsubscribeToken String?   @unique @default(cuid())
+  optedOutAt       DateTime?
+
   @@index([status])
   @@index([source])
   @@index([createdAt])
   @@index([signupAt])
   @@index([locationId])
   @@index([status, locationId])
+  @@index([optedOutAt])
 }
 
 // ─────────────────────────────────────────────────────────────

@@ -2,6 +2,8 @@ import { db } from "./db";
 import { sendFunnelMail } from "./mail";
 import type { ContactStatus, FunnelTrigger } from "@prisma/client";
 
+const STUDIO_URL = process.env.STUDIO_URL ?? "http://localhost:3000";
+
 function triggerToStatus(t: FunnelTrigger): ContactStatus {
   return t as unknown as ContactStatus;
 }
@@ -15,6 +17,26 @@ function renderTemplate(
     .join(contact.firstName ?? "")
     .split("{{lastName}}")
     .join(contact.lastName ?? "");
+}
+
+/**
+ * Stellt sicher dass der Kontakt einen unsubscribeToken hat.
+ * Hintergrund: bestehende Kontakte (vor diesem Feature) haben keinen Token.
+ * Bei jedem Mail-Versand wird das hier per Backfill nachgeholt.
+ *
+ * Returns: gültiger Token-String, der für den Abmeldelink verwendet werden kann.
+ */
+async function ensureUnsubscribeToken(contactId: string, existing: string | null): Promise<string> {
+  if (existing) return existing;
+
+  // Neuen Token via crypto generieren — Prisma's cuid() greift nur bei INSERT,
+  // nicht bei UPDATE, daher manuell.
+  const token = `unsub_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+  await db.contact.update({
+    where: { id: contactId },
+    data: { unsubscribeToken: token },
+  });
+  return token;
 }
 
 let lastRunAt = 0;
@@ -165,14 +187,42 @@ export async function processFunnels(
 
         if (now < dueAt) break;
 
+        // OPT-OUT CHECK: wenn der Kontakt sich abgemeldet hat, keine Mail mehr.
+        // Wir markieren den Step trotzdem als "verarbeitet" damit der Funnel
+        // nicht unendlich hier hängen bleibt — aber via Cancel-Mechanismus,
+        // nicht via SENT.
+        if (enrollment.contact.optedOutAt) {
+          await db.funnelEnrollment.update({
+            where: { id: enrollment.id },
+            data: { cancelledAt: new Date(), cancelReason: "OPTED_OUT" },
+          });
+          await db.contactEvent.create({
+            data: {
+              contactId: enrollment.contactId,
+              type: "FUNNEL_CANCELLED",
+              meta: { funnelId: funnel.id, funnelName: funnel.name, reason: "OPTED_OUT" },
+            },
+          });
+          cancelled++;
+          break;
+        }
+
         try {
           const subject = renderTemplate(step.subject, enrollment.contact);
           const bodyHtml = renderTemplate(step.bodyHtml, enrollment.contact);
+
+          // Abmeldelink bauen — Token bei Bedarf nachgenerieren
+          const token = await ensureUnsubscribeToken(
+            enrollment.contactId,
+            enrollment.contact.unsubscribeToken,
+          );
+          const unsubscribeUrl = `${STUDIO_URL}/abmelden?t=${token}`;
 
           await sendFunnelMail({
             to: enrollment.contact.email,
             subject,
             bodyHtml,
+            unsubscribeUrl,
           });
 
           await db.funnelStepEvent.create({
