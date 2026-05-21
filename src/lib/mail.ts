@@ -4,6 +4,14 @@ import { db } from "./db";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM = process.env.MAIL_FROM ?? "onboarding@resend.dev";
+
+// Optional: Antwort-Adresse. Wenn gesetzt, wird sie als reply-to Header
+// in alle Mails geschrieben → wenn der Empfänger auf "Antworten" klickt,
+// geht die Mail an diese Adresse statt an die Absender-Adresse.
+// In Render als ENV setzen, z.B. MAIL_REPLY_TO=tim@example.com
+const REPLY_TO = process.env.MAIL_REPLY_TO?.trim() || null;
+const REPLY_TO_FIELD = REPLY_TO ? { replyTo: [REPLY_TO] } : {};
+
 const STUDIO_NAME = process.env.STUDIO_NAME ?? "Deine Gesundheitscoaches";
 const STUDIO_URL = process.env.STUDIO_URL ?? "http://localhost:3000";
 const LOGO_URL =
@@ -39,6 +47,7 @@ export async function sendDoiMail(opts: {
   const greeting = opts.firstName ? `Hallo ${opts.firstName},` : "Hallo,";
   return resend.emails.send({
     from: FROM,
+    ...REPLY_TO_FIELD,
     to: opts.to,
     subject: `Bitte bestätige deine E-Mail-Adresse`,
     html: doiTemplate({ confirmUrl, greeting }),
@@ -63,6 +72,7 @@ export async function sendPricingMail(opts: {
   const greeting = opts.firstName ? `Hallo ${opts.firstName},` : "Hallo,";
   return resend.emails.send({
     from: FROM,
+    ...REPLY_TO_FIELD,
     to: opts.to,
     subject: `Dein persönliches Sonderangebot — nur für dich`,
     html: pricingTemplate({ plans, signupUrl, greeting }),
@@ -83,6 +93,7 @@ export async function sendSignupConfirmation(opts: {
 }) {
   return resend.emails.send({
     from: FROM,
+    ...REPLY_TO_FIELD,
     to: opts.to,
     subject: `Willkommen bei ${STUDIO_NAME}`,
     html: signupConfirmTemplate({
@@ -107,6 +118,7 @@ export async function sendCampaignMail(opts: {
   const wrappedHtml = campaignWrapperTemplate({ bodyHtml: opts.bodyHtml });
   return resend.emails.send({
     from: FROM,
+    ...REPLY_TO_FIELD,
     to: opts.to,
     subject: opts.subject,
     html: wrappedHtml,
@@ -125,6 +137,7 @@ export async function sendFunnelMail(opts: {
   const wrappedHtml = campaignWrapperTemplate({ bodyHtml: opts.bodyHtml });
   return resend.emails.send({
     from: FROM,
+    ...REPLY_TO_FIELD,
     to: opts.to,
     subject: opts.subject,
     html: wrappedHtml,
