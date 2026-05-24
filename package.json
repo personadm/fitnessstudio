@@ -29,7 +29,12 @@
     "react-dom": "^19.0.0",
     "resend": "^4.0.1",
     "zod": "^3.24.1",
-    "mammoth": "^1.8.0"
+    "mammoth": "^1.8.0",
+    "@tiptap/extension-image": "^2.10.0",
+    "@tiptap/extension-link": "^2.10.0",
+    "@tiptap/pm": "^2.10.0",
+    "@tiptap/react": "^2.10.0",
+    "@tiptap/starter-kit": "^2.10.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
