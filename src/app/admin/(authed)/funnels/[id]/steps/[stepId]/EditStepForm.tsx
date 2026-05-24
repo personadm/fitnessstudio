@@ -53,19 +53,22 @@ export function EditStepForm({ step, funnel }: Props) {
     }
 
     startTransition(async () => {
-      const result = await updateFunnelStep({
-        stepId: step.id,
-        subject: subject.trim(),
-        bodyHtml,
-        delayDays,
-        delayHours,
-      });
+      const formData = new FormData();
+      formData.set("subject", subject.trim());
+      formData.set("bodyHtml", bodyHtml);
+      formData.set("delayDays", String(delayDays));
+      formData.set("delayHours", String(delayHours));
 
-      if (result.ok) {
-        router.push(`/admin/funnels/${funnel.id}`);
+      try {
+        // updateFunnelStep redirected bei Erfolg intern, daher kein Result-Check
+        await updateFunnelStep(step.id, funnel.id, formData);
+        // Falls Action doch zurückkehrt (z.B. ohne Redirect): manuell navigieren
         router.refresh();
-      } else {
-        setError(result.message ?? "Speichern fehlgeschlagen.");
+      } catch (err) {
+        // Next.js Redirect ist intern eine Exception — die NICHT als Fehler werten
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes("NEXT_REDIRECT")) return;
+        setError("Speichern fehlgeschlagen: " + msg);
       }
     });
   }
