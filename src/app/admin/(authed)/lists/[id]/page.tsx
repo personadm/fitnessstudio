@@ -13,25 +13,31 @@ interface PageProps {
 export default async function ListDetailPage({ params }: PageProps) {
   const { id } = await params;
 
-  const list = await db.list.findUnique({
-    where: { id },
-    include: {
-      contacts: {
-        include: {
-          contact: {
-            select: {
-              id: true,
-              email: true,
-              firstName: true,
-              lastName: true,
-              status: true,
+  const [list, locations] = await Promise.all([
+    db.list.findUnique({
+      where: { id },
+      include: {
+        contacts: {
+          include: {
+            contact: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                status: true,
+              },
             },
           },
+          orderBy: { addedAt: "desc" },
         },
-        orderBy: { addedAt: "desc" },
       },
-    },
-  });
+    }),
+    db.location.findMany({
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true },
+    }),
+  ]);
 
   if (!list) notFound();
 
@@ -61,7 +67,7 @@ export default async function ListDetailPage({ params }: PageProps) {
       {/* Personen hinzufügen */}
       <section className="mb-12">
         <p className="label mb-3">Personen hinzufügen</p>
-        <AddContactPanel listId={list.id} />
+        <AddContactPanel listId={list.id} locations={locations} />
       </section>
 
       {/* Mitglieder */}
@@ -70,7 +76,7 @@ export default async function ListDetailPage({ params }: PageProps) {
         {list.contacts.length === 0 ? (
           <div className="border border-ink/15 p-12 text-center">
             <p className="text-sm text-muted">
-              Diese Liste ist noch leer. Suche oben nach Kontakten zum Hinzufügen.
+              Diese Liste ist noch leer. Füge oben Personen hinzu.
             </p>
           </div>
         ) : (

@@ -12,7 +12,8 @@ export const runtime = "nodejs";
  *  - listId (optional): wenn gesetzt, wird pro Treffer geprüft ob der Kontakt
  *    schon in der Liste ist (Feld `alreadyInList`)
  *
- * Max 20 Ergebnisse, sortiert nach Name dann Mail.
+ * Max 50 Ergebnisse — höher als die bisherigen 20, damit Multi-Select
+ * mit "alle markieren" auf einen Schlag nutzbar ist.
  */
 export async function GET(req: NextRequest) {
   const session = await getSession();
@@ -28,7 +29,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ results: [] });
   }
 
-  // Bis zu 20 Treffer in email / firstName / lastName (case-insensitive)
   const contacts = await db.contact.findMany({
     where: {
       OR: [
@@ -45,10 +45,9 @@ export async function GET(req: NextRequest) {
       status: true,
     },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { email: "asc" }],
-    take: 20,
+    take: 50,
   });
 
-  // Pro Kontakt prüfen ob bereits in der Liste
   let inListIds = new Set<string>();
   if (listId && contacts.length > 0) {
     const existing = await db.contactList.findMany({
