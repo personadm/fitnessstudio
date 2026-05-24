@@ -19,46 +19,47 @@ interface Props {
   placeholder?: string;
 }
 
-/**
- * WYSIWYG-Editor für Mail-Inhalte. Basiert auf TipTap.
- *
- * Spezialitäten:
- *  - Bilder werden im Editor mit Label "Bild N" angezeigt (nur im Editor,
- *    nicht im finalen Mail-HTML). Macht es einfacher die Position zu finden,
- *    besonders bei vielen Bildern.
- *  - Editor hat max-height + internal scroll → verhindert dass die Page
- *    beim Enter-Drücken springt.
- */
-
 // ─────────────────────────────────────────────────────────────
-// IMAGE-NODE mit Label im Editor (renderHTML bleibt Standard <img>)
+// IMAGE-NODE mit Label im Editor
 // ─────────────────────────────────────────────────────────────
+//
+// Wichtige Fixes gegenüber der vorherigen Version:
+//
+// 1) NodeViewWrapper OHNE `as="span"`. TipTap-Image ist ein block-level Node
+//    (group: 'block'). Mit `as="span"` (inline) wurde ProseMirror beim
+//    Einfügen des zweiten Bildes verwirrt — das erste Bild wurde mit dem
+//    neuen ersetzt statt ein zweites zu erzeugen.
+//
+// 2) Counter-Logik via positions[]-Array statt frühem return. Sammelt erst
+//    alle Image-Positionen und nutzt indexOf — robuster als ein bedingter
+//    return in der descendants-Callback.
 
 function ImageNodeView({ node, editor, getPos }: NodeViewProps) {
-  // Index dieses Bildes im Dokument berechnen
-  const pos = typeof getPos === "function" ? getPos() : null;
-  let myIndex = 0;
+  // Aktuelle Position dieses Nodes im Dokument
+  const myPos =
+    typeof getPos === "function" ? getPos() : undefined;
 
-  if (pos !== null && pos !== undefined) {
-    let count = 0;
-    editor.state.doc.descendants((n, p) => {
-      if (n.type.name === "image") {
-        count++;
-        if (p === pos) {
-          myIndex = count;
-          return false; // Suche stoppen
-        }
-      }
-      return true;
-    });
+  // Alle Image-Positionen im Dokument sammeln
+  const allImagePositions: number[] = [];
+  editor.state.doc.descendants((n, p) => {
+    if (n.type.name === "image") {
+      allImagePositions.push(p);
+    }
+  });
+
+  // Index 1-basiert ermitteln; fallback "?" falls Position nicht gefunden
+  let labelNumber: string | number = "?";
+  if (typeof myPos === "number") {
+    const idx = allImagePositions.indexOf(myPos);
+    if (idx !== -1) labelNumber = idx + 1;
   }
 
-  const src = node.attrs.src as string;
+  const src = (node.attrs.src as string) ?? "";
   const alt = (node.attrs.alt as string) ?? "";
 
   return (
-    <NodeViewWrapper as="span" className="image-node-wrapper">
-      <span className="image-label">Bild {myIndex || "?"}</span>
+    <NodeViewWrapper className="image-node-wrapper">
+      <div className="image-label">Bild {labelNumber}</div>
       <img src={src} alt={alt} draggable="false" />
     </NodeViewWrapper>
   );
@@ -101,8 +102,6 @@ export function RichTextEditor({ initialHtml = "", onChange, placeholder }: Prop
       attributes: {
         class: "tiptap-content focus:outline-none p-4",
       },
-      // Verhindert dass scrolling in den Editor "ausbricht" — die parent-Page
-      // scrollt nicht mit, wenn der Cursor an der Editor-Grenze ankommt.
       scrollThreshold: 80,
       scrollMargin: 80,
     },
@@ -128,8 +127,6 @@ export function RichTextEditor({ initialHtml = "", onChange, placeholder }: Prop
   return (
     <div className="border border-ink/20 bg-white">
       <Toolbar editor={editor} />
-      {/* Scroll-Container — Editor scrollt INTERN bei langem Inhalt.
-          Damit verschiebt Enter nicht mehr die ganze Page. */}
       <div className="max-h-[500px] overflow-y-auto">
         <EditorContent editor={editor} />
       </div>
@@ -314,6 +311,8 @@ function ImageButton({ editor }: { editor: Editor }) {
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result as string;
+      // .focus() vor .setImage() — Cursor steht garantiert im Editor, neues Bild
+      // wird an dieser Position eingefügt statt ein vorhandenes zu ersetzen.
       editor.chain().focus().setImage({ src: dataUrl }).run();
     };
     reader.onerror = () => alert("Bild konnte nicht geladen werden.");
@@ -365,40 +364,37 @@ function EditorStyles() {
 .tiptap-content li > p { margin: 0; }
 .tiptap-content a { color: #1A1815; text-decoration: underline; }
 
-/* Bild-Wrapper mit Label — nur im Editor sichtbar, kommt NICHT in den Mail-Output */
+/* Bild-Wrapper mit Label — Label ist BLOCK-LEVEL über dem Bild,
+   nicht absolut positioniert (sonst überdeckt es das Bild). */
 .tiptap-content .image-node-wrapper {
   display: block;
-  position: relative;
-  margin: 20px auto;
-  max-width: 100%;
+  margin: 20px 0;
   text-align: center;
-}
-.tiptap-content .image-node-wrapper img {
-  max-width: 100%;
-  height: auto;
-  display: block;
-  margin: 0 auto;
-  border-radius: 2px;
-  border: 1px dashed #ccc;
 }
 .tiptap-content .image-node-wrapper .image-label {
   display: inline-block;
-  position: absolute;
-  top: 6px;
-  left: 50%;
-  transform: translateX(-50%);
   background: #1A1815;
   color: #fff;
   font-family: 'Courier New', monospace;
   font-size: 11px;
   letter-spacing: 0.08em;
-  padding: 3px 10px;
+  padding: 3px 12px;
+  margin-bottom: 6px;
   border-radius: 2px;
-  pointer-events: none;
-  z-index: 1;
+  user-select: none;
 }
-.tiptap-content .image-node-wrapper.ProseMirror-selectednode img,
-.tiptap-content img.ProseMirror-selectednode { outline: 2px solid #7CAE2D; }
+.tiptap-content .image-node-wrapper img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border: 1px dashed rgba(0, 0, 0, 0.15);
+  border-radius: 2px;
+}
+.tiptap-content .image-node-wrapper.ProseMirror-selectednode img {
+  outline: 2px solid #7CAE2D;
+  border-color: transparent;
+}
 .tiptap-content:focus { outline: none; }
       `,
       }}
