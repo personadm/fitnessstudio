@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { CampaignEditForm } from "./CampaignEditForm";
 
@@ -41,10 +41,7 @@ export default async function CampaignEditPage({ params }: PageProps) {
 
   if (!campaign) notFound();
 
-  // Versendete Campaigns können nicht editiert werden — zurück zur Detail-Page
-  if (campaign.status !== "DRAFT") {
-    redirect(`/admin/campaigns/${id}`);
-  }
+  const isSent = campaign.status === "SENT";
 
   return (
     <div className="p-8 md:p-12">
@@ -56,13 +53,30 @@ export default async function CampaignEditPage({ params }: PageProps) {
       </Link>
 
       <div className="mt-6 mb-12">
-        <p className="label">Entwurf bearbeiten</p>
-        <h1 className="mt-2 text-display text-4xl">Newsletter bearbeiten</h1>
-        <p className="mt-3 max-w-2xl text-sm text-muted leading-relaxed">
-          Du kannst alle Felder anpassen solange der Newsletter noch nicht
-          versendet wurde. Beim Speichern bleibt der Status auf „Entwurf" —
-          versenden machst du danach auf der Detail-Seite.
+        <p className="label">
+          {isSent ? "Versendete Kampagne bearbeiten" : "Entwurf bearbeiten"}
         </p>
+        <h1 className="mt-2 text-display text-4xl">Newsletter bearbeiten</h1>
+
+        {isSent ? (
+          <div className="mt-4 max-w-2xl border border-acid bg-acid/20 p-4">
+            <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink">
+              ⓘ Diese Kampagne wurde bereits versendet
+            </p>
+            <p className="mt-2 text-sm text-ink leading-relaxed">
+              Du kannst Betreff, Inhalt und Targeting bearbeiten — der Versand-Status
+              bleibt erhalten. Falls du an eine neue Liste senden willst: Liste hier
+              ändern, speichern, danach auf der Detail-Seite „Erneut versenden" klicken.
+              Empfänger, die schon eine Mail bekommen haben, bekommen <strong>keine zweite</strong>.
+            </p>
+          </div>
+        ) : (
+          <p className="mt-3 max-w-2xl text-sm text-muted leading-relaxed">
+            Du kannst alle Felder anpassen solange der Newsletter noch nicht
+            versendet wurde. Beim Speichern bleibt der Status auf „Entwurf" —
+            versenden machst du danach auf der Detail-Seite.
+          </p>
+        )}
       </div>
 
       <CampaignEditForm

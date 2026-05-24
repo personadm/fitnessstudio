@@ -680,8 +680,14 @@ export async function countContactsForBulkAdd(
 // ─────────────────────────────────────────────────────────────
 
 /**
- * Aktualisiert eine Campaign — aber nur solange sie noch DRAFT ist.
- * Bereits versendete Campaigns (status SENT) können nicht mehr geändert werden.
+ * Aktualisiert eine Campaign — auch nach Versand.
+ *
+ * Bei einer SENT-Campaign bleibt der Status auf SENT. Der Edit ändert nur
+ * die Vorlage (Betreff, Inhalt, Targeting). Bereits versendete Mails sind
+ * davon nicht betroffen (die sind ja schon raus).
+ *
+ * Wenn die Campaign erneut versendet werden soll, muss danach noch
+ * `restartCampaign` aufgerufen werden — das setzt Status zurück auf DRAFT.
  */
 export async function updateCampaign(campaignId: string, formData: FormData) {
   await requireAdmin();
@@ -693,9 +699,6 @@ export async function updateCampaign(campaignId: string, formData: FormData) {
 
   if (!existing) {
     throw new Error("Kampagne nicht gefunden.");
-  }
-  if (existing.status !== "DRAFT") {
-    throw new Error("Versendete Kampagnen können nicht mehr bearbeitet werden.");
   }
 
   const subject = (formData.get("subject") as string)?.trim() ?? "";
@@ -776,9 +779,10 @@ export async function processCampaignBatch(campaignId: string) {
     return { ok: false, message: "Kampagne nicht gefunden." };
   }
 
-  if (campaign.status === "SENT") {
-    return { ok: true, done: true, total: 0, sentTotal: 0, batchSent: 0 };
-  }
+  // Bei SENT-Status erstmal weitermachen, aber nur wenn neue Empfänger da sind
+  // die noch kein SENT-Event haben. Falls Tim einen erneuten Versand via
+  // restartCampaign angestoßen hat, ist der Status sowieso wieder DRAFT.
+  // Hier nur defensiv: wenn SENT + keine neuen Empfänger → done.
 
   const recipients = await getCampaignRecipients({
     listId: campaign.listId,
@@ -869,4 +873,43 @@ export async function processCampaignBatch(campaignId: string) {
     sentTotal: newSentCount,
     batchSent,
   };
+}
+
+/**
+ * Setzt eine SENT-Campaign zurück auf DRAFT, damit sie erneut versendet werden kann.
+ *
+ * Wichtig: die alten CampaignEvent-Einträge (SENT) bleiben erhalten!
+ * Empfänger die schon eine Mail bekommen haben, bekommen beim erneuten
+ * Versand KEINE zweite Mail (Schutz durch @@unique-Constraint).
+ *
+ * Sinnvoll wenn:
+ *  - Targeting wurde auf neue Liste/Status geändert → neue Empfänger
+ *    bekommen die Mail
+ *  - Bestehende Empfänger der ursprünglichen Liste bleiben außen vor
+ */
+export async function restartCampaign(campaignId: string) {
+  await requireAdmin();
+
+  const existing = await db.campaign.findUnique({
+    where: { id: campaignId },
+    select: { id: true, status: true },
+  });
+
+  if (!existing) {
+    throw new Error("Kampagne nicht gefunden.");
+  }
+  if (existing.status === "DRAFT") {
+    // Schon im DRAFT-Status, nichts zu tun
+    revalidatePath(`/admin/campaigns/${campaignId}`);
+    return { ok: true, alreadyDraft: true };
+  }
+
+  await db.campaign.update({
+    where: { id: campaignId },
+    data: { status: "DRAFT", sentAt: null },
+  });
+
+  revalidatePath(`/admin/campaigns/${campaignId}`);
+  revalidatePath("/admin/campaigns");
+  return { ok: true };
 }
