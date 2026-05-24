@@ -4,32 +4,36 @@ import { useState } from "react";
 import { RichTextEditor } from "./RichTextEditor";
 
 interface Props {
-  onUpdate: (data: { subject: string; bodyHtml: string }) => void;
-  initialSubject?: string;
-  initialBodyHtml?: string;
+  kind: "funnel" | "newsletter";
+  onGenerated: (subject: string, bodyHtml: string) => void;
 }
 
 /**
- * "Selbst schreiben"-Modus für Mails. Voller WYSIWYG-Editor:
- *  - Paste mit Formatierung aus Word/Pages/Browser
- *  - Bilder an Cursor-Position einfügen
- *  - Fett, Kursiv, Listen, Links, Überschriften
+ * "Selbst schreiben"-Modus für Mails mit WYSIWYG-Editor.
  *
- * Output via onUpdate-Callback ist HTML (direkt sendefähig).
+ * Props matchen das EmailComposer-Pattern:
+ *  - `kind`: nur für Placeholder-Text (Funnel-Schritt vs Newsletter)
+ *  - `onGenerated`: Callback wird bei jeder Änderung gerufen,
+ *    der Parent speichert subject und bodyHtml für den späteren Submit
  */
-export function ManualEmailComposer({ onUpdate, initialSubject = "", initialBodyHtml = "" }: Props) {
-  const [subject, setSubject] = useState(initialSubject);
-  const [bodyHtml, setBodyHtml] = useState(initialBodyHtml);
+export function ManualEmailComposer({ kind, onGenerated }: Props) {
+  const [subject, setSubject] = useState("");
+  const [bodyHtml, setBodyHtml] = useState("");
 
   function updateSubject(v: string) {
     setSubject(v);
-    onUpdate({ subject: v, bodyHtml });
+    onGenerated(v, bodyHtml);
   }
 
   function updateBody(html: string) {
     setBodyHtml(html);
-    onUpdate({ subject, bodyHtml: html });
+    onGenerated(subject, html);
   }
+
+  const subjectPlaceholder =
+    kind === "newsletter"
+      ? "z.B. Unser neuer Sommer-Trainingsplan"
+      : "z.B. Dein erster Schritt ist da";
 
   return (
     <div className="space-y-6">
@@ -39,7 +43,7 @@ export function ManualEmailComposer({ onUpdate, initialSubject = "", initialBody
           type="text"
           value={subject}
           onChange={(e) => updateSubject(e.target.value)}
-          placeholder="z.B. Dein erster Trainingsplan ist da"
+          placeholder={subjectPlaceholder}
           className="w-full border-b border-ink/20 bg-transparent py-2 text-base placeholder:text-muted/60 focus:border-ink focus:outline-none"
         />
         <p className="mt-1 font-mono text-[10px] text-muted">
@@ -50,7 +54,7 @@ export function ManualEmailComposer({ onUpdate, initialSubject = "", initialBody
       <div>
         <label className="label mb-2 block">Mail-Inhalt</label>
         <RichTextEditor
-          initialHtml={initialBodyHtml}
+          initialHtml=""
           onChange={updateBody}
           placeholder="Schreibe hier los — oder kopiere Text aus Word/Pages rein, die Formatierung bleibt erhalten."
         />
