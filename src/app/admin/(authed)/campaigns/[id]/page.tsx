@@ -39,7 +39,6 @@ export default async function CampaignDetailPage({ params }: PageProps) {
     where: { campaignId: id, event: "SENT" },
   });
 
-  // Targeting-Beschreibung bauen
   const targetParts: string[] = [];
   if (campaign.list) {
     targetParts.push(`Liste „${campaign.list.name}" (${campaign.list._count.contacts} insgesamt)`);
@@ -51,6 +50,8 @@ export default async function CampaignDetailPage({ params }: PageProps) {
   } else if (campaign.targetStatus && !campaign.targetLocation) {
     targetParts.push("alle Standorte");
   }
+
+  const isDraft = campaign.status === "DRAFT";
 
   return (
     <div className="p-8 md:p-12">
@@ -65,8 +66,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
         <p className="label">Kampagne · {campaign.status}</p>
         <h1 className="mt-2 text-display text-3xl">{campaign.subject}</h1>
         <p className="mt-2 text-sm text-muted">
-          {targetParts.join(" · ")} · {recipients.length} versandfähig (DOI bestätigt
-          {campaign.targetStatus !== "EHEMALIGER" ? ", nicht Ehemaliger" : ""})
+          {targetParts.join(" · ")} · {recipients.length} versandfähig
         </p>
       </div>
 
@@ -81,7 +81,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
           </div>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-3">
           {campaign.status === "SENT" ? (
             <div className="border border-ink/15 p-4">
               <p className="label !text-acid_dark">✓ Versendet</p>
@@ -91,7 +91,17 @@ export default async function CampaignDetailPage({ params }: PageProps) {
               </p>
             </div>
           ) : (
-            <CampaignSendButton campaignId={campaign.id} recipientCount={recipients.length} />
+            <>
+              {/* Bearbeiten-Button — nur sichtbar bei DRAFT */}
+              <Link
+                href={`/admin/campaigns/${campaign.id}/edit`}
+                className="block w-full border border-ink/20 px-3 py-2 text-center font-mono text-xs uppercase tracking-[0.1em] hover:bg-ink hover:text-cream"
+              >
+                ✎ Bearbeiten
+              </Link>
+
+              <CampaignSendButton campaignId={campaign.id} recipientCount={recipients.length} />
+            </>
           )}
 
           <form action={deleteCampaign.bind(null, campaign.id)}>
@@ -99,6 +109,12 @@ export default async function CampaignDetailPage({ params }: PageProps) {
               Kampagne löschen
             </button>
           </form>
+
+          {isDraft && (
+            <p className="font-mono text-[10px] text-muted leading-relaxed">
+              Solange der Newsletter im Entwurf-Status ist, kannst du ihn jederzeit bearbeiten oder löschen.
+            </p>
+          )}
         </div>
       </div>
     </div>

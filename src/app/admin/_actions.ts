@@ -13,8 +13,6 @@ import {
   clubSignupSchema,
 } from "@/lib/validation";
 import { enrollIntoMatchingFunnels, processFunnels } from "@/lib/funnels";
-import { getCampaignRecipients } from "@/lib/campaigns";
-import { sendCampaignMail } from "@/lib/mail";
 import type { ContactStatus, FunnelTrigger } from "@prisma/client";
 
 async function requireAdmin() {
@@ -676,134 +674,73 @@ export async function countContactsForBulkAdd(
 }
 
 // ─────────────────────────────────────────────────────────────
-// NEWSLETTER-VERSAND: BATCHED & GEDROSSELT
+// CAMPAIGN BEARBEITEN
 // ─────────────────────────────────────────────────────────────
 
 /**
- * Pro Aufruf max. 30 Mails. Bei mehr Empfängern ruft der Client diese
- * Action wiederholt auf, bis result.done === true.
- *
- * Drosselung: 250ms zwischen Mails = ~4 Mails/Sekunde. Defensiv unter
- * Resend's 10/Sek-Limit, plus freundlich gegenüber Spam-Filtern (hohe
- * Send-Rate von einer Domain wirkt verdächtig).
- *
- * Idempotenz: vor jedem Send wird ein CampaignEvent mit
- * @@unique([campaignId, contactId, event]) erzeugt. Bei doppeltem Aufruf
- * (Browser-Refresh, Re-Klick) wird der gleiche Empfänger nicht zweimal
- * angesendet — der INSERT scheitert mit P2002 und wird übersprungen.
+ * Aktualisiert eine Campaign — aber nur solange sie noch DRAFT ist.
+ * Bereits versendete Campaigns (status SENT) können nicht mehr geändert werden.
  */
-const CAMPAIGN_BATCH_SIZE = 30;
-const CAMPAIGN_MAIL_THROTTLE_MS = 250;
-
-export async function processCampaignBatch(campaignId: string) {
+export async function updateCampaign(campaignId: string, formData: FormData) {
   await requireAdmin();
 
-  const campaign = await db.campaign.findUnique({
+  const existing = await db.campaign.findUnique({
     where: { id: campaignId },
+    select: { id: true, status: true },
   });
 
-  if (!campaign) {
-    return { ok: false, message: "Kampagne nicht gefunden." };
+  if (!existing) {
+    throw new Error("Kampagne nicht gefunden.");
+  }
+  if (existing.status !== "DRAFT") {
+    throw new Error("Versendete Kampagnen können nicht mehr bearbeitet werden.");
   }
 
-  // Bereits fertig versendet — sofort returnen
-  if (campaign.status === "SENT") {
-    return { ok: true, done: true, total: 0, sentTotal: 0, batchSent: 0 };
+  const subject = (formData.get("subject") as string)?.trim() ?? "";
+  const bodyHtml = (formData.get("bodyHtml") as string) ?? "";
+  const targetMode = (formData.get("targetMode") as string) ?? "STATUS";
+  const listIdRaw = (formData.get("listId") as string)?.trim() ?? "";
+  const targetStatusRaw = (formData.get("targetStatus") as string)?.trim() ?? "";
+  const targetLocationIdRaw = (formData.get("targetLocationId") as string)?.trim() ?? "";
+
+  if (!subject) throw new Error("Betreff fehlt.");
+  if (!bodyHtml || bodyHtml === "<p></p>") throw new Error("Mail-Inhalt fehlt.");
+
+  // Targeting: entweder listId ODER targetStatus, nicht beides
+  let updateData: {
+    subject: string;
+    bodyHtml: string;
+    listId: string | null;
+    targetStatus: ContactStatus | null;
+    targetLocationId: string | null;
+  };
+
+  if (targetMode === "LIST") {
+    if (!listIdRaw) throw new Error("Bitte eine Liste auswählen.");
+    updateData = {
+      subject,
+      bodyHtml,
+      listId: listIdRaw,
+      targetStatus: null,
+      targetLocationId: targetLocationIdRaw || null,
+    };
+  } else {
+    if (!targetStatusRaw) throw new Error("Bitte einen Status auswählen.");
+    updateData = {
+      subject,
+      bodyHtml,
+      listId: null,
+      targetStatus: targetStatusRaw as ContactStatus,
+      targetLocationId: targetLocationIdRaw || null,
+    };
   }
 
-  // Alle Empfänger laden
-  const recipients = await getCampaignRecipients({
-    listId: campaign.listId,
-    targetStatus: campaign.targetStatus,
-    targetLocationId: campaign.targetLocationId,
+  await db.campaign.update({
+    where: { id: campaignId },
+    data: updateData,
   });
-  const total = recipients.length;
-
-  if (total === 0) {
-    // Keine Empfänger → direkt auf SENT setzen damit nicht erneut versucht wird
-    await db.campaign.update({
-      where: { id: campaignId },
-      data: { status: "SENT", sentAt: new Date() },
-    });
-    return { ok: true, done: true, total: 0, sentTotal: 0, batchSent: 0 };
-  }
-
-  // Schon-Versendete via SENT-Events erkennen
-  const sentEvents = await db.campaignEvent.findMany({
-    where: { campaignId, event: "SENT" },
-    select: { contactId: true },
-  });
-  const sentIds = new Set(sentEvents.map((e) => e.contactId));
-
-  const toSend = recipients
-    .filter((r) => !sentIds.has(r.id))
-    .slice(0, CAMPAIGN_BATCH_SIZE);
-
-  // Status auf SENDING setzen wenn noch DRAFT (Tracking-Marker)
-  if (campaign.status === "DRAFT" && toSend.length > 0) {
-    await db.campaign.update({
-      where: { id: campaignId },
-      data: { status: "SENDING" },
-    });
-  }
-
-  let batchSent = 0;
-  for (const recipient of toSend) {
-    // Atomic INSERT vor Send — verhindert Doppel-Send
-    try {
-      await db.campaignEvent.create({
-        data: { campaignId, contactId: recipient.id, event: "SENT" },
-      });
-    } catch (err) {
-      const e = err as { code?: string };
-      if (e.code === "P2002") {
-        // Schon gesendet (anderer Aufruf war schneller) — skip
-        continue;
-      }
-      throw err;
-    }
-
-    // Mail verschicken
-    try {
-      const firstName = recipient.firstName ?? "";
-      const subject = campaign.subject.split("{{firstName}}").join(firstName);
-      const bodyHtml = campaign.bodyHtml.split("{{firstName}}").join(firstName);
-
-      await sendCampaignMail({
-        to: recipient.email,
-        subject,
-        bodyHtml,
-      });
-
-      batchSent++;
-      // Drosseln vor nächster Mail
-      await new Promise((r) => setTimeout(r, CAMPAIGN_MAIL_THROTTLE_MS));
-    } catch (err) {
-      // Mail-Versand failed — Event ist bereits geschrieben. Bewusste Entscheidung:
-      // lieber eine Mail nicht raus als doppelt raus. User kann via Resend-Dashboard
-      // sehen welche Mails durchgekommen sind.
-      console.error("[campaigns] mail send failed (event already recorded)", err);
-    }
-  }
-
-  // Status final
-  const newSentCount = sentIds.size + batchSent;
-  const done = newSentCount >= total;
-
-  if (done) {
-    await db.campaign.update({
-      where: { id: campaignId },
-      data: { status: "SENT", sentAt: new Date() },
-    });
-  }
 
   revalidatePath(`/admin/campaigns/${campaignId}`);
-
-  return {
-    ok: true,
-    done,
-    total,
-    sentTotal: newSentCount,
-    batchSent,
-  };
+  revalidatePath("/admin/campaigns");
+  redirect(`/admin/campaigns/${campaignId}`);
 }
