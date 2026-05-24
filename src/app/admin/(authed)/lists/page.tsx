@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { createList, deleteList } from "@/app/admin/_actions";
+import { createList } from "@/app/admin/_actions";
+import { DeleteListButton } from "./DeleteListButton";
 
 export const dynamic = "force-dynamic";
 
@@ -28,32 +29,40 @@ export default async function ListsPage() {
       <section className="mb-12 border border-ink/15 p-6">
         <p className="label mb-3">Neue Liste anlegen</p>
         <form action={createList} className="flex flex-wrap items-end gap-3">
-          <label className="flex-1 min-w-[200px]">
-            <span className="block font-mono text-[10px] uppercase tracking-[0.1em] text-muted mb-1">Name</span>
-            <input
-              type="text"
-              name="name"
-              required
-              maxLength={100}
-              placeholder="z.B. Reha-Sport-Interessenten"
-              className="w-full border-b border-ink/20 bg-transparent py-2 text-base focus:border-ink focus:outline-none"
-            />
-          </label>
-          <label className="flex-1 min-w-[200px]">
-            <span className="block font-mono text-[10px] uppercase tracking-[0.1em] text-muted mb-1">Beschreibung (optional)</span>
-            <input
-              type="text"
-              name="description"
-              maxLength={300}
-              placeholder="kurze Notiz"
-              className="w-full border-b border-ink/20 bg-transparent py-2 text-base focus:border-ink focus:outline-none"
-            />
-          </label>
+          <div className="flex-1 min-w-[200px]">
+            <label className="block">
+              <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
+                Name (Pflicht)
+              </span>
+              <input
+                type="text"
+                name="name"
+                required
+                maxLength={100}
+                placeholder="z.B. Sommer-Aktion 2026"
+                className="mt-1 w-full border-b border-ink/20 bg-transparent py-2 text-base placeholder:text-muted/60 focus:border-ink focus:outline-none"
+              />
+            </label>
+          </div>
+          <div className="flex-1 min-w-[200px]">
+            <label className="block">
+              <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
+                Beschreibung (optional)
+              </span>
+              <input
+                type="text"
+                name="description"
+                maxLength={300}
+                placeholder="Wofür diese Liste?"
+                className="mt-1 w-full border-b border-ink/20 bg-transparent py-2 text-base placeholder:text-muted/60 focus:border-ink focus:outline-none"
+              />
+            </label>
+          </div>
           <button
             type="submit"
-            className="bg-ink px-5 py-2 font-mono text-xs uppercase tracking-[0.12em] text-acid hover:bg-ink-soft"
+            className="bg-ink px-4 py-2 font-mono text-xs uppercase tracking-[0.12em] text-acid hover:bg-ink-soft"
           >
-            Anlegen →
+            + Anlegen
           </button>
         </form>
       </section>
@@ -97,19 +106,7 @@ export default async function ListsPage() {
                   >
                     Bearbeiten →
                   </Link>
-                  <form action={deleteList.bind(null, list.id)}>
-                    <button
-                      type="submit"
-                      className="font-mono text-xs uppercase tracking-[0.1em] text-muted hover:text-red-700"
-                      onClick={(e) => {
-                        if (!confirm(`Liste „${list.name}" wirklich löschen? Mitglieder bleiben erhalten, nur die Gruppierung wird entfernt.`)) {
-                          e.preventDefault();
-                        }
-                      }}
-                    >
-                      Löschen
-                    </button>
-                  </form>
+                  <DeleteListButton listId={list.id} listName={list.name} />
                 </div>
               </div>
             ))}
