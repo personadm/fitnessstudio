@@ -1,71 +1,121 @@
+import Link from "next/link";
 import { db } from "@/lib/db";
 import { createList, deleteList } from "@/app/admin/_actions";
 
+export const dynamic = "force-dynamic";
+
 export default async function ListsPage() {
   const lists = await db.list.findMany({
-    orderBy: { name: "asc" },
-    include: { _count: { select: { contacts: true } } },
+    orderBy: { createdAt: "desc" },
+    include: {
+      _count: { select: { contacts: true } },
+    },
   });
 
   return (
-    <div className="p-8 md:p-12">
-      <p className="label">Listen</p>
-      <h1 className="mt-2 text-display text-4xl mb-12">Newsletter-Listen</h1>
+    <div className="p-8 md:p-12 max-w-5xl">
+      <div className="mb-12">
+        <p className="label">Marketing</p>
+        <h1 className="mt-2 text-display text-5xl">Listen</h1>
+        <p className="mt-3 max-w-2xl text-sm text-muted leading-relaxed">
+          Gruppen von Kontakten für Newsletter-Versand. Eine Liste ist eine
+          freie Sammlung — du fügst Personen manuell hinzu oder entfernst sie
+          wieder. Listen sind unabhängig vom Status („Kunde", „Ehemaliger" etc).
+        </p>
+      </div>
 
-      <div className="grid grid-cols-1 gap-12 md:grid-cols-3">
-        <div className="md:col-span-2">
-          <div className="border border-ink/15">
-            {lists.length === 0 ? (
-              <p className="p-8 text-center text-sm text-muted">Noch keine Listen.</p>
-            ) : (
-              <ul className="divide-y divide-ink/15">
-                {lists.map((l) => (
-                  <li key={l.id} className="flex items-center justify-between p-4">
-                    <div>
-                      <p className="font-medium">{l.name}</p>
-                      {l.description && <p className="text-xs text-muted">{l.description}</p>}
-                      <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                        {l._count.contacts} Empfänger
-                      </p>
-                    </div>
-                    <form action={deleteList.bind(null, l.id)}>
-                      <button className="font-mono text-xs text-red-700 underline underline-offset-2">
-                        Löschen
-                      </button>
-                    </form>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-
-        <div>
-          <p className="label mb-3">Neue Liste</p>
-          <form action={createList} className="space-y-4">
+      {/* Neue Liste anlegen */}
+      <section className="mb-12 border border-ink/15 p-6">
+        <p className="label mb-3">Neue Liste anlegen</p>
+        <form action={createList} className="flex flex-wrap items-end gap-3">
+          <label className="flex-1 min-w-[200px]">
+            <span className="block font-mono text-[10px] uppercase tracking-[0.1em] text-muted mb-1">Name</span>
             <input
+              type="text"
               name="name"
               required
-              placeholder="Listen-Name"
-              className="w-full border-b-2 border-ink bg-transparent py-2 text-base outline-none focus:border-acid_dark"
+              maxLength={100}
+              placeholder="z.B. Reha-Sport-Interessenten"
+              className="w-full border-b border-ink/20 bg-transparent py-2 text-base focus:border-ink focus:outline-none"
             />
+          </label>
+          <label className="flex-1 min-w-[200px]">
+            <span className="block font-mono text-[10px] uppercase tracking-[0.1em] text-muted mb-1">Beschreibung (optional)</span>
             <input
+              type="text"
               name="description"
-              placeholder="Beschreibung (optional)"
-              className="w-full border-b-2 border-ink/30 bg-transparent py-2 text-sm outline-none focus:border-ink"
+              maxLength={300}
+              placeholder="kurze Notiz"
+              className="w-full border-b border-ink/20 bg-transparent py-2 text-base focus:border-ink focus:outline-none"
             />
-            <button
-              type="submit"
-              className="w-full bg-ink py-2 font-mono text-xs uppercase tracking-[0.12em] text-acid hover:bg-ink-soft"
-            >
-              Anlegen
-            </button>
-          </form>
-          <p className="mt-4 text-xs text-muted">
-            Tipp: Kontakte können einer Liste auf der jeweiligen Detail-Seite hinzugefügt werden.
-          </p>
-        </div>
-      </div>
+          </label>
+          <button
+            type="submit"
+            className="bg-ink px-5 py-2 font-mono text-xs uppercase tracking-[0.12em] text-acid hover:bg-ink-soft"
+          >
+            Anlegen →
+          </button>
+        </form>
+      </section>
+
+      {/* Alle Listen */}
+      <section>
+        <p className="label mb-4">Alle Listen ({lists.length})</p>
+        {lists.length === 0 ? (
+          <div className="border border-ink/15 p-12 text-center">
+            <p className="text-sm text-muted">Noch keine Listen angelegt.</p>
+          </div>
+        ) : (
+          <div className="border border-ink/15 divide-y divide-ink/10">
+            {lists.map((list) => (
+              <div
+                key={list.id}
+                className="flex flex-wrap items-center justify-between gap-4 p-4 hover:bg-ink/5"
+              >
+                <div className="min-w-0 flex-1">
+                  <Link
+                    href={`/admin/lists/${list.id}`}
+                    className="text-base font-medium hover:underline"
+                  >
+                    {list.name}
+                  </Link>
+                  <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
+                    {list._count.contacts}{" "}
+                    {list._count.contacts === 1 ? "Mitglied" : "Mitglieder"}
+                    {list.description && (
+                      <>
+                        {" · "}
+                        <span className="normal-case tracking-normal">{list.description}</span>
+                      </>
+                    )}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Link
+                    href={`/admin/lists/${list.id}`}
+                    className="font-mono text-xs uppercase tracking-[0.1em] text-muted hover:text-ink"
+                  >
+                    Bearbeiten →
+                  </Link>
+                  <form action={deleteList.bind(null, list.id)}>
+                    <button
+                      type="submit"
+                      className="font-mono text-xs uppercase tracking-[0.1em] text-muted hover:text-red-700"
+                      onClick={(e) => {
+                        if (!confirm(`Liste „${list.name}" wirklich löschen? Mitglieder bleiben erhalten, nur die Gruppierung wird entfernt.`)) {
+                          e.preventDefault();
+                        }
+                      }}
+                    >
+                      Löschen
+                    </button>
+                  </form>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
