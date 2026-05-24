@@ -131,6 +131,19 @@ model Contact {
   @@index([signupAt])
   @@index([locationId])
   @@index([status, locationId])
+events            ContactEvent[]
+  funnelEnrollments FunnelEnrollment[]
+
+  // Abmeldung (Newsletter-Opt-out)
+  unsubscribeToken String?   @unique @default(cuid())
+  optedOutAt       DateTime?
+
+  @@index([status])
+  @@index([source])
+  @@index([createdAt])
+  ...
+  @@index([optedOutAt])
+}
 }
 
 // ─────────────────────────────────────────────────────────────
