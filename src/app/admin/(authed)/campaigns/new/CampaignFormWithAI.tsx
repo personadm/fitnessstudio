@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createCampaign } from "@/app/admin/_actions";
 import { AIEmailComposer } from "@/components/admin/AIEmailComposer";
 import { EmailPreview } from "@/components/admin/EmailPreview";
+import { RichTextEditor } from "@/components/admin/RichTextEditor";
 
 interface ListOption {
   id: string;
@@ -199,20 +200,25 @@ export function CampaignFormWithAI({ lists, locations }: Props) {
           />
         </label>
 
-        <label className="block">
-          <span className="label mb-2 block">
-            Inhalt (HTML — &lt;p&gt;, &lt;a href=...&gt;, &lt;strong&gt;, &lt;br&gt;, &lt;img&gt;)
-          </span>
-          <textarea
-            name="bodyHtml"
-            value={bodyHtml}
-            onChange={(e) => setBodyHtml(e.target.value)}
-            required
-            rows={12}
-            placeholder={`<p>Hallo zusammen,</p>\n<p>nächste Woche startet unser neuer HYROX-Kurs!</p>`}
-            className="w-full border border-ink/20 bg-transparent p-3 font-mono text-sm outline-none focus:border-ink"
+        <div>
+          <p className="label mb-2 block">Mail-Inhalt</p>
+          <RichTextEditor
+            initialHtml={bodyHtml}
+            onChange={setBodyHtml}
+            placeholder="Schreibe los — oder kopiere Text aus Word/Pages rein. Formatierung bleibt erhalten."
           />
-        </label>
+          {/* Hidden input damit Form-Submit den bodyHtml mitschickt */}
+          <input type="hidden" name="bodyHtml" value={bodyHtml} />
+          <p className="mt-2 font-mono text-[10px] text-muted leading-relaxed">
+            {"· Strg+V: Text mit Formatierung aus Word/Pages einfügen"}
+            <br />
+            {"· 🖼 Bild: an Cursor-Position einfügen (max. 4 MB)"}
+            <br />
+            {"· 🔗 Link: Text markieren, dann klicken"}
+            <br />
+            {"· {{firstName}} wird beim Versand ersetzt"}
+          </p>
+        </div>
 
         {bodyHtml.trim() && (
           <div>
