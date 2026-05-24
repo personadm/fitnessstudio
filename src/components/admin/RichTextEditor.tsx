@@ -1,6 +1,13 @@
 "use client";
 
-import { useEditor, EditorContent, type Editor } from "@tiptap/react";
+import {
+  useEditor,
+  EditorContent,
+  ReactNodeViewRenderer,
+  NodeViewWrapper,
+  type Editor,
+  type NodeViewProps,
+} from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
@@ -15,35 +22,74 @@ interface Props {
 /**
  * WYSIWYG-Editor für Mail-Inhalte. Basiert auf TipTap.
  *
- * Features:
- *  - Paste mit Formatierung (Word, Pages, Browser) — wird automatisch übernommen
- *  - Bilder per Toolbar-Button an Cursor-Position einfügen (als Base64 inline)
- *  - Fett, Kursiv, Überschriften, Listen, Links
- *
- * Output: HTML-String via onChange-Callback bei jeder Änderung.
- *
- * Anmerkung zu Bildern: werden als data:base64-URL inline ins HTML gepackt.
- * Vorteil: kein externes Storage nötig, Bild ist Teil der Mail. Nachteil:
- * Mails werden bei mehreren großen Bildern groß (Resend-Limit liegt bei ~10 MB).
- * Pragmatischer Trade-off — bei Problemen später auf externes Hosting umsteigen.
+ * Spezialitäten:
+ *  - Bilder werden im Editor mit Label "Bild N" angezeigt (nur im Editor,
+ *    nicht im finalen Mail-HTML). Macht es einfacher die Position zu finden,
+ *    besonders bei vielen Bildern.
+ *  - Editor hat max-height + internal scroll → verhindert dass die Page
+ *    beim Enter-Drücken springt.
  */
+
+// ─────────────────────────────────────────────────────────────
+// IMAGE-NODE mit Label im Editor (renderHTML bleibt Standard <img>)
+// ─────────────────────────────────────────────────────────────
+
+function ImageNodeView({ node, editor, getPos }: NodeViewProps) {
+  // Index dieses Bildes im Dokument berechnen
+  const pos = typeof getPos === "function" ? getPos() : null;
+  let myIndex = 0;
+
+  if (pos !== null && pos !== undefined) {
+    let count = 0;
+    editor.state.doc.descendants((n, p) => {
+      if (n.type.name === "image") {
+        count++;
+        if (p === pos) {
+          myIndex = count;
+          return false; // Suche stoppen
+        }
+      }
+      return true;
+    });
+  }
+
+  const src = node.attrs.src as string;
+  const alt = (node.attrs.alt as string) ?? "";
+
+  return (
+    <NodeViewWrapper as="span" className="image-node-wrapper">
+      <span className="image-label">Bild {myIndex || "?"}</span>
+      <img src={src} alt={alt} draggable="false" />
+    </NodeViewWrapper>
+  );
+}
+
+const ImageWithLabel = Image.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(ImageNodeView);
+  },
+});
+
+// ─────────────────────────────────────────────────────────────
+// EDITOR-KOMPONENTE
+// ─────────────────────────────────────────────────────────────
+
 export function RichTextEditor({ initialHtml = "", onChange, placeholder }: Props) {
   const editor = useEditor({
-    immediatelyRender: false, // Next.js: SSR-Mismatch vermeiden
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
-        // Code-Block, Blockquote etc. brauchen wir für Mails nicht
         codeBlock: false,
         horizontalRule: false,
+        heading: { levels: [1, 2] },
       }),
-      Image.configure({
-        // Bilder bekommen automatisch max-width:100% für Responsive
+      ImageWithLabel.configure({
         HTMLAttributes: {
           style: "max-width:100%;height:auto;",
         },
       }),
       Link.configure({
-        openOnClick: false, // Im Editor-Modus nicht navigieren
+        openOnClick: false,
         HTMLAttributes: {
           rel: "noopener noreferrer",
         },
@@ -53,14 +99,15 @@ export function RichTextEditor({ initialHtml = "", onChange, placeholder }: Prop
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
     editorProps: {
       attributes: {
-        class: "tiptap-content focus:outline-none min-h-[300px] p-4",
+        class: "tiptap-content focus:outline-none p-4",
       },
+      // Verhindert dass scrolling in den Editor "ausbricht" — die parent-Page
+      // scrollt nicht mit, wenn der Cursor an der Editor-Grenze ankommt.
+      scrollThreshold: 80,
+      scrollMargin: 80,
     },
   });
 
-  // Wenn sich initialHtml von außen ändert (z.B. weil KI was generiert hat
-  // und der Parent das in den Editor pumpt), Content aktualisieren —
-  // aber NICHT bei jedem Editor-Update, sonst Endlosschleife.
   const lastInitialRef = useRef(initialHtml);
   useEffect(() => {
     if (!editor) return;
@@ -81,7 +128,11 @@ export function RichTextEditor({ initialHtml = "", onChange, placeholder }: Prop
   return (
     <div className="border border-ink/20 bg-white">
       <Toolbar editor={editor} />
-      <EditorContent editor={editor} />
+      {/* Scroll-Container — Editor scrollt INTERN bei langem Inhalt.
+          Damit verschiebt Enter nicht mehr die ganze Page. */}
+      <div className="max-h-[500px] overflow-y-auto">
+        <EditorContent editor={editor} />
+      </div>
       <EditorStyles />
       {placeholder && editor.isEmpty && (
         <div className="pointer-events-none absolute mt-[-300px] p-4 text-sm text-muted/60">
@@ -98,7 +149,7 @@ export function RichTextEditor({ initialHtml = "", onChange, placeholder }: Prop
 
 function Toolbar({ editor }: { editor: Editor }) {
   return (
-    <div className="flex flex-wrap items-center gap-1 border-b border-ink/15 bg-ink/5 p-2">
+    <div className="sticky top-0 z-10 flex flex-wrap items-center gap-1 border-b border-ink/15 bg-ink/5 p-2">
       <ToolbarButton
         active={editor.isActive("bold")}
         onClick={() => editor.chain().focus().toggleBold().run()}
@@ -221,30 +272,19 @@ function Divider() {
   return <span className="mx-1 inline-block h-5 w-px bg-ink/15" />;
 }
 
-// ─────────────────────────────────────────────────────────────
-// LINK-BUTTON mit Inline-Dialog
-// ─────────────────────────────────────────────────────────────
-
 function LinkButton({ editor }: { editor: Editor }) {
   function handleLink() {
     const previousUrl = editor.getAttributes("link").href as string | undefined;
     const url = window.prompt("Link-URL (leer = Link entfernen):", previousUrl ?? "https://");
 
-    // User hat Abbrechen geklickt
     if (url === null) return;
 
-    // Leer = entfernen
     if (url === "") {
       editor.chain().focus().extendMarkRange("link").unsetLink().run();
       return;
     }
 
-    editor
-      .chain()
-      .focus()
-      .extendMarkRange("link")
-      .setLink({ href: url })
-      .run();
+    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
   }
 
   return (
@@ -258,10 +298,6 @@ function LinkButton({ editor }: { editor: Editor }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// IMAGE-BUTTON mit File-Picker
-// ─────────────────────────────────────────────────────────────
-
 function ImageButton({ editor }: { editor: Editor }) {
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -269,7 +305,6 @@ function ImageButton({ editor }: { editor: Editor }) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Größen-Check: 4 MB Limit pro Bild (defensiv unter Resend-Mail-Limit)
     if (file.size > 4 * 1024 * 1024) {
       alert("Bild ist zu groß (max. 4 MB). Bitte komprimieren oder kleineres Bild wählen.");
       e.target.value = "";
@@ -279,13 +314,11 @@ function ImageButton({ editor }: { editor: Editor }) {
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result as string;
-      // Bild an aktuelle Cursor-Position einfügen
       editor.chain().focus().setImage({ src: dataUrl }).run();
     };
     reader.onerror = () => alert("Bild konnte nicht geladen werden.");
     reader.readAsDataURL(file);
 
-    // Input zurücksetzen damit gleiches Bild nochmal eingefügt werden kann
     e.target.value = "";
   }
 
@@ -309,7 +342,7 @@ function ImageButton({ editor }: { editor: Editor }) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// EDITOR-STYLES (für h1, h2, p, ul, ol etc. im Editor-Bereich)
+// EDITOR-STYLES
 // ─────────────────────────────────────────────────────────────
 
 function EditorStyles() {
@@ -317,11 +350,12 @@ function EditorStyles() {
     <style
       dangerouslySetInnerHTML={{
         __html: `
-.tiptap-content { font-family: Arial, Helvetica, sans-serif; font-size: 15px; line-height: 1.6; color: #1A1815; }
+.tiptap-content { font-family: Arial, Helvetica, sans-serif; font-size: 15px; line-height: 1.6; color: #1A1815; min-height: 280px; }
 .tiptap-content > * + * { margin-top: 0.75em; }
 .tiptap-content h1 { font-size: 1.7em; font-weight: 700; line-height: 1.3; margin-top: 1em; margin-bottom: 0.4em; }
 .tiptap-content h2 { font-size: 1.35em; font-weight: 700; line-height: 1.3; margin-top: 1em; margin-bottom: 0.4em; }
 .tiptap-content p { margin: 0.5em 0; }
+.tiptap-content p:empty::before { content: ""; display: inline-block; }
 .tiptap-content strong { font-weight: 700; }
 .tiptap-content em { font-style: italic; }
 .tiptap-content ul, .tiptap-content ol { padding-left: 1.6em; margin: 0.6em 0; }
@@ -330,10 +364,42 @@ function EditorStyles() {
 .tiptap-content li { margin: 0.2em 0; }
 .tiptap-content li > p { margin: 0; }
 .tiptap-content a { color: #1A1815; text-decoration: underline; }
-.tiptap-content img { max-width: 100%; height: auto; display: block; margin: 16px auto; border-radius: 2px; }
+
+/* Bild-Wrapper mit Label — nur im Editor sichtbar, kommt NICHT in den Mail-Output */
+.tiptap-content .image-node-wrapper {
+  display: block;
+  position: relative;
+  margin: 20px auto;
+  max-width: 100%;
+  text-align: center;
+}
+.tiptap-content .image-node-wrapper img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  border-radius: 2px;
+  border: 1px dashed #ccc;
+}
+.tiptap-content .image-node-wrapper .image-label {
+  display: inline-block;
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1A1815;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  padding: 3px 10px;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 1;
+}
+.tiptap-content .image-node-wrapper.ProseMirror-selectednode img,
 .tiptap-content img.ProseMirror-selectednode { outline: 2px solid #7CAE2D; }
 .tiptap-content:focus { outline: none; }
-.tiptap-content .ProseMirror-trailingBreak { display: none; }
       `,
       }}
     />
