@@ -339,15 +339,16 @@ function ImageButton({ editor }: { editor: Editor }) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 4 * 1024 * 1024) {
-      alert("Bild ist zu groß (max. 4 MB). Bitte komprimieren oder kleineres Bild wählen.");
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Bild ist zu groß (max. 10 MB Original). Bitte vorher komprimieren.");
       e.target.value = "";
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
+    try {
+      // Bild auf max 1200px Breite skalieren und als JPEG mit 80% Qualität speichern.
+      // Damit sind Bilder meist <500KB groß — und mehrere passen in den 5MB-Newsletter.
+      const dataUrl = await resizeImageToDataUrl(file, 1200, 0.8);
 
       // ROBUSTER INSERT-PFAD MIT NODESELECTION-SCHUTZ:
       //
@@ -355,21 +356,15 @@ function ImageButton({ editor }: { editor: Editor }) {
       // Bild, das gerade durch Klick oder Cursor-Nachbarschaft selektiert
       // ist), würde `insertContent` diesen Node ERSETZEN. Das ist genau der
       // Bug warum nur ein Bild zur Zeit drin blieb.
-      //
-      // Schritt 1: prüfen ob Atom selected ist → Cursor dahinter setzen
-      // Schritt 2: an Cursor-Position einfügen (NICHT ans Ende!)
       const { selection } = editor.state;
       const nodeAtFrom = editor.state.doc.nodeAt(selection.from);
       const isAtomSelected =
         nodeAtFrom?.isAtom === true && selection.from + 1 === selection.to;
 
       if (isAtomSelected) {
-        // Cursor hinter den Atom-Node setzen
         editor.commands.setTextSelection(selection.to);
       }
 
-      // An aktueller Cursor-Position einfügen — KEIN focus('end')!
-      // Das Bild kommt dort hin, wo der Cursor steht.
       const inserted = editor
         .chain()
         .focus()
@@ -382,9 +377,10 @@ function ImageButton({ editor }: { editor: Editor }) {
       if (!inserted) {
         console.warn("[RichTextEditor] Image insert failed");
       }
-    };
-    reader.onerror = () => alert("Bild konnte nicht geladen werden.");
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error("[RichTextEditor] Bild-Resize fehlgeschlagen", err);
+      alert("Bild konnte nicht verarbeitet werden.");
+    }
 
     e.target.value = "";
   }
@@ -393,7 +389,7 @@ function ImageButton({ editor }: { editor: Editor }) {
     <>
       <ToolbarButton
         onClick={() => fileRef.current?.click()}
-        title="Bild an Cursor-Position einfügen"
+        title="Bild an Cursor-Position einfügen (wird auf max. 1200px komprimiert)"
       >
         🖼 Bild
       </ToolbarButton>
@@ -406,6 +402,60 @@ function ImageButton({ editor }: { editor: Editor }) {
       />
     </>
   );
+}
+
+/**
+ * Komprimiert ein Bild via Canvas:
+ *  - Originalgröße bleibt erhalten wenn Breite ≤ maxWidth
+ *  - Sonst proportional auf maxWidth skaliert
+ *  - Output: JPEG-Data-URL mit gegebener Qualität (0.0–1.0)
+ *
+ * Typisches Ergebnis: 4 MB JPEG → ~300–500 KB. So passen 5–10 Bilder
+ * in einen Newsletter unter dem 5MB Server-Action-Limit.
+ */
+async function resizeImageToDataUrl(
+  file: File,
+  maxWidth: number,
+  quality: number,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Datei konnte nicht gelesen werden"));
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      if (!dataUrl) {
+        reject(new Error("Datei-Read leer"));
+        return;
+      }
+
+      const img = new window.Image();
+      img.onerror = () => reject(new Error("Bild konnte nicht dekodiert werden"));
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxWidth) {
+          height = Math.round(height * (maxWidth / width));
+          width = maxWidth;
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Canvas-Kontext nicht verfügbar"));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        // JPEG ist effizient für Fotos. PNGs mit Transparenz verlieren
+        // diese — aber für Newsletter ist das meist kein Problem.
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 // ─────────────────────────────────────────────────────────────
