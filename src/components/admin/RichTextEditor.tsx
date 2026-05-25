@@ -311,9 +311,28 @@ function ImageButton({ editor }: { editor: Editor }) {
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result as string;
-      // .focus() vor .setImage() — Cursor steht garantiert im Editor, neues Bild
-      // wird an dieser Position eingefügt statt ein vorhandenes zu ersetzen.
-      editor.chain().focus().setImage({ src: dataUrl }).run();
+
+      // Wichtig: setImage() ersetzt die aktuelle Selection — wenn der Cursor
+      // direkt nach dem letzten eingefügten Bild auf dem Bild stand, würde
+      // dieses ersetzt. Stattdessen:
+      //  1) Cursor IMMER ans Ende des Dokuments setzen
+      //  2) Einen neuen Paragraph anfügen
+      //  3) In den neuen Paragraph das Bild einfügen
+      //  4) Cursor hinter das Bild verschieben (für nächstes Bild)
+      const endPos = editor.state.doc.content.size;
+      editor
+        .chain()
+        .focus()
+        .insertContentAt(endPos, [
+          { type: "paragraph" },
+          { type: "image", attrs: { src: dataUrl } },
+          { type: "paragraph" },
+        ])
+        .run();
+
+      // Cursor in den letzten leeren Paragraph nach dem Bild
+      const newEnd = editor.state.doc.content.size;
+      editor.commands.setTextSelection(newEnd - 1);
     };
     reader.onerror = () => alert("Bild konnte nicht geladen werden.");
     reader.readAsDataURL(file);

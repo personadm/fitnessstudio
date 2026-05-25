@@ -352,8 +352,8 @@ function legalFooterBlock(unsubscribeUrl: string | null): string {
   <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="margin-top:24px;">
     <tr><td align="center" style="font-family:Arial,Helvetica,sans-serif;font-size:10px;line-height:1.7;color:#A8A39A;padding:0 16px;">
       <p style="margin:0 0 6px;color:#A8A39A;">Deine Gesundheitscoaches:</p>
-      <p style="margin:0 0 4px;color:#A8A39A;">Vital-Fit - Lauchenstraße 98 - 48607 Ochtrup - Tel: 02553 7216466</p>
-      <p style="margin:0 0 14px;color:#A8A39A;">Villa-Fit - Erhardstraße 2 - 48683 Ahaus - Tel: 02561 9611166</p>
+      <p style="margin:0 0 4px;color:#A8A39A;">Vital-Fit · Laurenzstr. 98 · 48607 Ochtrup · Tel: 02553 7216466</p>
+      <p style="margin:0 0 14px;color:#A8A39A;">Villa-Fit · Erhardstr. 2 · 48683 Ahaus · Tel: 02561 961166</p>
       <p style="margin:0;color:#A8A39A;">
         Du möchtest keine E-Mails mehr von uns erhalten? <a href="${href}" style="color:#A8A39A;text-decoration:underline;">Hier abmelden</a>.
       </p>
