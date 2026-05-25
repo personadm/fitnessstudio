@@ -137,7 +137,7 @@ export function RichTextEditor({ initialHtml = "", onChange, placeholder }: Prop
     if (initialHtml === lastEmittedHtmlRef.current) return; // unser eigenes Echo
     if (initialHtml === editor.getHTML()) return; // schon im Editor
 
-    editor.commands.setContent(initialHtml || "", { emitUpdate: false });
+    editor.commands.setContent(initialHtml || "", false);
     lastEmittedHtmlRef.current = initialHtml;
   }, [initialHtml, editor]);
 
