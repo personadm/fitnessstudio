@@ -349,25 +349,39 @@ function ImageButton({ editor }: { editor: Editor }) {
     reader.onload = () => {
       const dataUrl = reader.result as string;
 
-      // ROBUSTER INSERT-PFAD:
+      // ROBUSTER INSERT-PFAD MIT NODESELECTION-SCHUTZ:
       //
-      // Schritt 1: Cursor IMMER ans Ende des Dokuments setzen. Damit ist
-      // garantiert, dass keine NodeSelection (auf einem vorhandenen Bild)
-      // aktiv ist, die durch setImage/insertContent ersetzt würde.
+      // Wenn die aktuelle Selection ein Atom-Node ist (z.B. ein vorhandenes
+      // Bild, das gerade durch Klick oder Cursor-Nachbarschaft selektiert
+      // ist), würde `insertContent` diesen Node ERSETZEN. Das ist genau der
+      // Bug warum nur ein Bild zur Zeit drin blieb.
       //
-      // Schritt 2: An aktueller Position einen leeren Paragraph + Bild +
-      // leeren Paragraph einfügen. Der trailing Paragraph stellt sicher,
-      // dass nach dem Bild Platz zum Tippen UND zum Einfügen weiterer
-      // Bilder ist (Cursor landet nach dem Insert dort).
-      editor
+      // Schritt 1: prüfen ob Atom selected ist → Cursor dahinter setzen
+      // Schritt 2: an Cursor-Position einfügen (NICHT ans Ende!)
+      const { selection } = editor.state;
+      const nodeAtFrom = editor.state.doc.nodeAt(selection.from);
+      const isAtomSelected =
+        nodeAtFrom?.isAtom === true && selection.from + 1 === selection.to;
+
+      if (isAtomSelected) {
+        // Cursor hinter den Atom-Node setzen
+        editor.commands.setTextSelection(selection.to);
+      }
+
+      // An aktueller Cursor-Position einfügen — KEIN focus('end')!
+      // Das Bild kommt dort hin, wo der Cursor steht.
+      const inserted = editor
         .chain()
-        .focus("end")
-        .insertContent([
-          { type: "paragraph" },
-          { type: "image", attrs: { src: dataUrl } },
-          { type: "paragraph" },
-        ])
+        .focus()
+        .insertContent({
+          type: "image",
+          attrs: { src: dataUrl },
+        })
         .run();
+
+      if (!inserted) {
+        console.warn("[RichTextEditor] Image insert failed");
+      }
     };
     reader.onerror = () => alert("Bild konnte nicht geladen werden.");
     reader.readAsDataURL(file);
@@ -379,7 +393,7 @@ function ImageButton({ editor }: { editor: Editor }) {
     <>
       <ToolbarButton
         onClick={() => fileRef.current?.click()}
-        title="Bild ans Ende des Dokuments anfügen"
+        title="Bild an Cursor-Position einfügen"
       >
         🖼 Bild
       </ToolbarButton>
