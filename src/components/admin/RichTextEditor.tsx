@@ -11,7 +11,7 @@ import {
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface Props {
   initialHtml?: string;
@@ -20,46 +20,52 @@ interface Props {
 }
 
 // ─────────────────────────────────────────────────────────────
-// IMAGE-NODE mit Label im Editor
+// IMAGE-NODE mit Live-Counter
 // ─────────────────────────────────────────────────────────────
 //
-// Wichtige Fixes gegenüber der vorherigen Version:
-//
-// 1) NodeViewWrapper OHNE `as="span"`. TipTap-Image ist ein block-level Node
-//    (group: 'block'). Mit `as="span"` (inline) wurde ProseMirror beim
-//    Einfügen des zweiten Bildes verwirrt — das erste Bild wurde mit dem
-//    neuen ersetzt statt ein zweites zu erzeugen.
-//
-// 2) Counter-Logik via positions[]-Array statt frühem return. Sammelt erst
-//    alle Image-Positionen und nutzt indexOf — robuster als ein bedingter
-//    return in der descendants-Callback.
+// Counter wird via editor.on('update') aktualisiert. Bei jedem Doc-Change
+// werden alle ImageNodeViews neu durchnummeriert. Das ist robust auch nach
+// Insert/Delete/Reorder.
 
 function ImageNodeView({ node, editor, getPos }: NodeViewProps) {
-  // Aktuelle Position dieses Nodes im Dokument
-  const myPos =
-    typeof getPos === "function" ? getPos() : undefined;
+  const [labelNumber, setLabelNumber] = useState<number | null>(null);
 
-  // Alle Image-Positionen im Dokument sammeln
-  const allImagePositions: number[] = [];
-  editor.state.doc.descendants((n, p) => {
-    if (n.type.name === "image") {
-      allImagePositions.push(p);
+  useEffect(() => {
+    function recalculate() {
+      if (typeof getPos !== "function") return;
+      const myPos = getPos();
+      if (typeof myPos !== "number") return;
+
+      let count = 0;
+      let foundIdx = 0;
+      editor.state.doc.descendants((n, p) => {
+        if (n.type.name === "image") {
+          count++;
+          if (p === myPos) foundIdx = count;
+        }
+      });
+
+      setLabelNumber(foundIdx > 0 ? foundIdx : null);
     }
-  });
 
-  // Index 1-basiert ermitteln; fallback "?" falls Position nicht gefunden
-  let labelNumber: string | number = "?";
-  if (typeof myPos === "number") {
-    const idx = allImagePositions.indexOf(myPos);
-    if (idx !== -1) labelNumber = idx + 1;
-  }
+    recalculate();
+    editor.on("update", recalculate);
+    editor.on("selectionUpdate", recalculate);
+
+    return () => {
+      editor.off("update", recalculate);
+      editor.off("selectionUpdate", recalculate);
+    };
+  }, [editor, getPos]);
 
   const src = (node.attrs.src as string) ?? "";
   const alt = (node.attrs.alt as string) ?? "";
 
   return (
-    <NodeViewWrapper className="image-node-wrapper">
-      <div className="image-label">Bild {labelNumber}</div>
+    <NodeViewWrapper className="image-node-wrapper" data-bild-nr={labelNumber ?? ""}>
+      <div className="image-label">
+        📷 Bild {labelNumber !== null ? labelNumber : "…"}
+      </div>
       <img src={src} alt={alt} draggable="false" />
     </NodeViewWrapper>
   );
@@ -76,6 +82,12 @@ const ImageWithLabel = Image.extend({
 // ─────────────────────────────────────────────────────────────
 
 export function RichTextEditor({ initialHtml = "", onChange, placeholder }: Props) {
+  // KRITISCH: speichert den letzten HTML-Wert den WIR via onChange gesendet haben.
+  // Damit erkennen wir, ob ein neues `initialHtml` von EXTERN kommt oder nur
+  // unser eigenes Echo durch React-State-Update ist.
+  const lastEmittedHtmlRef = useRef<string>(initialHtml);
+  const [imageCount, setImageCount] = useState(0);
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -86,7 +98,7 @@ export function RichTextEditor({ initialHtml = "", onChange, placeholder }: Prop
       }),
       ImageWithLabel.configure({
         HTMLAttributes: {
-          style: "max-width:100%;height:auto;",
+          style: "max-width:100%;height:auto;display:block;",
         },
       }),
       Link.configure({
@@ -97,7 +109,18 @@ export function RichTextEditor({ initialHtml = "", onChange, placeholder }: Prop
       }),
     ],
     content: initialHtml,
-    onUpdate: ({ editor }) => onChange(editor.getHTML()),
+    onUpdate: ({ editor }) => {
+      const html = editor.getHTML();
+      lastEmittedHtmlRef.current = html; // merken, was wir nach oben geben
+      onChange(html);
+
+      // Bild-Anzahl im Debug-Footer aktualisieren
+      let count = 0;
+      editor.state.doc.descendants((n) => {
+        if (n.type.name === "image") count++;
+      });
+      setImageCount(count);
+    },
     editorProps: {
       attributes: {
         class: "tiptap-content focus:outline-none p-4",
@@ -107,13 +130,15 @@ export function RichTextEditor({ initialHtml = "", onChange, placeholder }: Prop
     },
   });
 
-  const lastInitialRef = useRef(initialHtml);
+  // PING-PONG-FIX: nur setContent wenn der eingehende initialHtml weder
+  // unser eigenes Echo noch der aktuelle Editor-State ist.
   useEffect(() => {
     if (!editor) return;
-    if (initialHtml !== lastInitialRef.current) {
-      lastInitialRef.current = initialHtml;
-      editor.commands.setContent(initialHtml || "");
-    }
+    if (initialHtml === lastEmittedHtmlRef.current) return; // unser eigenes Echo
+    if (initialHtml === editor.getHTML()) return; // schon im Editor
+
+    editor.commands.setContent(initialHtml || "", { emitUpdate: false });
+    lastEmittedHtmlRef.current = initialHtml;
   }, [initialHtml, editor]);
 
   if (!editor) {
@@ -129,6 +154,14 @@ export function RichTextEditor({ initialHtml = "", onChange, placeholder }: Prop
       <Toolbar editor={editor} />
       <div className="max-h-[500px] overflow-y-auto">
         <EditorContent editor={editor} />
+      </div>
+      {/* Debug-Anzeige unter dem Editor — zeigt sofort wenn was nicht stimmt */}
+      <div className="border-t border-ink/15 bg-ink/5 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
+        {imageCount === 0 ? (
+          <>Keine Bilder im Newsletter</>
+        ) : (
+          <>{imageCount} {imageCount === 1 ? "Bild" : "Bilder"} im Newsletter</>
+        )}
       </div>
       <EditorStyles />
       {placeholder && editor.isEmpty && (
@@ -295,6 +328,10 @@ function LinkButton({ editor }: { editor: Editor }) {
   );
 }
 
+// ─────────────────────────────────────────────────────────────
+// IMAGE-BUTTON mit robustem Insert
+// ─────────────────────────────────────────────────────────────
+
 function ImageButton({ editor }: { editor: Editor }) {
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -312,27 +349,25 @@ function ImageButton({ editor }: { editor: Editor }) {
     reader.onload = () => {
       const dataUrl = reader.result as string;
 
-      // Wichtig: setImage() ersetzt die aktuelle Selection — wenn der Cursor
-      // direkt nach dem letzten eingefügten Bild auf dem Bild stand, würde
-      // dieses ersetzt. Stattdessen:
-      //  1) Cursor IMMER ans Ende des Dokuments setzen
-      //  2) Einen neuen Paragraph anfügen
-      //  3) In den neuen Paragraph das Bild einfügen
-      //  4) Cursor hinter das Bild verschieben (für nächstes Bild)
-      const endPos = editor.state.doc.content.size;
+      // ROBUSTER INSERT-PFAD:
+      //
+      // Schritt 1: Cursor IMMER ans Ende des Dokuments setzen. Damit ist
+      // garantiert, dass keine NodeSelection (auf einem vorhandenen Bild)
+      // aktiv ist, die durch setImage/insertContent ersetzt würde.
+      //
+      // Schritt 2: An aktueller Position einen leeren Paragraph + Bild +
+      // leeren Paragraph einfügen. Der trailing Paragraph stellt sicher,
+      // dass nach dem Bild Platz zum Tippen UND zum Einfügen weiterer
+      // Bilder ist (Cursor landet nach dem Insert dort).
       editor
         .chain()
-        .focus()
-        .insertContentAt(endPos, [
+        .focus("end")
+        .insertContent([
           { type: "paragraph" },
           { type: "image", attrs: { src: dataUrl } },
           { type: "paragraph" },
         ])
         .run();
-
-      // Cursor in den letzten leeren Paragraph nach dem Bild
-      const newEnd = editor.state.doc.content.size;
-      editor.commands.setTextSelection(newEnd - 1);
     };
     reader.onerror = () => alert("Bild konnte nicht geladen werden.");
     reader.readAsDataURL(file);
@@ -344,7 +379,7 @@ function ImageButton({ editor }: { editor: Editor }) {
     <>
       <ToolbarButton
         onClick={() => fileRef.current?.click()}
-        title="Bild an Cursor-Position einfügen"
+        title="Bild ans Ende des Dokuments anfügen"
       >
         🖼 Bild
       </ToolbarButton>
@@ -383,23 +418,25 @@ function EditorStyles() {
 .tiptap-content li > p { margin: 0; }
 .tiptap-content a { color: #1A1815; text-decoration: underline; }
 
-/* Bild-Wrapper mit Label — Label ist BLOCK-LEVEL über dem Bild,
-   nicht absolut positioniert (sonst überdeckt es das Bild). */
+/* Bild-Wrapper mit Label */
 .tiptap-content .image-node-wrapper {
   display: block;
-  margin: 20px 0;
+  margin: 24px 0;
+  padding: 0;
   text-align: center;
+  position: relative;
 }
 .tiptap-content .image-node-wrapper .image-label {
   display: inline-block;
   background: #1A1815;
-  color: #fff;
+  color: #ffffff;
   font-family: 'Courier New', monospace;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  padding: 3px 12px;
-  margin-bottom: 6px;
-  border-radius: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 4px 14px;
+  margin: 0 0 8px 0;
+  border-radius: 3px;
   user-select: none;
 }
 .tiptap-content .image-node-wrapper img {
@@ -407,11 +444,12 @@ function EditorStyles() {
   max-width: 100%;
   height: auto;
   margin: 0 auto;
-  border: 1px dashed rgba(0, 0, 0, 0.15);
+  border: 1px dashed rgba(0, 0, 0, 0.2);
   border-radius: 2px;
+  background: #fafafa;
 }
 .tiptap-content .image-node-wrapper.ProseMirror-selectednode img {
-  outline: 2px solid #7CAE2D;
+  outline: 3px solid #7CAE2D;
   border-color: transparent;
 }
 .tiptap-content:focus { outline: none; }
