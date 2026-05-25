@@ -1,19 +1,8 @@
 import { LeadForm } from "@/components/LeadForm";
-import { ScrollToTop } from "@/components/ScrollToTop";
-import { TrackPageView } from "@/components/TrackPageView";
 import { db } from "@/lib/db";
 import { getTestimonials } from "@/lib/testimonials";
 
-// Landing-Page nicht statisch beim Build vorrendern — DB-Pool reicht nicht für 33 parallele Pages.
-// Wird stattdessen bei jedem Request frisch gerendert (Supabase eu-west liefert in <100ms).
-export const dynamic = "force-dynamic";
-
-export const metadata = {
-  title: "Deine Gesundheitscoaches – JETZT GRATIS STARTEN!",
-  description: "Hier bekommst du dein Gratis-Start-Angebot!",
-};
-
-const STUDIO = process.env.STUDIO_NAME ?? "Deine Gesundheitscoaches";
+const STUDIO = process.env.STUDIO_NAME ?? "Studio Iron";
 
 // Etwas tiefer/refiner als das Neon-Grün vorher
 const GREEN = "#7CAE2D";
@@ -64,16 +53,14 @@ export default async function LandingPage() {
   ]);
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-cream">
-      <ScrollToTop />
-      <TrackPageView path="/" />
+    <main className="min-h-screen bg-cream">
       {/* ─── Top Bar ─── */}
       <header className="border-b border-ink/10">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 md:px-6 md:py-4 text-[11px] uppercase tracking-[0.14em]">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 text-[11px] uppercase tracking-[0.14em]">
           <span className="font-mono">{STUDIO}</span>
           <a
-            href="#anmelde-bereich"
-            className="font-mono underline underline-offset-4 hover:text-ink-soft -my-2 py-2 -mx-2 px-2"
+            href="#email"
+            className="font-mono underline underline-offset-4 hover:text-ink-soft"
           >
             Direkt anmelden →
           </a>
@@ -82,50 +69,36 @@ export default async function LandingPage() {
 
       {/* ─── HERO ─── */}
       <section>
-        <div className="mx-auto max-w-7xl px-5 md:px-6 py-12 md:py-24">
-          {/* Logo: mobile zentral oben, Desktop in rechter Spalte */}
-          <div className="flex justify-center md:hidden mb-8">
-            <img
-              src={LOGO_URL}
-              alt="Deine Gesundheitscoaches"
-              width={120}
-              height={120}
-              className="h-24 w-24"
-              loading="eager"
-            />
-          </div>
-
-          <div className="grid grid-cols-12 gap-x-4 gap-y-10 md:gap-x-16 md:gap-y-12">
+        <div className="mx-auto max-w-7xl px-6 py-16 md:py-24">
+          <div className="grid grid-cols-12 gap-x-10 gap-y-12 md:gap-x-16">
             {/* Left */}
-            <div className="col-span-12 lg:col-span-7 text-center md:text-left">
-              <p className="label mb-4 md:mb-6" style={{ color: GREEN }}>
+            <div className="col-span-12 lg:col-span-7">
+              <p className="label mb-6" style={{ color: GREEN }}>
                 Ganzheitlich Fit
               </p>
               <h1
-                className="text-display-italic text-4xl leading-[1.05] sm:text-5xl md:text-[88px] md:leading-[0.95]"
+                className="text-display-italic text-6xl leading-[1] md:text-[110px] md:leading-[0.95]"
                 style={{ color: GREEN }}
               >
-                Dein Gratis
-                <br />
-                Start-Angebot
+                Unser Angebot
                 <br />
                 per Email
               </h1>
 
-              <p className="mt-6 mx-auto max-w-md text-display text-lg leading-relaxed text-ink-soft sm:text-xl md:mt-10 md:mx-0 md:max-w-xl md:text-2xl">
+              <p className="mt-10 max-w-xl text-display text-xl leading-relaxed text-ink-soft md:text-2xl">
                 Wohlfühlfigur, schmerzfreie Gelenke, neue Energie — ganzheitlich, ohne Diätstress
                 und ohne Leistungsdruck.
               </p>
 
-              <ul className="mt-8 space-y-4 md:mt-12 md:space-y-5">
+              <ul className="mt-12 space-y-5">
                 {["Wohlfühlfigur", "Schmerzfreie Gelenke", "Mehr Energie"].map((item) => (
                     <li
                       key={item}
-                      className="flex items-center justify-center gap-3 text-xl sm:text-2xl md:justify-start md:gap-4 md:text-3xl"
+                      className="flex items-center gap-4 text-2xl md:text-3xl"
                       style={{ color: GREEN }}
                     >
                       <span
-                        className="inline-block h-2.5 w-2.5 rounded-full flex-shrink-0 md:h-3 md:w-3"
+                        className="inline-block h-3 w-3 rounded-full flex-shrink-0"
                         style={{ backgroundColor: GREEN }}
                         aria-hidden
                       />
@@ -138,25 +111,24 @@ export default async function LandingPage() {
 
             {/* Right */}
             <div className="col-span-12 lg:col-span-5">
-              {/* Logo nur auf Desktop in dieser Spalte */}
-              <div className="hidden md:flex md:mb-8 md:justify-end">
+              <div className="mb-8 flex justify-end">
                 <img
                   src={LOGO_URL}
                   alt="Deine Gesundheitscoaches"
                   width={120}
                   height={120}
-                  className="md:h-28 md:w-28"
+                  className="h-24 w-24 md:h-28 md:w-28"
                   loading="eager"
                 />
               </div>
 
-              <div className="space-y-5 md:space-y-6">
-                <div className="text-center md:text-left">
-                  <p className="label mb-2 md:mb-3">Was passiert</p>
-                  <p className="mx-auto max-w-md text-[15px] leading-relaxed text-ink-soft md:mx-0 md:max-w-none md:text-base">
-                    Trag deine Mail ein. Du bekommst sofort unsere aktuellen Angebote in dein
-                    Postfach – inklusive direktem Anmelde-Button mit einem tollen Angebot für
-                    deinen Gratis-Start. Kein Spam, kein Verkaufsdruck, keine versteckten Kosten.
+              <div className="space-y-6">
+                <div>
+                  <p className="label mb-3">Was passiert</p>
+                  <p className="text-base leading-relaxed text-ink-soft">
+                    Trag deine E-Mail-Adresse ein. Du bekommst sofort dein persönliches
+                    Gratis-Start-Angebot in dein Postfach — ganz entspannt und einfach
+                    durchlesen. Wir freuen uns auf dich!
                   </p>
                 </div>
                 <LeadForm locations={locations} />
@@ -168,29 +140,29 @@ export default async function LandingPage() {
 
       {/* ─── Testimonials (schwarz) ─── */}
       <section className="bg-ink text-cream">
-        <div className="mx-auto max-w-7xl px-5 md:px-6 py-16 md:py-24">
-          <div className="mb-10 max-w-2xl text-center md:mb-12 md:text-left">
-            <p className="label !text-acid mb-3 md:mb-4">Das sagen unsere Kunden</p>
-            <h2 className="text-display-italic text-cream text-5xl leading-[0.95] sm:text-6xl md:text-7xl">
+        <div className="mx-auto max-w-7xl px-6 py-20 md:py-24">
+          <div className="mb-12 max-w-2xl">
+            <p className="label !text-acid mb-4">Das sagen unsere Kunden</p>
+            <h2 className="text-display-italic text-cream text-5xl leading-[0.95] md:text-7xl">
               Echte
               <br />
               Erfolge.
             </h2>
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-5">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
             {testimonials.map((t) => (
-              <article key={t.name} className="bg-cream text-ink p-5 flex flex-col text-center sm:text-left sm:p-4">
+              <article key={t.name} className="bg-cream text-ink p-4 flex flex-col">
                 <img
                   src={t.imageUrl}
                   alt={t.name}
-                  className="aspect-square w-full object-cover mb-4 md:mb-4"
+                  className="aspect-square w-full object-cover mb-4"
                   loading="lazy"
                 />
-                <h3 className="text-display text-lg font-medium leading-tight sm:text-base">{t.name}</h3>
+                <h3 className="text-display text-base font-medium leading-tight">{t.name}</h3>
                 <p className="mt-1 text-xs text-muted">
                   Alter: {t.age} - {t.city}
                 </p>
-                <p className="mt-4 text-base leading-relaxed text-display italic sm:text-sm">„{t.quote}"</p>
+                <p className="mt-4 text-sm leading-relaxed text-display italic">„{t.quote}"</p>
               </article>
             ))}
           </div>
@@ -208,11 +180,11 @@ export default async function LandingPage() {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-ink/75 via-ink/20 to-transparent" />
           <div className="relative z-10 flex h-full items-end">
-            <div className="mx-auto w-full max-w-7xl px-5 pb-8 text-center md:px-6 md:pb-16 md:text-left">
-              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-cream/80 mb-3 sm:text-xs sm:mb-4">
+            <div className="mx-auto w-full max-w-7xl px-6 pb-8 md:pb-16">
+              <p className="font-mono text-xs uppercase tracking-[0.14em] text-cream/80 mb-4">
                 Seit 2008 · Persönlich, herzlich, kompetent
               </p>
-              <p className="text-display-italic text-cream text-4xl leading-[1] sm:text-5xl md:text-7xl">
+              <p className="text-display-italic text-cream text-4xl leading-[1] md:text-7xl">
                 Tina &amp; Erik Bodon.
                 <br />
                 Deine Gesundheitscoaches.
@@ -224,11 +196,11 @@ export default async function LandingPage() {
 
       {/* ─── So arbeiten wir (grüner Block) ─── */}
       <section style={{ backgroundColor: GREEN }}>
-        <div className="mx-auto max-w-7xl px-5 md:px-6 py-16 md:py-28">
-          <div className="grid grid-cols-12 gap-6 mb-12 text-center md:gap-8 md:mb-16 md:text-left">
+        <div className="mx-auto max-w-7xl px-6 py-20 md:py-28">
+          <div className="grid grid-cols-12 gap-8 mb-16">
             <div className="col-span-12 md:col-span-5">
-              <p className="label !text-cream/70 mb-3 md:mb-4">Unser Weg</p>
-              <h2 className="text-display-italic text-cream text-5xl leading-[0.95] sm:text-6xl md:text-7xl">
+              <p className="label !text-cream/70 mb-4">Unser Weg</p>
+              <h2 className="text-display-italic text-cream text-5xl md:text-7xl leading-[0.95]">
                 Der
                 <br />
                 ganzheitliche
@@ -236,8 +208,8 @@ export default async function LandingPage() {
                 Weg.
               </h2>
             </div>
-            <div className="col-span-12 md:col-span-6 md:col-start-7 flex items-end justify-center md:justify-start">
-              <p className="mx-auto max-w-md text-cream/95 text-lg leading-relaxed text-display sm:text-xl md:mx-0 md:max-w-none">
+            <div className="col-span-12 md:col-span-6 md:col-start-7 flex items-end">
+              <p className="text-cream/95 text-lg md:text-xl leading-relaxed text-display">
                 Unsere Methode verbindet Ernährung, Bewegung, Stressregulation und Regeneration.
                 Damit du leichter abnimmst, schmerzfrei durch den Alltag kommst und wieder
                 Energie für Beruf, Familie und Freizeit hast.
@@ -245,7 +217,7 @@ export default async function LandingPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-12 border-t border-cream/30 pt-12 text-center md:grid-cols-3 md:gap-12 md:pt-12 md:text-left">
+          <div className="grid grid-cols-1 gap-12 md:grid-cols-3 border-t border-cream/30 pt-12">
             {[
               {
                 num: "№ 01",
@@ -264,11 +236,11 @@ export default async function LandingPage() {
               },
             ].map((p) => (
               <div key={p.title}>
-                <p className="font-mono text-xs uppercase tracking-[0.14em] text-cream/70 mb-3 md:mb-3">
+                <p className="font-mono text-xs uppercase tracking-[0.14em] text-cream/70 mb-3">
                   {p.num}
                 </p>
-                <h3 className="text-display text-cream text-3xl mb-4 sm:text-4xl md:text-4xl md:mb-4">{p.title}</h3>
-                <p className="mx-auto max-w-md text-cream/90 text-base leading-relaxed md:mx-0 md:max-w-none md:text-base">{p.body}</p>
+                <h3 className="text-display text-cream text-3xl md:text-4xl mb-4">{p.title}</h3>
+                <p className="text-cream/90 leading-relaxed">{p.body}</p>
               </div>
             ))}
           </div>
@@ -277,10 +249,10 @@ export default async function LandingPage() {
 
       {/* ─── 5-Bilder-Grid ─── */}
       <section className="bg-cream">
-        <div className="mx-auto max-w-7xl px-5 md:px-6 py-16 md:py-20">
-          <div className="mb-10 max-w-2xl text-center md:mb-10 md:text-left">
-            <p className="label mb-3 md:mb-4">Im Studio</p>
-            <h2 className="text-display text-3xl leading-[1] sm:text-4xl md:text-5xl">
+        <div className="mx-auto max-w-7xl px-6 py-16 md:py-20">
+          <div className="mb-10 max-w-2xl">
+            <p className="label mb-4">Im Studio</p>
+            <h2 className="text-display text-3xl leading-[1] md:text-5xl">
               Fünf Bausteine.
               <br />
               <span className="text-display-italic" style={{ color: GREEN }}>
@@ -288,7 +260,7 @@ export default async function LandingPage() {
               </span>
             </h2>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3 lg:grid-cols-5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {BENEFIT_IMAGES.map((b) => (
               <div key={b.label} className="relative aspect-[4/5] overflow-hidden">
                 <img
@@ -298,7 +270,7 @@ export default async function LandingPage() {
                   loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                <p className="absolute bottom-4 left-4 right-4 text-cream text-display text-xl leading-tight sm:text-lg md:text-xl">
+                <p className="absolute bottom-4 left-4 right-4 text-cream text-display text-lg md:text-xl leading-tight">
                   {b.label}
                 </p>
               </div>
@@ -309,9 +281,9 @@ export default async function LandingPage() {
 
       {/* ─── Standorte + CTA ─── */}
       <section className="bg-cream">
-        <div className="mx-auto max-w-2xl px-5 py-20 text-center md:px-6 md:py-28">
-          <p className="label mb-4 md:mb-6">Letzter Schritt</p>
-          <p className="text-display text-4xl leading-[1.1] sm:text-5xl md:text-5xl">
+        <div className="mx-auto max-w-2xl px-6 py-20 md:py-28 text-center">
+          <p className="label mb-6">Letzter Schritt</p>
+          <p className="text-display text-4xl leading-[1.1] md:text-5xl">
             Mail rein,
             <br />
             Angebot raus,
@@ -319,8 +291,8 @@ export default async function LandingPage() {
             <span className="text-display-italic">los geht's.</span>
           </p>
           <a
-            href="#anmelde-bereich"
-            className="mt-10 inline-block border-b-2 border-ink pb-1 font-mono text-xs uppercase tracking-[0.14em] hover:text-ink-soft -mx-2 px-2 md:mt-10"
+            href="#email"
+            className="mt-10 inline-block border-b-2 border-ink pb-1 font-mono text-xs uppercase tracking-[0.14em] hover:text-ink-soft"
           >
             Zum Formular ↑
           </a>
@@ -329,21 +301,21 @@ export default async function LandingPage() {
 
       {/* ─── Footer ─── */}
       <footer className="border-t border-ink/15 bg-cream">
-        <div className="mx-auto flex max-w-7xl flex-col items-center gap-4 px-5 py-6 text-center font-mono text-[11px] uppercase tracking-[0.14em] text-muted sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4 sm:text-left md:px-6 md:py-6">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-6 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
           <span>
             © {new Date().getFullYear()} DEINE GESUNDHEITSCOACHES
           </span>
-          <nav className="flex flex-wrap justify-center gap-x-5 gap-y-2 sm:gap-x-6">
-            <a href="/impressum" className="hover:text-ink -my-1 py-1">
+          <nav className="flex flex-wrap gap-x-6 gap-y-2">
+            <a href="/impressum" className="hover:text-ink">
               Impressum
             </a>
-            <a href="/datenschutz" className="hover:text-ink -my-1 py-1">
+            <a href="/datenschutz" className="hover:text-ink">
               Datenschutz
             </a>
-            <a href="/agb" className="hover:text-ink -my-1 py-1">
+            <a href="/agb" className="hover:text-ink">
               AGB
             </a>
-            <a href="/teilnahmebedingungen" className="hover:text-ink -my-1 py-1">
+            <a href="/teilnahmebedingungen" className="hover:text-ink">
               Teilnahmebedingungen
             </a>
           </nav>
