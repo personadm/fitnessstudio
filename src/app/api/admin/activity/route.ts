@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 
 export type ActivityKind =
   | "LEAD"
@@ -20,9 +20,22 @@ export type ActivityItem = {
   href?: string;
 };
 
+/**
+ * Live-Activity für das Admin-Dashboard.
+ *
+ * Schema-Hinweise:
+ *  - CampaignEvent hat KEIN `sentAt` und KEINE direkte `contact`-Relation —
+ *    Zeitstempel ist `createdAt`, Verbindung zu Contact über `contactId`.
+ *    Wir filtern zusätzlich auf event = "SENT", damit Bounces/Opens/Clicks
+ *    nicht in der Activity erscheinen.
+ *  - FunnelStepEvent hat `sentAt` und kommt über `enrollment.contact`.
+ *  - Contact-Daten der CampaignEvents werden in einer zweiten Query geholt
+ *    und über eine Map verknüpft (keine Relation im Schema).
+ */
 export async function GET() {
-  const session = await getSession();
-  if (!session) {
+  try {
+    await requireAdmin();
+  } catch {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 
@@ -76,7 +89,10 @@ export async function GET() {
       take: 50,
     }),
     db.campaignEvent.findMany({
-      where: { createdAt: { gte: since }, event: "SENT" },
+      where: {
+        event: "SENT",
+        createdAt: { gte: since },
+      },
       select: {
         id: true,
         contactId: true,
@@ -88,17 +104,15 @@ export async function GET() {
     }),
   ]);
 
-  // Contacts für CampaignEvents separat (keine direkte Relation im Schema)
-  const campaignContactIds = Array.from(
-    new Set(campaignEvents.map((ce) => ce.contactId)),
-  );
+  // Contacts für CampaignEvents in einer Sammel-Query holen (keine Relation im Schema)
+  const campaignContactIds = Array.from(new Set(campaignEvents.map((c) => c.contactId)));
   const campaignContacts = campaignContactIds.length
     ? await db.contact.findMany({
         where: { id: { in: campaignContactIds } },
         select: { id: true, firstName: true, lastName: true, email: true },
       })
     : [];
-  const campaignContactMap = new Map(campaignContacts.map((c) => [c.id, c]));
+  const contactMap = new Map(campaignContacts.map((c) => [c.id, c]));
 
   const items: ActivityItem[] = [];
   const displayName = (c: { firstName: string | null; lastName: string | null; email: string }) =>
@@ -163,16 +177,16 @@ export async function GET() {
   }
 
   for (const ce of campaignEvents) {
-    const c = campaignContactMap.get(ce.contactId);
-    if (!c) continue;
+    const contact = contactMap.get(ce.contactId);
+    if (!contact) continue;
     items.push({
       id: `campaign-${ce.id}`,
       kind: "CAMPAIGN_MAIL",
       at: ce.createdAt.toISOString(),
-      title: `Newsletter an ${displayName(c)}`,
+      title: `Newsletter an ${displayName(contact)}`,
       subtitle: ce.campaign.subject,
-      contactId: c.id,
-      href: `/admin/contacts/${c.id}`,
+      contactId: contact.id,
+      href: `/admin/contacts/${contact.id}`,
     });
   }
 
