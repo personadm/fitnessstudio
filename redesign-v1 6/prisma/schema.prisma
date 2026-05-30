@@ -1,0 +1,369 @@
+// Prisma Schema — Multi-Location Phase 2
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────
+
+enum ContactStatus {
+  INTERESSENT
+  NEUKUNDE
+  KUNDE
+  EHEMALIGER
+}
+
+enum ContactSource {
+  LANDING
+  DIRECT
+  MANUAL
+  IMPORT
+  CLUB_OFFLINE
+  CLUB_ONLINE
+}
+
+enum BillingInterval {
+  MONATLICH
+  QUARTALSWEISE
+  HALBJAEHRLICH
+  JAEHRLICH
+  EINMALIG
+}
+
+enum Gender {
+  MAENNLICH
+  WEIBLICH
+  DIVERS
+}
+
+enum FunnelTrigger {
+  INTERESSENT
+  NEUKUNDE
+  KUNDE
+  EHEMALIGER
+}
+
+// ─────────────────────────────────────────────────────────────
+// LOCATION
+// ─────────────────────────────────────────────────────────────
+
+model Location {
+  id         String   @id @default(cuid())
+  name       String
+  street     String?
+  postalCode String?
+  city       String?
+  phone      String?
+  email      String?
+  active     Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  contacts         Contact[]
+  plans            PricingPlan[]
+  funnels          Funnel[]
+  targetedCampaigns Campaign[]
+
+  @@index([active, sortOrder])
+}
+
+// ─────────────────────────────────────────────────────────────
+// CONTACT
+// ─────────────────────────────────────────────────────────────
+
+model Contact {
+  id        String        @id @default(cuid())
+  email     String        @unique
+  firstName String?
+  lastName  String?
+  gender    Gender?
+  phone     String?
+  birthDate DateTime?     @db.Date
+
+  status ContactStatus @default(INTERESSENT)
+  source ContactSource @default(LANDING)
+
+  street     String?
+  postalCode String?
+  city       String?
+
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
+  doiToken       String?   @unique
+  doiSentAt      DateTime?
+  doiConfirmedAt DateTime?
+
+  consentText String?
+  consentIp   String?
+
+  refToken String? @unique
+
+  pricingPlanId     String?
+  pricingPlan       PricingPlan? @relation(fields: [pricingPlanId], references: [id])
+  memberSince       DateTime?
+  memberUntil       DateTime?
+  iban              String?
+  contractStartDate DateTime?    @db.Date
+  signupAt          DateTime?
+  signupStaff       String? // Name des Mitarbeiters bei Club-Anmeldung
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lists             ContactList[]
+  events            ContactEvent[]
+  funnelEnrollments FunnelEnrollment[]
+
+  // Abmeldung (Newsletter-Opt-out)
+  // unsubscribeToken: bei neuen Kontakten via @default(cuid()) automatisch erzeugt.
+  // Bestehende Kontakte haben hier null und bekommen ihren Token erst beim
+  // nächsten Mail-Versand (Backfill in src/lib/funnels.ts).
+  unsubscribeToken String?   @unique @default(cuid())
+  optedOutAt       DateTime?
+
+  @@index([status])
+  @@index([source])
+  @@index([createdAt])
+  @@index([signupAt])
+  @@index([locationId])
+  @@index([status, locationId])
+  @@index([optedOutAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// PRICING PLANS
+// ─────────────────────────────────────────────────────────────
+
+model PricingPlan {
+  id              String          @id @default(cuid())
+  name            String
+  description     String?
+  priceCents      Int
+  billingInterval BillingInterval @default(MONATLICH)
+  highlights      String[]
+  // Bis zu 3 hervorgehobene Vorteile fürs Anmeldeseiten-Hero
+  // Format: [{ "text": "...", "subtitle": "...", "isGold": false }, ...]
+  topHighlights   Json     @default("[]")
+  agb             String? // Tarif-spezifischer AGB-Text, wird auf Anmeldeseite gezeigt
+  availableOnline  Boolean @default(true)  // Sichtbar im Online-Formular /anmelden
+  availableOffline Boolean @default(true)  // Sichtbar im Club-Formular /admin/club-anmeldung
+  active          Boolean         @default(true)
+  sortOrder       Int             @default(0)
+
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contacts Contact[]
+
+  @@index([locationId, active])
+}
+
+// ─────────────────────────────────────────────────────────────
+// LISTS & CAMPAIGNS
+// ─────────────────────────────────────────────────────────────
+
+model List {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  contacts  ContactList[]
+  campaigns Campaign[]
+}
+
+model ContactList {
+  contactId String
+  listId    String
+  addedAt   DateTime @default(now())
+
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  list    List    @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@id([contactId, listId])
+}
+
+model Campaign {
+  id          String    @id @default(cuid())
+
+  // Empfänger-Targeting: ENTWEDER listId ODER targetStatus muss gesetzt sein.
+  // targetLocationId schränkt die Empfänger zusätzlich auf einen Standort ein.
+  listId           String?
+  list             List?          @relation(fields: [listId], references: [id], onDelete: SetNull)
+  targetStatus     ContactStatus?
+  targetLocationId String?
+  targetLocation   Location?      @relation(fields: [targetLocationId], references: [id], onDelete: SetNull)
+
+  subject     String
+  bodyHtml    String
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  status      String    @default("DRAFT")
+  createdAt   DateTime  @default(now())
+
+  events CampaignEvent[]
+
+  @@index([targetStatus, targetLocationId])
+}
+
+model CampaignEvent {
+  id         String   @id @default(cuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contactId  String
+  event      String
+  meta       Json?
+  createdAt  DateTime @default(now())
+
+  @@unique([campaignId, contactId, event])
+  @@index([campaignId, event])
+}
+
+// ─────────────────────────────────────────────────────────────
+// AUDIT
+// ─────────────────────────────────────────────────────────────
+
+model ContactEvent {
+  id        String   @id @default(cuid())
+  contactId String
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  type      String
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([contactId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// FUNNELS
+// ─────────────────────────────────────────────────────────────
+
+model Funnel {
+  id        String        @id @default(cuid())
+  name      String
+  trigger   FunnelTrigger
+  active    Boolean       @default(true)
+  autoStop  Boolean       @default(true)
+
+  // Standort-Filter: wenn gesetzt, nur Kontakte an diesem Standort
+  // werden eingeschrieben. null = alle Standorte (Default).
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
+  // Wochenplan-Modus: wenn scheduleWeekday gesetzt, werden Schritte
+  // nicht nach delayDays/delayHours berechnet, sondern nach Wochenplan:
+  // jeder Schritt fällig am Wochentag X, alle Y Wochen, um Z Uhr.
+  // 0=So, 1=Mo, 2=Di, 3=Mi, 4=Do, 5=Fr, 6=Sa (entspricht JS Date.getDay())
+  scheduleWeekday      Int?
+  scheduleWeekInterval Int    @default(1)
+  scheduleHour         Int    @default(9)
+  scheduleMinute       Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  steps       FunnelStep[]
+  enrollments FunnelEnrollment[]
+
+  @@index([trigger, active])
+  @@index([locationId])
+}
+
+model FunnelStep {
+  id        String   @id @default(cuid())
+  funnelId  String
+  funnel    Funnel   @relation(fields: [funnelId], references: [id], onDelete: Cascade)
+  orderNum  Int
+  delayDays Int
+  delayHours Int     @default(0)
+  subject   String
+  bodyHtml  String
+  createdAt DateTime @default(now())
+
+  events FunnelStepEvent[]
+
+  @@unique([funnelId, orderNum])
+  @@index([funnelId])
+}
+
+model FunnelEnrollment {
+  id           String    @id @default(cuid())
+  funnelId     String
+  funnel       Funnel    @relation(fields: [funnelId], references: [id], onDelete: Cascade)
+  contactId    String
+  contact      Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+  cancelledAt  DateTime?
+  cancelReason String?
+
+  events FunnelStepEvent[]
+
+  @@unique([funnelId, contactId])
+  @@index([completedAt, cancelledAt])
+}
+
+model FunnelStepEvent {
+  id           String           @id @default(cuid())
+  enrollmentId String
+  enrollment   FunnelEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  stepId       String
+  step         FunnelStep       @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  sentAt       DateTime         @default(now())
+
+  @@unique([enrollmentId, stepId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// ADMIN
+// ─────────────────────────────────────────────────────────────
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// ANALYTICS / TRACKING
+// ─────────────────────────────────────────────────────────────
+
+model PageView {
+  id        String   @id @default(cuid())
+  path      String
+  sessionId String?
+  referrer  String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([path, createdAt])
+  @@index([sessionId])
+}
