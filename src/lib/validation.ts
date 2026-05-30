@@ -14,26 +14,39 @@ export const leadSchema = z.object({
 });
 export type LeadInput = z.infer<typeof leadSchema>;
 
-export const signupSchema = z.object({
-  email: z.string().trim().toLowerCase().email("Bitte gültige E-Mail-Adresse angeben."),
-  firstName: z.string().trim().min(1, "Vorname fehlt."),
-  lastName: z.string().trim().min(1, "Nachname fehlt."),
-  gender: z.enum(["MAENNLICH", "WEIBLICH", "DIVERS"], {
-    errorMap: () => ({ message: "Bitte Geschlecht angeben." }),
-  }),
-  phone: z.string().trim().optional().or(z.literal("")),
-  birthDate: z.string().trim().min(1, "Geburtsdatum fehlt."),
-  street: z.string().trim().min(1, "Straße fehlt."),
-  postalCode: z.string().trim().min(4, "PLZ fehlt."),
-  city: z.string().trim().min(1, "Stadt fehlt."),
-  iban: z.string().trim().min(15, "IBAN fehlt.").max(34),
-  contractStartDate: z.string().trim().min(1, "Vertragsstart fehlt."),
-  pricingPlanId: z.string().min(1, "Bitte einen Tarif auswählen."),
-  ref: z.string().optional(),
-  consent: z.literal(true, {
-    errorMap: () => ({ message: "Bitte AGB und Datenschutz akzeptieren." }),
-  }),
-});
+export const signupSchema = z
+  .object({
+    email: z.string().trim().toLowerCase().email("Bitte gültige E-Mail-Adresse angeben."),
+    firstName: z.string().trim().min(1, "Vorname fehlt."),
+    lastName: z.string().trim().min(1, "Nachname fehlt."),
+    // Im neuen Hero-Form von /anmelden nicht mehr abgefragt — optional.
+    gender: z.enum(["MAENNLICH", "WEIBLICH", "DIVERS"]).optional().nullable(),
+    phone: z.string().trim().optional().or(z.literal("")),
+    birthDate: z.string().trim().min(1, "Geburtsdatum fehlt."),
+    street: z.string().trim().min(1, "Straße fehlt."),
+    postalCode: z.string().trim().min(4, "PLZ fehlt."),
+    city: z.string().trim().min(1, "Stadt fehlt."),
+    // IBAN und Vertragsstart: im neuen UI nicht mehr abgefragt — optional.
+    // /api/signup speichert null wenn leer (Prisma erlaubt das).
+    iban: z.string().trim().optional().or(z.literal("")),
+    contractStartDate: z.string().trim().optional().or(z.literal("")),
+    pricingPlanId: z.string().min(1, "Bitte einen Tarif auswählen."),
+    locationId: z.string().trim().optional().nullable(),
+    ref: z.string().optional(),
+    // Consent: entweder das alte einzelne `consent: true` ODER beide neuen Felder.
+    consent: z.boolean().optional(),
+    agbConsent: z.boolean().optional(),
+    datenschutzConsent: z.boolean().optional(),
+  })
+  .refine(
+    (data) =>
+      data.consent === true ||
+      (data.agbConsent === true && data.datenschutzConsent === true),
+    {
+      message: "Bitte AGB und Datenschutz akzeptieren.",
+      path: ["consent"],
+    },
+  );
 export type SignupInput = z.infer<typeof signupSchema>;
 
 export const loginSchema = z.object({

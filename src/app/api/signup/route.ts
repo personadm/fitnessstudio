@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, message: "Tarif nicht verfügbar." }, { status: 400 });
     }
 
-    // Standort-Logik (analog zu leads)
+    // Standort-Logik (analog zu /api/leads)
     const activeLocations = await db.location.findMany({
       where: { active: true },
       select: { id: true },
@@ -65,16 +65,29 @@ export async function POST(req: NextRequest) {
       (data.ref ? await db.contact.findUnique({ where: { refToken: data.ref } }) : null) ??
       (await db.contact.findUnique({ where: { email: data.email } }));
 
+    // Null-safe Aufbereitung der optionalen Felder:
+    //   - iban / contractStartDate werden im neuen UI nicht mehr abgefragt
+    //   - gender ist im neuen Hero-Form ebenfalls weggefallen
+    // Prisma Contact hat alle drei als optional → null erlaubt.
+    const ibanValue = data.iban && data.iban.trim() ? data.iban.trim() : null;
+    const contractStartValue =
+      data.contractStartDate && data.contractStartDate.trim()
+        ? new Date(data.contractStartDate)
+        : null;
+    const genderValue = data.gender ?? null;
+
     const contactData = {
       email: data.email,
       firstName: data.firstName,
       lastName: data.lastName,
-      gender: data.gender,
-      phone: data.phone,
+      gender: genderValue,
+      phone: data.phone || null,
       birthDate: new Date(data.birthDate),
       street: data.street,
       postalCode: data.postalCode,
       city: data.city,
+      iban: ibanValue,
+      contractStartDate: contractStartValue,
       signupAt: new Date(),
       pricingPlanId: data.pricingPlanId,
       locationId: resolvedLocationId,
@@ -115,7 +128,7 @@ export async function POST(req: NextRequest) {
 
     await enrollIntoMatchingFunnels(contact.id, contact.status);
 
-    // 🎉 Push-Notification aufs Handy (silent skip wenn VAPID nicht konfiguriert)
+    // Push-Notification aufs Handy (silent skip wenn VAPID nicht konfiguriert)
     try {
       await notifyOnlineSignup({
         firstName: contact.firstName,
