@@ -73,8 +73,18 @@ export const planSchema = z.object({
 export type PlanInput = z.infer<typeof planSchema>;
 
 export const campaignSchema = z.object({
-  listId: z.string().min(1, "Bitte eine Liste wählen."),
-  subject: z.string().trim().min(1, "Betreff fehlt.").max(150),
+  // Zielgruppe-Modus: entweder eine Liste ODER ein Status-Filter
+  targetMode: z.enum(["LIST", "STATUS"]).default("LIST"),
+  // Wenn LIST → listId muss gesetzt sein
+  listId: z.string().trim().optional().nullable(),
+  // Wenn STATUS → targetStatus muss gesetzt sein
+  targetStatus: z
+    .enum(["INTERESSENT", "NEUKUNDE", "KUNDE", "EHEMALIGER"])
+    .optional()
+    .nullable(),
+  // Optional: zusätzlicher Standort-Filter
+  targetLocationId: z.string().trim().optional().nullable(),
+  subject: z.string().trim().min(1, "Betreff fehlt.").max(200),
   bodyHtml: z.string().min(1, "Inhalt fehlt."),
 });
 export type CampaignInput = z.infer<typeof campaignSchema>;
@@ -90,12 +100,19 @@ export const funnelSchema = z.object({
   }),
   active: z.boolean().default(true),
   autoStop: z.boolean().default(true),
+  locationId: z.string().trim().optional().nullable(),
+  // Optional: zeitgesteuerter Versand (z.B. Mittwochs 9:00 alle 2 Wochen)
+  scheduleWeekday: z.coerce.number().int().min(0).max(6).optional().nullable(),
+  scheduleWeekInterval: z.coerce.number().int().min(1).max(52).default(1),
+  scheduleHour: z.coerce.number().int().min(0).max(23).default(9),
+  scheduleMinute: z.coerce.number().int().min(0).max(59).default(0),
 });
 export type FunnelInput = z.infer<typeof funnelSchema>;
 
 export const funnelStepSchema = z.object({
   funnelId: z.string().min(1),
   delayDays: z.coerce.number().int().min(0).max(3650),
+  delayHours: z.coerce.number().int().min(0).max(23).default(0),
   subject: z.string().trim().min(1, "Betreff fehlt.").max(200),
   bodyHtml: z.string().min(1, "Inhalt fehlt."),
 });
