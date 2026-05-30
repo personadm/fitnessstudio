@@ -49,9 +49,16 @@ export async function sendDoiMail(opts: {
     from: FROM,
     ...REPLY_TO_FIELD,
     to: opts.to,
-    subject: `Bitte bestätige deine E-Mail-Adresse`,
+    subject: `Bitte bestätige deine Anmeldung (1 Klick)`,
     html: doiTemplate({ confirmUrl, greeting }),
-    text: `${greeting}\n\nbitte bestätige deine E-Mail-Adresse:\n\n${confirmUrl}\n\nWenn du dich nicht eingetragen hast, ignoriere diese Mail einfach.\n\n— ${STUDIO_NAME}`,
+    text:
+      `${greeting}\n\n` +
+      `fast geschafft! Du hast dein Gratis-Start-Angebot bei den Gesundheitscoaches angefordert.\n\n` +
+      `Bitte bestätige einmal kurz, dass du das warst – dann schalten wir dein Angebot sofort frei:\n\n` +
+      `${confirmUrl}\n\n` +
+      `Direkt danach siehst du, wie dein persönlicher Start aussieht.\n\n` +
+      `Falls du das nicht warst, ignoriere diese Mail einfach – dann passiert nichts.\n\n` +
+      `Herzliche Grüße\nTina & Erik – Deine Gesundheitscoaches`,
   });
 }
 
@@ -64,19 +71,30 @@ export async function sendPricingMail(opts: {
   firstName?: string | null;
   refToken: string;
 }) {
-  const plans = await db.pricingPlan.findMany({
-    where: { active: true, availableOnline: true },
-    orderBy: { sortOrder: "asc" },
-  });
   const signupUrl = `${STUDIO_URL}/anmelden?ref=${opts.refToken}`;
   const greeting = opts.firstName ? `Hallo ${opts.firstName},` : "Hallo,";
+  const subject = opts.firstName
+    ? `Geschafft – hier ist dein Gratis-Start-Angebot, ${opts.firstName}`
+    : `Geschafft – hier ist dein Gratis-Start-Angebot`;
   return resend.emails.send({
     from: FROM,
     ...REPLY_TO_FIELD,
     to: opts.to,
-    subject: `Dein persönliches Sonderangebot — nur für dich`,
-    html: pricingTemplate({ plans, signupUrl, greeting }),
-    text: pricingTextFallback({ plans, signupUrl, greeting }),
+    subject,
+    html: offerTemplate({ signupUrl, greeting }),
+    text:
+      `${greeting}\n\n` +
+      `du bist drin – herzlich willkommen bei den Gesundheitscoaches!\n\n` +
+      `Wie versprochen kommt hier dein persönliches Start-Angebot. ` +
+      `In 6 Wochen bringen wir dich spürbar leichter, schmerzfreier und mit mehr Energie ` +
+      `durch den Alltag – ganzheitlich, ohne Diätstress und ohne Leistungsdruck.\n\n` +
+      `Das Wichtigste auf einen Blick:\n` +
+      `• Dein Start kostet einmalig 99 € – und deine gesetzliche Krankenkasse erstattet bis zu 100 % davon.\n` +
+      `• Du beginnst mit 2 Std. Personal-Coaching, Körper- & Stoffwechselanalyse und einem Plan, der zu deinem Alltag passt.\n` +
+      `• Zufriedenheitsgarantie: Nach 6 Wochen entscheidest du komplett frei.\n\n` +
+      `Sichere dir jetzt deinen Platz:\n${signupUrl}\n\n` +
+      `Über 6.000 Menschen sind diesen Weg schon mit uns gegangen.\n\n` +
+      `Wir freuen uns auf dich!\nTina & Erik – Deine Gesundheitscoaches`,
   });
 }
 
@@ -178,14 +196,17 @@ function doiTemplate({ confirmUrl, greeting }: { confirmUrl: string; greeting: s
         <tr><td style="padding:8px 40px 40px;">
           <p style="font-family:'Courier New',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8A857E;margin:0 0 24px;">${STUDIO_NAME}</p>
           <p style="font-size:16px;line-height:1.6;margin:0 0 12px;">${greeting}</p>
-          <h1 style="font-size:28px;line-height:1.2;margin:0 0 16px;font-weight:400;">Bestätige deine E-Mail-Adresse</h1>
-          <p style="font-size:16px;line-height:1.6;margin:0 0 32px;">Klick einmal kurz auf den Button, damit wir wissen, dass die Adresse wirklich dir gehört. Erst danach senden wir dir unsere aktuellen Angebote zu.</p>
-          <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:#1A1815;">
-            <a href="${confirmUrl}" style="display:inline-block;padding:14px 28px;font-family:'Courier New',monospace;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:#C8FF00;text-decoration:none;">E-Mail bestätigen →</a>
+          <h1 style="font-size:28px;line-height:1.25;margin:0 0 16px;font-weight:400;">Fast geschafft!</h1>
+          <p style="font-size:16px;line-height:1.6;margin:0 0 16px;">Du hast dein Gratis-Start-Angebot bei den Gesundheitscoaches angefordert.</p>
+          <p style="font-size:16px;line-height:1.6;margin:0 0 32px;">Bitte bestätige einmal kurz, dass du das warst – dann schalten wir dein Angebot sofort frei:</p>
+          <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:#0F6E56;border-radius:8px;">
+            <a href="${confirmUrl}" style="display:inline-block;padding:16px 32px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:600;letter-spacing:0.04em;color:#ffffff;text-decoration:none;">Anmeldung bestätigen →</a>
           </td></tr></table>
-          <p style="font-size:13px;line-height:1.6;color:#8A857E;margin:32px 0 0;">Falls der Button nicht funktioniert: ${confirmUrl}</p>
+          <p style="font-size:14px;line-height:1.6;color:#5F5E5A;margin:24px 0 0;">Direkt danach siehst du, wie dein persönlicher Start aussieht.</p>
+          <p style="font-size:13px;line-height:1.6;color:#8A857E;margin:24px 0 0;">Falls der Button nicht funktioniert: <br><a href="${confirmUrl}" style="color:#5F5E5A;word-break:break-all;">${confirmUrl}</a></p>
           <hr style="border:none;border-top:1px solid #D8D2C7;margin:32px 0;">
-          <p style="font-size:12px;line-height:1.6;color:#8A857E;margin:0;">Wenn du dich nicht eingetragen hast, ignoriere diese Mail einfach.</p>
+          <p style="font-size:12px;line-height:1.6;color:#8A857E;margin:0;">Falls du das nicht warst, ignoriere diese Mail einfach – dann passiert nichts.</p>
+          <p style="font-size:13px;line-height:1.6;margin:16px 0 0;">Herzliche Grüße<br>Tina & Erik – Deine Gesundheitscoaches</p>
         </td></tr>
       </table>
     </td></tr>
@@ -372,4 +393,60 @@ function escapeHtml(s: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+// ─────────────────────────────────────────────────────────────
+// Angebots-Mail-Template (nach DOI-Bestätigung)
+// ─────────────────────────────────────────────────────────────
+
+function offerTemplate({ signupUrl, greeting }: { signupUrl: string; greeting: string }) {
+  return `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="utf-8"><style>${shellStyles()}</style></head>
+<body>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:48px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #D8D2C7;">
+        <tr><td>${logoBlock()}</td></tr>
+        <tr><td style="padding:8px 40px 40px;">
+          <p style="font-family:'Courier New',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8A857E;margin:0 0 24px;">${STUDIO_NAME}</p>
+          <p style="font-size:16px;line-height:1.6;margin:0 0 12px;">${greeting}</p>
+          <h1 style="font-size:30px;line-height:1.2;margin:0 0 16px;font-weight:600;color:#2C2C2A;">Du bist drin – willkommen!</h1>
+          <p style="font-size:16px;line-height:1.6;margin:0 0 16px;color:#5F5E5A;">Wie versprochen kommt hier dein persönliches Start-Angebot. In 6 Wochen bringen wir dich spürbar leichter, schmerzfreier und mit mehr Energie durch den Alltag – ganzheitlich, ohne Diätstress und ohne Leistungsdruck.</p>
+
+          <div style="background:#FBF7F0;border-left:4px solid #0F6E56;padding:20px 24px;margin:24px 0;border-radius:4px;">
+            <p style="font-family:'Courier New',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#0F6E56;margin:0 0 12px;font-weight:600;">Das Wichtigste auf einen Blick</p>
+            <ul style="margin:0;padding:0;list-style:none;">
+              <li style="font-size:15px;line-height:1.6;margin:0 0 10px;padding-left:24px;position:relative;color:#2C2C2A;">
+                <span style="position:absolute;left:0;color:#0F6E56;font-weight:bold;">✓</span>
+                Dein Start kostet einmalig <strong>99 €</strong> – und deine gesetzliche Krankenkasse erstattet bis zu <strong>100 %</strong> davon.
+              </li>
+              <li style="font-size:15px;line-height:1.6;margin:0 0 10px;padding-left:24px;position:relative;color:#2C2C2A;">
+                <span style="position:absolute;left:0;color:#0F6E56;font-weight:bold;">✓</span>
+                Du beginnst mit <strong>2 Std. Personal-Coaching</strong>, Körper- & Stoffwechselanalyse und einem Plan, der zu deinem Alltag passt.
+              </li>
+              <li style="font-size:15px;line-height:1.6;margin:0 0 0;padding-left:24px;position:relative;color:#2C2C2A;">
+                <span style="position:absolute;left:0;color:#0F6E56;font-weight:bold;">✓</span>
+                <strong>Zufriedenheitsgarantie:</strong> Nach 6 Wochen entscheidest du komplett frei.
+              </li>
+            </ul>
+          </div>
+
+          <p style="font-size:16px;line-height:1.6;margin:0 0 20px;color:#2C2C2A;font-weight:500;">Sichere dir jetzt deinen Platz:</p>
+
+          <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;"><tr><td style="background:#0F6E56;border-radius:8px;">
+            <a href="${signupUrl}" style="display:inline-block;padding:16px 32px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">Zu meinem Start-Angebot →</a>
+          </td></tr></table>
+
+          <p style="font-size:13px;line-height:1.6;color:#8A857E;margin:0 0 24px;">Falls der Button nicht funktioniert: <br><a href="${signupUrl}" style="color:#5F5E5A;word-break:break-all;">${signupUrl}</a></p>
+
+          <hr style="border:none;border-top:1px solid #D8D2C7;margin:16px 0 24px;">
+
+          <p style="font-size:13px;line-height:1.5;color:#5F5E5A;margin:0 0 16px;font-style:italic;">Über 6.000 Menschen sind diesen Weg schon mit uns gegangen.</p>
+          <p style="font-size:14px;line-height:1.6;margin:0;">Wir freuen uns auf dich!<br><strong>Tina & Erik</strong> – Deine Gesundheitscoaches</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
 }

@@ -152,6 +152,9 @@ model PricingPlan {
   priceCents      Int
   billingInterval BillingInterval @default(MONATLICH)
   highlights      String[]
+  // Bis zu 3 hervorgehobene Vorteile fürs Anmeldeseiten-Hero
+  // Format: [{ "text": "...", "subtitle": "...", "isGold": false }, ...]
+  topHighlights   Json     @default("[]")
   agb             String? // Tarif-spezifischer AGB-Text, wird auf Anmeldeseite gezeigt
   availableOnline  Boolean @default(true)  // Sichtbar im Online-Formular /anmelden
   availableOffline Boolean @default(true)  // Sichtbar im Club-Formular /admin/club-anmeldung

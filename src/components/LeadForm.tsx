@@ -1,56 +1,45 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 type State = "idle" | "loading" | "success" | "error";
-type Gender = "MAENNLICH" | "WEIBLICH" | "DIVERS";
 
-const GENDERS: { value: Gender; label: string }[] = [
-  { value: "MAENNLICH", label: "Männlich" },
-  { value: "WEIBLICH", label: "Weiblich" },
-  { value: "DIVERS", label: "Divers" },
-];
-
-interface Location {
+type Location = {
   id: string;
   name: string;
   city: string | null;
-}
+};
 
 interface Props {
-  locations?: Location[]; // aktive Standorte, optional — falls leer keine Auswahl
+  locations: Location[];
 }
 
-export function LeadForm({ locations = [] }: Props) {
-  const onlyOne = locations.length === 1;
-  const hasMany = locations.length > 1;
+const PETROL = "#0F6E56";
 
+/**
+ * Schlankes Lead-Formular für die Landing-Page Hero-Sektion:
+ *  - Vorname (required)
+ *  - E-Mail (required)
+ *  - Standort (Pflicht nur wenn mehrere aktive Locations existieren)
+ *  - DSGVO-Consent
+ *
+ * Backend (/api/leads) akzeptiert lastName und gender als optional, sodass
+ * dieses schlanke Formular weiterhin funktioniert.
+ */
+export function LeadForm({ locations }: Props) {
   const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [gender, setGender] = useState<Gender | "">("");
   const [email, setEmail] = useState("");
+  const [locationId, setLocationId] = useState(
+    locations.length === 1 ? locations[0].id : "",
+  );
   const [consent, setConsent] = useState(false);
-  // Bei genau einem Standort vorbelegen
-  const [locationId, setLocationId] = useState<string>(onlyOne ? locations[0].id : "");
   const [state, setState] = useState<State>("idle");
   const [message, setMessage] = useState("");
-  const successRef = useRef<HTMLDivElement>(null);
 
-  // Nach erfolgreichem Submit zum Erfolgs-Hinweis scrollen.
-  // Auf Mobile ist die Form weit unten, der Hinweis würde sonst
-  // außerhalb des Sichtbereichs erscheinen.
-  useEffect(() => {
-    if (state === "success" && successRef.current) {
-      successRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  }, [state]);
-
-  const locationRequired = hasMany;
-  const canSubmit = !!gender && consent && (!locationRequired || !!locationId);
+  const needsLocationChoice = locations.length > 1;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!canSubmit) return;
     setState("loading");
     setMessage("");
 
@@ -60,11 +49,9 @@ export function LeadForm({ locations = [] }: Props) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           firstName,
-          lastName,
-          gender,
           email,
+          locationId: locationId || null,
           consent,
-          locationId: locationId || undefined,
         }),
       });
       const data = await res.json();
@@ -85,143 +72,110 @@ export function LeadForm({ locations = [] }: Props) {
   if (state === "success") {
     return (
       <div
-        ref={successRef}
-        className="border border-ink/20 bg-ink text-cream p-8 max-w-xl scroll-mt-24"
+        className="rounded-xl border bg-white p-8 shadow-sm"
+        style={{ borderColor: "rgba(15,110,86,0.2)" }}
       >
-        <p className="label text-acid mb-4">✓ Eingetragen</p>
-        <p className="text-display text-3xl leading-tight mb-3">Schau in dein Postfach.</p>
-        <p className="text-sm leading-relaxed text-cream/80">{message}</p>
-        <p className="mt-4 text-xs text-cream/60">
-          Nach der Bestätigung schicken wir dir die Angebote per Mail.
+        <div
+          className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold"
+          style={{ backgroundColor: "rgba(15,110,86,0.1)", color: PETROL }}
+        >
+          ✓ Eingetragen
+        </div>
+        <h3 className="mb-3 text-xl font-semibold text-[#2C2C2A]">
+          Schau in dein Postfach.
+        </h3>
+        <p className="text-sm leading-relaxed text-[#5F5E5A]">{message}</p>
+        <p className="mt-3 text-xs text-[#8A857E]">
+          Nach der Bestätigung schalten wir dein Gratis-Start-Angebot frei.
         </p>
       </div>
     );
   }
 
-  return (
-    <form onSubmit={onSubmit} className="w-full max-w-full sm:max-w-xl space-y-5" id="anmelde-bereich">
-      {/* Standort-Auswahl, nur wenn mehrere */}
-      {hasMany && (
-        <fieldset>
-          <legend className="label mb-3">Welcher Standort?</legend>
-          <div className="grid grid-cols-2 gap-2">
-            {locations.map((l) => {
-              const selected = locationId === l.id;
-              return (
-                <label
-                  key={l.id}
-                  className={`cursor-pointer border px-3 py-2.5 text-center font-mono text-xs uppercase tracking-[0.1em] transition-colors ${
-                    selected
-                      ? "border-ink bg-ink text-acid"
-                      : "border-ink/20 hover:border-ink/40"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="locationId"
-                    value={l.id}
-                    checked={selected}
-                    onChange={() => setLocationId(l.id)}
-                    required
-                    className="sr-only"
-                  />
-                  <span className="block leading-tight">{l.name}</span>
-                  {l.city && (
-                    <span
-                      className={`block text-[10px] mt-0.5 ${
-                        selected ? "text-cream/70" : "text-muted"
-                      }`}
-                    >
-                      {l.city}
-                    </span>
-                  )}
-                </label>
-              );
-            })}
-          </div>
-        </fieldset>
-      )}
+  const canSubmit =
+    consent &&
+    firstName.trim() &&
+    email.trim() &&
+    (!needsLocationChoice || locationId);
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+  return (
+    <form
+      onSubmit={onSubmit}
+      id="email"
+      className="rounded-xl border border-[#E8E2D5] bg-white p-6 md:p-7"
+    >
+      <h3 className="text-2xl font-semibold text-[#2C2C2A]">Dein Gratis-Start-Plan</h3>
+      <p className="mt-1 text-sm text-[#5F5E5A]">Sofort per Mail. In Ruhe durchlesen.</p>
+
+      <div className="mt-5 space-y-4">
         <label className="block">
-          <span className="label mb-2 block">Vorname</span>
+          <span className="block text-sm font-medium text-[#2C2C2A]">Vorname</span>
           <input
             type="text"
             required
             autoComplete="given-name"
+            placeholder="Dein Vorname"
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             disabled={state === "loading"}
-            className="w-full border-b-2 border-ink bg-transparent py-2 text-base outline-none focus:border-acid_dark disabled:opacity-50"
+            className="mt-1.5 w-full rounded-lg border border-[#D8D2C7] bg-white px-3 py-2.5 text-base placeholder:text-[#A8A39A] outline-none transition-colors focus:border-[#0F6E56] focus:ring-1 focus:ring-[#0F6E56] disabled:opacity-50"
           />
         </label>
+
         <label className="block">
-          <span className="label mb-2 block">Nachname</span>
+          <span className="block text-sm font-medium text-[#2C2C2A]">E-Mail-Adresse</span>
           <input
-            type="text"
+            type="email"
             required
-            autoComplete="family-name"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
+            autoComplete="email"
+            placeholder="name@mail.de"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             disabled={state === "loading"}
-            className="w-full border-b-2 border-ink bg-transparent py-2 text-base outline-none focus:border-acid_dark disabled:opacity-50"
+            className="mt-1.5 w-full rounded-lg border border-[#D8D2C7] bg-white px-3 py-2.5 text-base placeholder:text-[#A8A39A] outline-none transition-colors focus:border-[#0F6E56] focus:ring-1 focus:ring-[#0F6E56] disabled:opacity-50"
           />
         </label>
+
+        {needsLocationChoice && (
+          <label className="block">
+            <span className="block text-sm font-medium text-[#2C2C2A]">Standort</span>
+            <select
+              required
+              value={locationId}
+              onChange={(e) => setLocationId(e.target.value)}
+              disabled={state === "loading"}
+              className="mt-1.5 w-full rounded-lg border border-[#D8D2C7] bg-white px-3 py-2.5 text-base outline-none transition-colors focus:border-[#0F6E56] focus:ring-1 focus:ring-[#0F6E56] disabled:opacity-50"
+            >
+              <option value="" disabled>
+                Standort wählen…
+              </option>
+              {locations.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                  {l.city ? ` · ${l.city}` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
 
-      <fieldset>
-        <legend className="label mb-3">Geschlecht</legend>
-        <div className="grid grid-cols-3 gap-2">
-          {GENDERS.map((g) => {
-            const selected = gender === g.value;
-            return (
-              <label
-                key={g.value}
-                className={`cursor-pointer border px-2 py-2 text-center font-mono text-[11px] uppercase tracking-[0.1em] transition-colors ${
-                  selected ? "border-ink bg-ink text-acid" : "border-ink/20 hover:border-ink/40"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="gender"
-                  value={g.value}
-                  checked={selected}
-                  onChange={() => setGender(g.value)}
-                  className="sr-only"
-                />
-                {g.label}
-              </label>
-            );
-          })}
-        </div>
-      </fieldset>
-
-      <label className="block">
-        <span className="label mb-2 block">E-Mail-Adresse</span>
-        <input
-          type="email"
-          required
-          autoComplete="email"
-          placeholder="dein.name@beispiel.de"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          disabled={state === "loading"}
-          className="w-full border-b-2 border-ink bg-transparent py-2 text-base outline-none focus:border-acid_dark disabled:opacity-50"
-        />
-      </label>
-
-      <label className="flex items-start gap-3 text-xs leading-relaxed text-ink-soft cursor-pointer">
+      <label className="mt-5 flex cursor-pointer items-start gap-3 text-xs leading-relaxed text-[#5F5E5A]">
         <input
           type="checkbox"
           checked={consent}
           onChange={(e) => setConsent(e.target.checked)}
-          className="mt-0.5 h-4 w-4 accent-ink"
           required
+          className="mt-0.5 h-4 w-4 accent-[#0F6E56]"
         />
         <span>
-          Ich willige ein, dass meine Daten zur Zusendung der Angebote verarbeitet werden. Widerruf
-          jederzeit per Klick auf den Abmelde-Link in jeder Mail. Mehr in der{" "}
-          <a href="/datenschutz" className="underline underline-offset-2 hover:text-ink">
+          Ich willige ein, dass meine Daten zur Zusendung des Gratis-Start-Angebots
+          verarbeitet werden. Widerruf jederzeit per Klick auf den Abmelde-Link in jeder
+          Mail. Mehr in der{" "}
+          <a
+            href="/datenschutz"
+            className="underline underline-offset-2 hover:text-[#2C2C2A]"
+          >
             Datenschutzerklärung
           </a>
           .
@@ -231,16 +185,31 @@ export function LeadForm({ locations = [] }: Props) {
       <button
         type="submit"
         disabled={state === "loading" || !canSubmit}
-        className="group w-full bg-ink py-4 text-acid disabled:bg-ink/40 disabled:text-cream disabled:cursor-not-allowed transition-all hover:bg-ink-soft"
+        className="mt-5 w-full rounded-lg px-5 py-3.5 text-base font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+        style={{ backgroundColor: PETROL }}
       >
-        <span className="font-mono text-xs uppercase tracking-[0.12em]">
-          {state === "loading" ? "Sendet…" : "Angebote per Mail anfordern"}
-        </span>
-        <span className="ml-2 inline-block transition-transform group-hover:translate-x-1">→</span>
+        {state === "loading" ? "Sendet…" : "Ja, schick mir meinen Gratis-Start-Plan →"}
       </button>
 
+      <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-[#8A857E]">
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden
+        >
+          <path
+            d="M3 5V3.5a3 3 0 016 0V5h.5a1 1 0 011 1v4a1 1 0 01-1 1h-7a1 1 0 01-1-1V6a1 1 0 011-1H3zm1 0h4V3.5a2 2 0 10-4 0V5z"
+            fill="currentColor"
+          />
+        </svg>
+        100 % gratis & unverbindlich · jederzeit abbestellbar
+      </p>
+
       {state === "error" && (
-        <p role="alert" className="text-sm text-red-700">
+        <p role="alert" className="mt-3 text-sm text-red-700">
           {message}
         </p>
       )}

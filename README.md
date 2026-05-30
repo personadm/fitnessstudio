@@ -1,55 +1,81 @@
-# Komplett-Update — 6 Dateien
+# Redesign v1 — Landing & Anmelden komplett überarbeitet
 
-Alles in dieser Lieferung muss hochgeladen werden. Pfade stimmen 1:1.
+11 Dateien. Hochladen, Schema-Migration laufen lassen, deployen.
 
-## Datei-Liste
+## Diff-Übersicht
 
 | Datei | Status | Was sich ändert |
 |---|---|---|
-| `src/components/admin/RichTextEditor.tsx` | Update | Bild-Insert-Bug behoben — Bilder lassen sich jetzt mehrfach einfügen |
-| `src/lib/mail.ts` | Update | Mail-Footer: „Laurenzstr. 98" (statt „Lauchenstraße"), Telefon Villa-Fit korrigiert auf 02561 961166 (war 9611166) |
-| `src/app/impressum/page.tsx` | Update | Inhalt aus dem PDF: Vital-Fit GmbH, Erik Bodon, korrekte USt-IdNr und HRB |
-| `src/app/datenschutz/page.tsx` | Update | Komplette neue Datenschutzerklärung aus dem PDF |
-| `src/app/teilnahmebedingungen/page.tsx` | Update | Komplette neuen Teilnahmebedingungen aus dem PDF |
-| `src/app/agb/page.tsx` | Update | Komplette neue AGB aus dem PDF |
+| `prisma/schema.prisma` | Update | `PricingPlan.topHighlights` Json @default("[]") neu |
+| `src/lib/validation.ts` | Update | `leadSchema`: lastName + gender optional, locationId neu. `planSchema` komplett überarbeitet inkl. `topHighlights` |
+| `src/lib/mail.ts` | Update | `sendDoiMail` + `sendPricingMail` mit neuen Texten + Templates aus dem Briefing |
+| `src/app/api/leads/route.ts` | Update | `locationId` aus Body lesen, validieren, beim Contact-upsert mitspeichern. lastName/gender bleiben optional |
+| `src/components/LeadForm.tsx` | **NEU** (ersetzt alt) | Schlanke Form: Vorname + E-Mail + Standort + Consent. Petrol/Grün Akzent |
+| `src/app/page.tsx` | Update | Hero komplett neu (Pille, H1, grüne Zeile, Fließtext, 3 Beweis-Punkte, Gold-Hinweis, Form-Karte). Header: Logo + Studio-Name (kein „Direkt anmelden" mehr). Alles unter Hero unverändert |
+| `src/app/bestaetigen/page.tsx` | Update | Auto-Redirect nach 1.5s via meta-refresh + sichtbarer Fallback-Button. Pricing-Mail im Hintergrund unverändert |
+| `src/app/anmelden/page.tsx` | Update | Komplett neu: Header mit Logo, Fortschrittsanzeige, H1 + Subtitle, übergibt topHighlights an SignupForm |
+| `src/components/SignupForm.tsx` | Update | Komplett neu: Plan-Switcher (nur bei >1 Plan), Tarif-Karte mit Preis-Anker (199 € durchgestrichen), 3 Highlight-Kacheln (Gold-Variante), 2-spaltige Häkchenliste, Zufriedenheitsgarantie, 2 Testimonials, Form-Header „Schritt 2", Felder in Zeilen gruppiert, Button „Jetzt starten →", Microcopy |
+| `src/app/admin/(authed)/plans/page.tsx` | Update | Imports + Helper für topHighlights, Sektion im PlanForm-Body |
+| `src/app/admin/(authed)/plans/TopHighlightsEditor.tsx` | **NEU** | Client-Component: bis 3 Slots mit Text+Untertitel+Gold-Checkbox, Reorder via ▲/▼ |
+| `src/app/admin/_actions.ts` | Update | `savePlan` parst zusätzlich `topHighlights` JSON aus FormData |
 
-## Bild-Insert: was war kaputt
+## Was am Backend NICHT angefasst wurde
 
-Der TipTap-Befehl `setImage()` **ersetzt die aktuelle Selection**. Nach dem
-Einfügen des ersten Bildes war das Bild „selected" — beim nächsten Klick auf
-„Bild" wurde das vorherige durch das neue ersetzt.
+- DSGVO-Consent-Speicherung (`consentText`, `consentIp`)
+- DOI-Token-Generierung (`generateToken`)
+- Funnel-Enrollment (`enrollIntoMatchingFunnels`)
+- Signup-API (`/api/signup`)
+- Contact-Schema in Prisma (nur PricingPlan erweitert)
+- Push-Notifications
+- Bestehende Plans-Liste/Löschen/Aktivieren
 
-**Fix:** Statt `setImage()` jetzt `insertContentAt(endPos, ...)` — fügt Paragraph
-+ Bild + Paragraph am Ende des Dokuments an. Cursor landet im letzten leeren
-Paragraph, sodass das nächste Bild garantiert ein neues wird.
+## Schema-Migration
 
-## Newsletter-Versand: was du beobachtet hast
+Nach Upload:
 
-> *„Die 2. Email ging zwar raus, kam aber nicht bei mir an.
-> Die Email kann auch für einen weiteren Versand nicht bearbeitet werden."*
+```
+npx prisma db push
+```
 
-Zwei verschiedene Sachen:
+Da das neue Feld `topHighlights` einen `@default("[]")` hat, ist die Migration
+sicher — bestehende Plans bekommen automatisch ein leeres Array. Kein Data Loss.
 
-**1) Mail kam nicht an** — Empfänger die schon einmal eine Mail dieser Kampagne
-bekommen haben, bekommen **per Design keine zweite**. Das schützt vor
-Doppel-Spam und ist über die Datenbank-Constraint abgesichert.
+## Lokales Testen vor Deploy
 
-Wenn `mail@gesundheitscoaches.de` schon einmal in der Empfängerliste war und
-die erste Mail rausging, wird er beim zweiten Versand übersprungen. Die
-Detail-Page zeigt das jetzt klar: „X versandfähig · Y noch nicht angeschrieben".
+### Testpfad 1 — Landing & DOI-Flow
+1. `npm run dev` → `http://localhost:3000`
+2. Hero-Form sollte exakt wie Bild 1 aussehen
+3. Eintragen: Vorname + Mail + (falls 2 Studios) Standort + Häkchen → „Ja, schick mir meinen Gratis-Start-Plan →"
+4. Erfolgsmeldung „Schau in dein Postfach"
+5. Mail im Postfach: Betreff „Bitte bestätige deine Anmeldung (1 Klick)" — Button „Anmeldung bestätigen →"
+6. Klick auf Button → Erfolgsseite „Geschafft!" → nach 1.5s Auto-Redirect zu `/anmelden`
+7. Parallel kommt zweite Mail: „Geschafft – hier ist dein Gratis-Start-Angebot, [Vorname]" mit Button „Zu meinem Start-Angebot →"
 
-Falls die erste Mail tatsächlich nie ankam (Spam-Filter?), bitte im
-Resend-Dashboard prüfen unter „Logs" — dort siehst du den Delivery-Status
-jeder einzelnen Mail.
+### Testpfad 2 — Anmelden mit 1 vs. mehreren Plans
+1. Im Admin (`/admin/plans`) sicherstellen dass mindestens 1 Plan `active` und `availableOnline` ist
+2. Wenn 1 aktiver Plan: `/anmelden` zeigt direkt die Karte ohne Switcher
+3. Wenn 2+ aktive: oben Toggle-Buttons mit den Plan-Namen, Klick wechselt die Karte
+4. Wenn ein Plan `topHighlights` gefüllt hat → diese in den 3 Kacheln
+5. Wenn nicht → erste 3 Einträge aus `highlights[]` werden als Fallback genommen
 
-**2) Bearbeiten nach Versand** — sollte funktionieren wenn `campaign-resend.zip`
-vom letzten Mal deployed ist. Auf der Detail-Page einer SENT-Kampagne sollte
-oben rechts „✎ Bearbeiten" stehen. Falls nicht: Browser-Cache leeren (Strg+Shift+R)
-oder im Render-Dashboard prüfen ob der letzte Build wirklich durchlief.
+### Testpfad 3 — Top-Highlights pflegen
+1. `/admin/plans?edit=<id>` öffnen
+2. Sektion „Top-Highlights" sollte zwischen „Highlights" und „AGB" sichtbar sein
+3. „+ Kachel hinzufügen" → bis 3 Slots
+4. Text + Untertitel füllen, Gold-Hervorhebung wenn nötig
+5. Speichern → auf `/anmelden` sollten die Kacheln so erscheinen
 
-## Hochladen
+### Testpfad 4 — Backend nicht kaputt
+1. Bestehende Leads aus älteren Imports öffnen (Admin → Kontakte)
+2. Felder `lastName`, `gender` sollten weiterhin angezeigt werden (wurden nicht gelöscht)
+3. Neue Leads aus dem schlanken Form haben `lastName=""` und `gender=null` — das ist OK
 
-1. ZIP entpacken
-2. Alle 6 Dateien ins Repo (Pfade stimmen 1:1)
-3. Commit: `komplett-update: bild-fix + footer-korrektur + impressum/agb/datenschutz/teilnahme`
-4. Push → Render baut → fertig
+## Deploy
+
+Render baut → `npx prisma db push --accept-data-loss` läuft (sicher wegen default-Wert) → Build durchlaufen → testen.
+
+## Bekannte Limits / nicht gemacht
+
+- Plan-Wechsel im SignupForm aktualisiert AGB-Consent-Checkbox nicht automatisch (User muss neu zustimmen falls AGB-Text plan-spezifisch ist). Lass ich aus damit das Verhalten klar bleibt.
+- „99 € einmalig" und „59,99 €/Monat" in den Microcopies unter dem Button sind hardcoded (nicht aus DB), wie im Briefing definiert.
+- Die Tarif-Auswahl-Buttons oben zeigen `plan.name`. Falls du elegantere Labels willst (z.B. „6-Wochen-Programm" vs. „Jahresmitgliedschaft"), benenne die Pläne im Admin entsprechend.

@@ -1,6 +1,32 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { savePlan, togglePlanActive, deletePlan } from "@/app/admin/_actions";
+import { TopHighlightsEditor, type TopHighlightEntry } from "./TopHighlightsEditor";
+
+/** Liest das Json-Feld `topHighlights` und gibt ein sicheres Array zurück. */
+function parseTopHighlightsDefault(raw: unknown): TopHighlightEntry[] {
+  if (!raw) return [];
+  let arr: unknown = raw;
+  if (typeof raw === "string") {
+    try {
+      arr = JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .filter(
+      (x): x is Record<string, unknown> =>
+        typeof x === "object" && x !== null && typeof (x as { text?: unknown }).text === "string",
+    )
+    .slice(0, 3)
+    .map((x) => ({
+      text: String(x.text),
+      subtitle: typeof x.subtitle === "string" ? x.subtitle : "",
+      isGold: x.isGold === true,
+    }));
+}
 
 interface PageProps {
   searchParams: Promise<{ edit?: string; new?: string; location?: string }>;
@@ -274,7 +300,13 @@ function PlanForm({
           placeholder={"24/7-Zugang\nAlle Kurse inklusive\nSauna-Bereich"}
           className="w-full border border-ink/20 bg-transparent p-3 text-sm outline-none focus:border-ink"
         />
+        <span className="mt-1 block text-xs text-muted">
+          Diese Liste wird auf /anmelden als kompakte 2-spaltige Häkchenliste angezeigt.
+        </span>
       </label>
+
+      {/* Top-Highlights — die 3 großen Kacheln */}
+      <TopHighlightsEditor defaultValue={parseTopHighlightsDefault(plan?.topHighlights)} />
 
       <label className="block">
         <span className="label mb-2 block">

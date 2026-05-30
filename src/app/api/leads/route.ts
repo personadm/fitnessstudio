@@ -19,73 +19,66 @@ export async function POST(req: NextRequest) {
 
     const { email, firstName, lastName, gender, locationId } = result.data;
 
-    // Standort-Logik:
-    // - Wenn locationId mitgeschickt: muss existieren und aktiv sein
-    // - Wenn nicht mitgeschickt: Auto-Set wenn genau 1 aktiver Standort,
-    //   Fehler wenn 2+ aktive Standorte existieren
-    const activeLocations = await db.location.findMany({
-      where: { active: true },
-      select: { id: true },
-    });
-
-    let resolvedLocationId: string | null = null;
-
-    if (locationId) {
-      const valid = activeLocations.find((l) => l.id === locationId);
-      if (!valid) {
-        return NextResponse.json(
-          { ok: false, message: "Standort nicht verfügbar." },
-          { status: 400 },
-        );
-      }
-      resolvedLocationId = locationId;
-    } else if (activeLocations.length === 1) {
-      resolvedLocationId = activeLocations[0].id;
-    } else if (activeLocations.length > 1) {
-      return NextResponse.json(
-        { ok: false, message: "Bitte wähle einen Standort aus." },
-        { status: 400 },
-      );
-    }
-    // activeLocations.length === 0: kein Standort-System aktiv, läuft ohne
-
+    // IP fürs Consent-Logging (DSGVO-Beleg)
     const ip =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
       req.headers.get("x-real-ip") ??
       "unknown";
 
     const consentText =
-      "Ich willige ein, dass meine Daten (Vorname, Nachname, Geschlecht, E-Mail) zur Zusendung von Informationen und Tarifen des Fitnessstudios verarbeitet werden. Die Einwilligung kann jederzeit widerrufen werden.";
+      "Ich willige ein, dass meine Daten (Vorname, E-Mail, Standort) zur Zusendung " +
+      "meines Gratis-Start-Angebots verarbeitet werden. Die Einwilligung kann " +
+      "jederzeit widerrufen werden.";
 
     const doiToken = generateToken();
 
-    const contact = await db.contact.upsert({
-      where: { email },
-      update: {
-        firstName,
-        lastName,
-        gender,
-        locationId: resolvedLocationId,
-        doiToken,
-        doiSentAt: new Date(),
-        consentText,
-        consentIp: ip,
-      },
-      create: {
-        email,
-        firstName,
-        lastName,
-        gender,
-        locationId: resolvedLocationId,
-        status: "INTERESSENT",
-        source: "LANDING",
-        doiToken,
-        doiSentAt: new Date(),
-        consentText,
-        consentIp: ip,
-      },
-    });
+    // Standort validieren — nur falls übergeben
+    let resolvedLocationId: string | null = null;
+    if (locationId) {
+      const loc = await db.location.findUnique({
+        where: { id: locationId },
+        select: { id: true, active: true },
+      });
+      if (loc && loc.active) {
+        resolvedLocationId = loc.id;
+      }
+    }
 
+    // Existierender Kontakt? Daten updaten, neuen DOI-Token vergeben.
+    // lastName/gender bleiben optional — wenn leer/null, vorherigen Wert nicht
+    // überschreiben (damit ein nachgelagertes Profil nicht verschwindet).
+    const existing = await db.contact.findUnique({ where: { email } });
+
+    const updateData: Record<string, unknown> = {
+      firstName,
+      doiToken,
+      doiSentAt: new Date(),
+      consentText,
+      consentIp: ip,
+    };
+    if (lastName) updateData.lastName = lastName;
+    if (gender) updateData.gender = gender;
+    if (resolvedLocationId) updateData.locationId = resolvedLocationId;
+
+    const contact = existing
+      ? await db.contact.update({ where: { email }, data: updateData })
+      : await db.contact.create({
+          data: {
+            email,
+            firstName,
+            lastName: lastName || "",
+            gender: gender ?? null,
+            locationId: resolvedLocationId,
+            status: "INTERESSENT",
+            source: "LANDING",
+            doiToken,
+            doiSentAt: new Date(),
+            consentText,
+            consentIp: ip,
+          },
+        });
+
+    // Schon bestätigt? Keine neue DOI-Mail, freundlich antworten.
     if (contact.doiConfirmedAt) {
       return NextResponse.json({
         ok: true,
@@ -100,7 +93,7 @@ export async function POST(req: NextRequest) {
       data: {
         contactId: contact.id,
         type: "DOI_REQUESTED",
-        meta: { ip, locationId: resolvedLocationId },
+        meta: { ip },
       },
     });
 
@@ -108,7 +101,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      message: "Bitte bestätige deine E-Mail-Adresse. Danach schicken wir dir die Tarife.",
+      message:
+        "Bitte bestätige deine E-Mail-Adresse. Direkt danach schalten wir dein Angebot frei.",
     });
   } catch (err) {
     console.error("[/api/leads]", err);

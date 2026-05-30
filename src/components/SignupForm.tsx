@@ -1,7 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+
+type TopHighlight = {
+  text: string;
+  subtitle?: string;
+  isGold?: boolean;
+};
 
 type Plan = {
   id: string;
@@ -10,16 +16,9 @@ type Plan = {
   priceCents: number;
   billingInterval: string;
   highlights: string[];
+  topHighlights: TopHighlight[];
   agb: string | null;
-  locationId: string | null; // null = Allgemein
-};
-
-const BILLING_SUFFIX: Record<string, string> = {
-  MONATLICH: "/ Monat",
-  QUARTALSWEISE: "/ Quartal",
-  HALBJAEHRLICH: "/ Halbjahr",
-  JAEHRLICH: "/ Jahr",
-  EINMALIG: "einmalig",
+  locationId: string | null;
 };
 
 type Location = {
@@ -30,11 +29,17 @@ type Location = {
 
 type Gender = "MAENNLICH" | "WEIBLICH" | "DIVERS";
 
-const GENDERS: { value: Gender; label: string }[] = [
-  { value: "MAENNLICH", label: "Männlich" },
-  { value: "WEIBLICH", label: "Weiblich" },
-  { value: "DIVERS", label: "Divers" },
-];
+const PETROL = "#0F6E56";
+const GOLD_BG = "#FAEEDA";
+const GOLD_TEXT = "#854F0B";
+
+const BILLING_SUFFIX: Record<string, string> = {
+  MONATLICH: "/ Monat",
+  QUARTALSWEISE: "/ Quartal",
+  HALBJAEHRLICH: "/ Halbjahr",
+  JAEHRLICH: "/ Jahr",
+  EINMALIG: "einmalig",
+};
 
 interface Props {
   plans: Plan[];
@@ -62,493 +67,595 @@ export function SignupForm({
   prefilledLastName,
   prefilledGender,
   prefilledLocationId,
-  scarcityPlaces,
-  scarcityDeadlineIso,
 }: Props) {
   const router = useRouter();
 
-  const onlyOneLocation = locations.length === 1;
-  const hasMultipleLocations = locations.length > 1;
-
-  const [locationId, setLocationId] = useState<string>(
-    prefilledLocationId ?? (onlyOneLocation ? locations[0].id : ""),
+  // Plan-Auswahl
+  const [selectedPlanId, setSelectedPlanId] = useState(plans[0]?.id ?? "");
+  const selectedPlan = useMemo(
+    () => plans.find((p) => p.id === selectedPlanId) ?? plans[0],
+    [plans, selectedPlanId],
   );
 
-  // Plans für den ausgewählten Standort (oder Allgemein)
-  const filteredPlans = plans.filter(
-    (p) => p.locationId === null || (locationId && p.locationId === locationId),
-  );
-
-  const [pricingPlanId, setPricingPlanId] = useState(filteredPlans[0]?.id ?? "");
+  // Form-Felder (alle existing fields bleiben)
+  const [firstName, setFirstName] = useState(prefilledFirstName ?? "");
+  const [lastName, setLastName] = useState(prefilledLastName ?? "");
+  const [email, setEmail] = useState(prefilledEmail);
+  const [birthDate, setBirthDate] = useState("");
+  const [phone, setPhone] = useState("");
+  const [street, setStreet] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [city, setCity] = useState("");
   const [gender, setGender] = useState<Gender | "">(prefilledGender ?? "");
-  // Bei genau einem verfügbaren Tarif: direkt ausgeklappt zeigen — keine Klick-
-  // Verschachtelung nötig. Bei mehreren Tarifen: alle eingeklappt, User wählt
-  // bewusst aus.
-  const [expandedPlans, setExpandedPlans] = useState<Set<string>>(
-    () => new Set(filteredPlans.length === 1 ? [filteredPlans[0].id] : []),
-  );
-  const [state, setState] = useState<"idle" | "loading" | "error">("idle");
-  const [errorMsg, setErrorMsg] = useState("");
+  const [locationId, setLocationId] = useState(prefilledLocationId ?? "");
+  const [agbConsent, setAgbConsent] = useState(false);
+  const [datenschutzConsent, setDatenschutzConsent] = useState(false);
 
-  const toggleExpanded = (id: string) => {
-    setExpandedPlans((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  const selectedPlan = filteredPlans.find((p) => p.id === pricingPlanId) ?? null;
-  const requiresPlanAgb = !!selectedPlan?.agb?.trim();
-
-  // Wenn Standort wechselt: aktuellen Plan ggf. zurücksetzen, falls nicht mehr verfügbar
+  // Wenn nur eine Location existiert: vorbelegen
   useEffect(() => {
-    const stillValid = filteredPlans.some((p) => p.id === pricingPlanId);
-    if (!stillValid) {
-      setPricingPlanId(filteredPlans[0]?.id ?? "");
+    if (locations.length === 1 && !locationId) {
+      setLocationId(locations[0].id);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [locationId]);
+  }, [locations, locationId]);
 
-  const locationRequired = hasMultipleLocations;
-  const canSubmit = !!gender && (!locationRequired || !!locationId) && !!pricingPlanId;
+  // Top-Highlights: wenn Plan welche hat → diese, sonst Fallback auf die ersten 3 highlights
+  const topThree: TopHighlight[] = useMemo(() => {
+    if (!selectedPlan) return [];
+    if (selectedPlan.topHighlights && selectedPlan.topHighlights.length > 0) {
+      return selectedPlan.topHighlights.slice(0, 3);
+    }
+    return selectedPlan.highlights.slice(0, 3).map((text) => ({ text, isGold: false }));
+  }, [selectedPlan]);
+
+  // Restliche Highlights für die kompakte Liste (alle die nicht in Top-3 sind)
+  // Wenn topHighlights gepflegt: ALLE highlights anzeigen. Sonst: alle ab Index 3.
+  const restHighlights: string[] = useMemo(() => {
+    if (!selectedPlan) return [];
+    if (selectedPlan.topHighlights && selectedPlan.topHighlights.length > 0) {
+      return selectedPlan.highlights;
+    }
+    return selectedPlan.highlights.slice(3);
+  }, [selectedPlan]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!canSubmit) return;
-    setState("loading");
-    setErrorMsg("");
-
-    const fd = new FormData(e.currentTarget);
-
-    // Geburtsdatum von TT.MM.JJJJ in ISO YYYY-MM-DD umwandeln
-    const birthDateRaw = String(fd.get("birthDate") ?? "").trim();
-    const birthMatch = birthDateRaw.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
-    if (!birthMatch) {
-      setState("error");
-      setErrorMsg("Bitte Geburtsdatum im Format TT.MM.JJJJ angeben (z. B. 15.03.1985).");
-      return;
-    }
-    const birthDateIso = `${birthMatch[3]}-${birthMatch[2]}-${birthMatch[1]}`;
-
-    const payload = {
-      email: fd.get("email"),
-      firstName: fd.get("firstName"),
-      lastName: fd.get("lastName"),
-      gender,
-      phone: fd.get("phone") || "",
-      birthDate: birthDateIso,
-      street: fd.get("street"),
-      postalCode: fd.get("postalCode"),
-      city: fd.get("city"),
-      pricingPlanId,
-      locationId: locationId || undefined,
-      ref: ref_ ?? undefined,
-      consent: fd.get("consent") === "on",
-    };
+    if (!selectedPlan) return;
+    setSubmitting(true);
+    setError("");
 
     try {
       const res = await fetch("/api/signup", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email,
+          birthDate,
+          phone,
+          street,
+          postalCode,
+          city,
+          gender: gender || null,
+          locationId: locationId || null,
+          pricingPlanId: selectedPlan.id,
+          ref: ref_,
+          agbConsent,
+          datenschutzConsent,
+        }),
       });
       const data = await res.json();
       if (data.ok) {
         router.push("/anmelden/danke");
       } else {
-        setState("error");
-        setErrorMsg(data.message ?? "Etwas ist schiefgelaufen.");
+        setError(data.message ?? "Anmeldung fehlgeschlagen.");
+        setSubmitting(false);
       }
     } catch {
-      setState("error");
-      setErrorMsg("Verbindung fehlgeschlagen.");
+      setError("Verbindung fehlgeschlagen.");
+      setSubmitting(false);
     }
   }
 
+  if (!selectedPlan) {
+    return null;
+  }
+
+  const hasMultiplePlans = plans.length > 1;
+  const needsLocationChoice = locations.length > 1;
+  const canSubmit =
+    agbConsent &&
+    datenschutzConsent &&
+    firstName.trim() &&
+    lastName.trim() &&
+    email.trim() &&
+    birthDate &&
+    street.trim() &&
+    postalCode.trim() &&
+    city.trim() &&
+    (!needsLocationChoice || locationId);
+
   return (
-    <>
-      {(scarcityPlaces || scarcityDeadlineIso) && (
-        <ScarcityBanner
-          places={scarcityPlaces ?? null}
-          deadlineIso={scarcityDeadlineIso ?? null}
-        />
+    <div className="space-y-6">
+      {/* Plan-Switcher — nur bei mehreren aktiven Plans */}
+      {hasMultiplePlans && (
+        <div className="flex flex-wrap gap-2">
+          {plans.map((p) => {
+            const selected = p.id === selectedPlanId;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setSelectedPlanId(p.id)}
+                className="rounded-lg border px-4 py-2 text-sm font-semibold transition-colors"
+                style={{
+                  borderColor: selected ? PETROL : "#D8D2C7",
+                  backgroundColor: selected ? PETROL : "#FFFFFF",
+                  color: selected ? "#FFFFFF" : "#2C2C2A",
+                }}
+              >
+                {p.name}
+              </button>
+            );
+          })}
+        </div>
       )}
-      <form onSubmit={onSubmit} className="grid grid-cols-1 gap-12 md:grid-cols-12">
-      {/* Standort-Auswahl + Tarif-Auswahl */}
-      <div className="md:col-span-5">
-        {/* Standort */}
-        {hasMultipleLocations && (
-          <div className="mb-8">
-            <p className="label mb-3">Welcher Standort?</p>
-            <div className="flex flex-wrap gap-2">
-              {locations.map((l) => {
-                const sel = locationId === l.id;
-                return (
-                  <label
-                    key={l.id}
-                    className={`cursor-pointer border px-4 py-2.5 font-mono text-xs uppercase tracking-[0.1em] transition-colors ${
-                      sel ? "border-ink bg-ink text-cream" : "border-ink/20 hover:border-ink/40"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="locationId"
-                      value={l.id}
-                      checked={sel}
-                      onChange={() => setLocationId(l.id)}
-                      required
-                      className="sr-only"
-                    />
-                    <span className="block leading-tight">{l.name}</span>
-                    {l.city && (
-                      <span
-                        className={`block text-[10px] mt-0.5 ${
-                          sel ? "text-cream/70" : "text-muted"
-                        }`}
-                      >
-                        {l.city}
-                      </span>
-                    )}
-                  </label>
-                );
-              })}
-            </div>
+
+      {/* Tarif-Karte mit Preis-Anker */}
+      <article className="rounded-xl border border-[#E8E2D5] bg-white p-5 md:p-7">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <h2 className="text-2xl font-bold leading-tight text-[#2C2C2A] md:text-3xl">
+            {selectedPlan.name}
+          </h2>
+          <div className="flex items-baseline gap-2">
+            <span className="text-base text-[#A8A39A] line-through">199 €</span>
+            <span className="text-3xl font-bold md:text-4xl" style={{ color: PETROL }}>
+              {formatPrice(selectedPlan.priceCents)}
+            </span>
+            {selectedPlan.billingInterval !== "EINMALIG" && (
+              <span className="text-sm text-[#5F5E5A]">
+                {BILLING_SUFFIX[selectedPlan.billingInterval] ?? ""}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {selectedPlan.description && (
+          <p className="mt-3 text-sm text-[#5F5E5A]">{selectedPlan.description}</p>
+        )}
+
+        {/* Die 3 großen Highlight-Kacheln */}
+        {topThree.length > 0 && (
+          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {topThree.map((h, idx) => (
+              <HighlightCard key={idx} highlight={h} />
+            ))}
           </div>
         )}
 
-        <p className="label mb-4">Tarif wählen</p>
-        <div className="space-y-3">
-          {filteredPlans.length === 0 ? (
-            <p className="border border-ink/15 p-6 text-sm text-muted">
-              Für diesen Standort sind aktuell keine Tarife verfügbar.
+        {/* Restliche Leistungen als 2-spaltige Häkchenliste */}
+        {restHighlights.length > 0 && (
+          <div className="mt-6 border-t border-[#E8E2D5] pt-5">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#5F5E5A]">
+              Außerdem alles dabei:
             </p>
-          ) : (
-            filteredPlans.map((p) => {
-              const selected = p.id === pricingPlanId;
-              const expanded = expandedPlans.has(p.id);
-              const hasDetails = !!p.description || p.highlights.length > 0;
-              const suffix = BILLING_SUFFIX[p.billingInterval] ?? "";
-              return (
-                <label
-                  key={p.id}
-                  className={`block cursor-pointer border p-5 transition-all ${
-                    selected ? "border-ink bg-ink text-cream" : "border-ink/20 hover:border-ink/40"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="pricingPlanId"
-                    value={p.id}
-                    checked={selected}
-                    onChange={() => setPricingPlanId(p.id)}
-                    className="sr-only"
-                  />
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p
-                        className={`font-mono text-[11px] uppercase tracking-[0.14em] ${
-                          selected ? "text-acid" : "text-muted"
-                        }`}
-                      >
-                        {selected ? "✓ gewählt" : "Tarif"}
-                      </p>
-                      <p className="mt-2 text-display text-2xl leading-tight">{p.name}</p>
-                    </div>
-                    <div className="text-right whitespace-nowrap">
-                      <p className="text-display text-3xl leading-none">
-                        {formatPrice(p.priceCents)}
-                      </p>
-                      {suffix && (
-                        <p
-                          className={`mt-1 font-mono text-[11px] ${
-                            selected ? "text-cream/70" : "text-muted"
-                          }`}
-                        >
-                          {suffix}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+            <ul className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
+              {restHighlights.map((h, idx) => (
+                <li key={idx} className="flex items-start gap-2 text-sm text-[#2C2C2A]">
+                  <span style={{ color: PETROL }} className="font-bold">
+                    ✓
+                  </span>
+                  <span className="leading-snug">{h}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </article>
 
-                  {hasDetails && expanded && (
-                    <div className={`mt-4 border-t pt-4 ${selected ? "border-cream/20" : "border-ink/15"}`}>
-                      {p.description && (
-                        <p
-                          className={`text-sm leading-relaxed ${
-                            selected ? "text-cream/80" : "text-ink-soft"
-                          }`}
-                        >
-                          {p.description}
-                        </p>
-                      )}
-                      {p.highlights.length > 0 && (
-                        <ul
-                          className={`mt-3 space-y-1.5 text-sm ${
-                            selected ? "text-cream/85" : "text-ink-soft"
-                          }`}
-                        >
-                          {p.highlights.map((h, i) => (
-                            <li key={i} className="flex gap-2">
-                              <span className={selected ? "text-acid" : "text-ink/40"}>✓</span>
-                              <span>{h}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  )}
+      {/* Zufriedenheitsgarantie */}
+      <div
+        className="flex items-start gap-3 rounded-xl border p-5"
+        style={{
+          borderColor: "rgba(15,110,86,0.25)",
+          backgroundColor: "rgba(15,110,86,0.06)",
+        }}
+      >
+        <div
+          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full"
+          style={{ backgroundColor: PETROL, color: "#FFFFFF" }}
+          aria-hidden
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M12 2L4 6v6c0 5 3.5 9.7 8 10 4.5-.3 8-5 8-10V6l-8-4z"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M8 12l3 3 5-5"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+        <div>
+          <p className="font-semibold text-[#2C2C2A]">Zufriedenheitsgarantie</p>
+          <p className="mt-1 text-sm leading-relaxed text-[#2C2C2A]">
+            Nach den 6 Wochen entscheidest du komplett frei, ob und wie du
+            weitermachst. Keine automatische Verpflichtung — dein einmaliges
+            Rücktrittsrecht ist eingebaut.
+          </p>
+        </div>
+      </div>
 
-                  {hasDetails && filteredPlans.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        toggleExpanded(p.id);
-                      }}
-                      className={`mt-3 font-mono text-[11px] uppercase tracking-[0.14em] underline underline-offset-4 ${
-                        selected ? "text-cream/80 hover:text-cream" : "text-ink-soft hover:text-ink"
-                      }`}
-                    >
-                      {expanded ? "Weniger anzeigen ▲" : "Details & Vorteile ▼"}
-                    </button>
-                  )}
-                </label>
-              );
-            })
+      {/* 2 Testimonials direkt vor Form */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Testimonial
+          initials="EJ"
+          name="Elke, 47"
+          quote="„15 kg weniger, 8 cm Bauchumfang verloren – und endlich schmerzfrei.""
+        />
+        <Testimonial
+          initials="CS"
+          name="Christel, 69"
+          quote="„Die OP wurde überflüssig, 10 kg runter und neue Lebensfreude.""
+        />
+      </div>
+
+      {/* Form */}
+      <form onSubmit={onSubmit} className="rounded-xl border border-[#E8E2D5] bg-white p-5 md:p-7">
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <span
+            className="inline-block rounded-full px-3 py-1 text-xs font-semibold"
+            style={{
+              backgroundColor: "rgba(15,110,86,0.1)",
+              color: PETROL,
+            }}
+          >
+            Schritt 2
+          </span>
+          <h2 className="text-xl font-bold text-[#2C2C2A] md:text-2xl">
+            Nur noch deine Daten
+          </h2>
+        </div>
+        <p className="mb-5 flex items-start gap-1.5 text-sm text-[#5F5E5A]">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="mt-0.5" aria-hidden>
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+            <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          <span>
+            Adresse & Geburtsdatum brauchen wir für deine Bescheinigung zur
+            Kassen-Erstattung.
+          </span>
+        </p>
+
+        <div className="space-y-3">
+          {/* Vor- und Nachname */}
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <Input
+              label="Vorname"
+              required
+              value={firstName}
+              onChange={setFirstName}
+              autoComplete="given-name"
+              disabled={submitting}
+            />
+            <Input
+              label="Nachname"
+              required
+              value={lastName}
+              onChange={setLastName}
+              autoComplete="family-name"
+              disabled={submitting}
+            />
+          </div>
+
+          {/* E-Mail volle Breite */}
+          <Input
+            label="E-Mail-Adresse"
+            required
+            type="email"
+            value={email}
+            onChange={setEmail}
+            autoComplete="email"
+            disabled={submitting}
+          />
+
+          {/* Geburtsdatum + Telefon */}
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <Input
+              label="Geburtsdatum"
+              required
+              type="date"
+              value={birthDate}
+              onChange={setBirthDate}
+              disabled={submitting}
+            />
+            <Input
+              label="Telefon (mobil)"
+              type="tel"
+              value={phone}
+              onChange={setPhone}
+              autoComplete="tel"
+              disabled={submitting}
+            />
+          </div>
+
+          {/* Straße volle Breite */}
+          <Input
+            label="Straße & Hausnummer"
+            required
+            value={street}
+            onChange={setStreet}
+            autoComplete="street-address"
+            disabled={submitting}
+          />
+
+          {/* PLZ + Stadt */}
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <Input
+              label="PLZ"
+              required
+              value={postalCode}
+              onChange={setPostalCode}
+              autoComplete="postal-code"
+              disabled={submitting}
+            />
+            <Input
+              label="Stadt"
+              required
+              value={city}
+              onChange={setCity}
+              autoComplete="address-level2"
+              disabled={submitting}
+            />
+          </div>
+
+          {/* Standort (falls mehrere) */}
+          {needsLocationChoice && (
+            <label className="block">
+              <span className="block text-sm font-medium text-[#2C2C2A]">Studio</span>
+              <select
+                required
+                value={locationId}
+                onChange={(e) => setLocationId(e.target.value)}
+                disabled={submitting}
+                className="mt-1.5 w-full rounded-lg border border-[#D8D2C7] bg-white px-3 py-2.5 text-base outline-none focus:border-[#0F6E56] focus:ring-1 focus:ring-[#0F6E56]"
+              >
+                <option value="" disabled>
+                  Studio wählen…
+                </option>
+                {locations.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                    {l.city ? ` · ${l.city}` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
           )}
         </div>
 
-        {/* Tarif-spezifische AGB */}
-        {requiresPlanAgb && selectedPlan && (
-          <div className="mt-4 border border-ink/15 bg-ink/5 p-3">
-            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted mb-1.5">
-              AGB · {selectedPlan.name}
-            </p>
-            <div className="max-h-32 overflow-y-auto pr-2 text-[11px] leading-snug text-ink-soft whitespace-pre-wrap">
-              {selectedPlan.agb}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Persönliche Daten */}
-      <div className="md:col-span-7">
-        <p className="label mb-4">Deine Daten</p>
-
-        <div className="space-y-6">
-          <Field
-            label="E-Mail-Adresse"
-            name="email"
-            type="email"
-            required
-            defaultValue={prefilledEmail}
-            readOnly={!!prefilledEmail}
-          />
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Vorname" name="firstName" required defaultValue={prefilledFirstName} />
-            <Field label="Nachname" name="lastName" required defaultValue={prefilledLastName} />
-          </div>
-
-          <fieldset>
-            <legend className="label mb-3">Geschlecht</legend>
-            <div className="flex flex-wrap gap-2">
-              {GENDERS.map((g) => {
-                const selected = gender === g.value;
-                return (
-                  <label
-                    key={g.value}
-                    className={`cursor-pointer border px-4 py-2 font-mono text-xs uppercase tracking-[0.12em] transition-colors ${
-                      selected
-                        ? "border-ink bg-ink text-acid"
-                        : "border-ink/20 hover:border-ink/40"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="gender"
-                      value={g.value}
-                      checked={selected}
-                      onChange={() => setGender(g.value)}
-                      className="sr-only"
-                    />
-                    {g.label}
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
-
-          <div className="grid grid-cols-2 gap-4">
-            <label className="block">
-              <span className="label mb-2 block">Geburtsdatum</span>
+        {/* Consents */}
+        <div className="mt-5 space-y-3">
+          {selectedPlan.agb && (
+            <label className="flex cursor-pointer items-start gap-3 text-xs leading-relaxed text-[#5F5E5A]">
               <input
-                type="text"
-                name="birthDate"
+                type="checkbox"
+                checked={agbConsent}
+                onChange={(e) => setAgbConsent(e.target.checked)}
                 required
-                placeholder="TT.MM.JJJJ"
-                inputMode="numeric"
-                pattern="\d{2}\.\d{2}\.\d{4}"
-                maxLength={10}
-                className="w-full border-b-2 border-ink bg-transparent py-2 text-base outline-none focus:border-ink"
+                className="mt-0.5 h-4 w-4 accent-[#0F6E56]"
               />
+              <span>
+                Ich akzeptiere die{" "}
+                <a
+                  href="/agb"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-2 hover:text-[#2C2C2A]"
+                >
+                  AGB
+                </a>{" "}
+                und Vertragsbedingungen für diesen Tarif.
+              </span>
             </label>
-            <Field label="Telefon (mobil)" name="phone" type="tel" required />
-          </div>
-          <Field label="Straße & Hausnummer" name="street" required />
-          <div className="grid grid-cols-3 gap-4">
-            <Field label="PLZ" name="postalCode" required />
-            <div className="col-span-2">
-              <Field label="Stadt" name="city" required />
-            </div>
-          </div>
+          )}
+          {!selectedPlan.agb && (
+            <label className="flex cursor-pointer items-start gap-3 text-xs leading-relaxed text-[#5F5E5A]">
+              <input
+                type="checkbox"
+                checked={agbConsent}
+                onChange={(e) => setAgbConsent(e.target.checked)}
+                required
+                className="mt-0.5 h-4 w-4 accent-[#0F6E56]"
+              />
+              <span>
+                Ich akzeptiere die{" "}
+                <a
+                  href="/agb"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-2 hover:text-[#2C2C2A]"
+                >
+                  AGB
+                </a>
+                .
+              </span>
+            </label>
+          )}
+
+          <label className="flex cursor-pointer items-start gap-3 text-xs leading-relaxed text-[#5F5E5A]">
+            <input
+              type="checkbox"
+              checked={datenschutzConsent}
+              onChange={(e) => setDatenschutzConsent(e.target.checked)}
+              required
+              className="mt-0.5 h-4 w-4 accent-[#0F6E56]"
+            />
+            <span>
+              Ich willige in die Verarbeitung meiner Daten gemäß{" "}
+              <a
+                href="/datenschutz"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 hover:text-[#2C2C2A]"
+              >
+                Datenschutzerklärung
+              </a>{" "}
+              ein.
+            </span>
+          </label>
         </div>
 
-        <label className="mt-8 flex items-start gap-3 text-xs leading-relaxed text-ink-soft cursor-pointer">
-          <input type="checkbox" name="consent" required className="mt-0.5 h-4 w-4 accent-ink" />
-          <span>
-            Ich habe die <a href="/agb" className="underline underline-offset-2">AGB</a> und die{" "}
-            <a href="/datenschutz" className="underline underline-offset-2">
-              Datenschutzerklärung
-            </a>{" "}
-            gelesen und stimme zu.
-          </span>
-        </label>
-
-        {state === "error" && (
-          <p role="alert" className="mt-4 text-sm text-red-700">
-            {errorMsg}
-          </p>
-        )}
-
+        {/* Submit-Button */}
         <button
           type="submit"
-          disabled={state === "loading" || !canSubmit}
-          className="mt-8 w-full bg-ink py-4 text-acid disabled:opacity-50 hover:bg-ink-soft transition-colors"
+          disabled={submitting || !canSubmit}
+          className="mt-6 w-full rounded-lg px-5 py-3.5 text-base font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+          style={{ backgroundColor: PETROL }}
         >
-          <span className="font-mono text-sm uppercase tracking-[0.14em]">
-            {state === "loading"
-              ? "Wird gesendet…"
-              : selectedPlan
-                ? `Jetzt für ${formatPrice(selectedPlan.priceCents)} bestellen *`
-                : "Jetzt bestellen *"}
-          </span>
-          <span className="ml-2">→</span>
+          {submitting ? "Wird gesendet…" : "Jetzt starten →"}
         </button>
 
-        <p className="mt-3 text-center text-xs text-muted">
-          * Es gelten die AGB des gewählten Tarifs. Wir melden uns für deinen persönlichen Start
-          bei dir.
+        {/* Microcopy unter Button */}
+        <p
+          className="mt-3 text-center text-sm font-semibold"
+          style={{ color: PETROL }}
+        >
+          {formatPrice(selectedPlan.priceCents)} einmalig · bis zu 100 % von deiner
+          Krankenkasse erstattet
         </p>
-      </div>
-    </form>
-    </>
-  );
-}
+        <p className="mt-2 text-center text-xs leading-relaxed text-[#8A857E]">
+          Danach 12 Monate Mitgliedschaft (59,99 €/Monat) – dank Zufriedenheitsgarantie
+          entscheidest du nach 6 Wochen frei. Es gelten die AGB.
+        </p>
 
-// ─────────────────────────────────────────────────────────────
-// Verknappungs-Banner mit Live-Countdown
-// ─────────────────────────────────────────────────────────────
-
-function ScarcityBanner({
-  places,
-  deadlineIso,
-}: {
-  places: number | null;
-  deadlineIso: string | null;
-}) {
-  const [now, setNow] = useState<number>(() => Date.now());
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const deadline = deadlineIso ? new Date(deadlineIso).getTime() : null;
-  const remaining = deadline ? Math.max(0, deadline - now) : 0;
-
-  const days = Math.floor(remaining / (24 * 60 * 60 * 1000));
-  const hours = Math.floor((remaining % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-  const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
-  const seconds = Math.floor((remaining % (60 * 1000)) / 1000);
-
-  const expired = deadline !== null && remaining === 0;
-
-  return (
-    <div className="mb-10 border-2 border-ink/30 bg-ink/5 p-5 md:p-7">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink">
-            ⚡ Dein Sonderangebot — nur für dich
+        {error && (
+          <p role="alert" className="mt-3 text-sm text-red-700">
+            {error}
           </p>
-          {places !== null && !expired && (
-            <p className="mt-2 text-display text-2xl leading-tight md:text-3xl">
-              Noch <span className="font-semibold">{places}</span>{" "}
-              {places === 1 ? "Platz" : "Plätze"} verfügbar
-            </p>
-          )}
-          {expired && (
-            <p className="mt-2 text-display text-2xl leading-tight md:text-3xl">
-              Angebot abgelaufen
-            </p>
-          )}
-        </div>
-        {deadline !== null && !expired && (
-          <div className="flex gap-2 md:gap-3">
-            <CountdownCell value={days} label={days === 1 ? "Tag" : "Tage"} />
-            <CountdownCell value={hours} label="Std" />
-            <CountdownCell value={minutes} label="Min" />
-            <CountdownCell value={seconds} label="Sek" />
-          </div>
         )}
-      </div>
+      </form>
     </div>
   );
 }
 
-function CountdownCell({ value, label }: { value: number; label: string }) {
+// ─────────────────────────────────────────────────────────────
+// Subkomponenten
+// ─────────────────────────────────────────────────────────────
+
+function HighlightCard({ highlight }: { highlight: TopHighlight }) {
+  const isGold = highlight.isGold === true;
+
   return (
-    <div className="flex min-w-[52px] flex-col items-center border border-ink/20 bg-cream px-2 py-2 md:min-w-[64px] md:px-3 md:py-3">
-      <span className="text-display text-2xl leading-none md:text-3xl">
-        {String(value).padStart(2, "0")}
-      </span>
-      <span className="mt-1 font-mono text-[9px] uppercase tracking-[0.1em] text-muted md:text-[10px]">
-        {label}
-      </span>
+    <div
+      className="rounded-xl border p-4"
+      style={{
+        backgroundColor: isGold ? GOLD_BG : "#FFFFFF",
+        borderColor: isGold ? "rgba(133,79,11,0.25)" : "#E8E2D5",
+      }}
+    >
+      <div
+        className="mb-2 inline-flex h-7 w-7 items-center justify-center rounded-full"
+        style={{
+          backgroundColor: isGold ? "rgba(133,79,11,0.15)" : "rgba(15,110,86,0.1)",
+          color: isGold ? GOLD_TEXT : PETROL,
+        }}
+        aria-hidden
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M5 12l5 5L20 7"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+      <p
+        className="text-sm font-semibold leading-snug"
+        style={{ color: isGold ? GOLD_TEXT : "#2C2C2A" }}
+      >
+        {highlight.text}
+      </p>
+      {highlight.subtitle && (
+        <p
+          className="mt-0.5 text-xs"
+          style={{ color: isGold ? "rgba(133,79,11,0.85)" : "#5F5E5A" }}
+        >
+          {highlight.subtitle}
+        </p>
+      )}
     </div>
   );
 }
 
-function Field({
-  label,
+function Testimonial({
+  initials,
   name,
+  quote,
+}: {
+  initials: string;
+  name: string;
+  quote: string;
+}) {
+  return (
+    <article className="rounded-xl border border-[#E8E2D5] bg-white p-4">
+      <div className="mb-2 flex items-center gap-2">
+        <span
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold"
+          style={{
+            backgroundColor: "rgba(15,110,86,0.1)",
+            color: PETROL,
+          }}
+        >
+          {initials}
+        </span>
+        <span className="text-sm font-semibold text-[#2C2C2A]">{name}</span>
+      </div>
+      <p className="text-sm leading-relaxed text-[#5F5E5A]">{quote}</p>
+    </article>
+  );
+}
+
+function Input({
+  label,
+  value,
+  onChange,
   type = "text",
   required,
-  defaultValue,
-  readOnly,
-  placeholder,
+  autoComplete,
+  disabled,
 }: {
   label: string;
-  name: string;
+  value: string;
+  onChange: (v: string) => void;
   type?: string;
   required?: boolean;
-  defaultValue?: string;
-  readOnly?: boolean;
-  placeholder?: string;
+  autoComplete?: string;
+  disabled?: boolean;
 }) {
   return (
     <label className="block">
-      <span className="label mb-2 block">{label}</span>
+      <span className="sr-only">{label}</span>
       <input
         type={type}
-        name={name}
         required={required}
-        defaultValue={defaultValue}
-        readOnly={readOnly}
-        placeholder={placeholder}
-        className="w-full border-b-2 border-ink bg-transparent py-2 text-base outline-none focus:border-acid_dark read-only:opacity-60"
+        autoComplete={autoComplete}
+        placeholder={label}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        className="w-full rounded-lg border border-[#D8D2C7] bg-white px-3 py-2.5 text-base placeholder:text-[#A8A39A] outline-none transition-colors focus:border-[#0F6E56] focus:ring-1 focus:ring-[#0F6E56] disabled:opacity-50"
       />
     </label>
   );

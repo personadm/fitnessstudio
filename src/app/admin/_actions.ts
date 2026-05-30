@@ -169,6 +169,31 @@ export async function savePlan(formData: FormData) {
     .map((s) => s.trim())
     .filter(Boolean);
 
+  // Top-Highlights: aus dem Hidden-Input "topHighlights" (JSON-String) parsen.
+  // Bei Parse-Fehler oder fehlendem Feld → leeres Array (Fallback im Frontend).
+  let topHighlights: Array<{ text: string; subtitle: string; isGold: boolean }> = [];
+  const rawTopHighlights = formData.get("topHighlights") as string | null;
+  if (rawTopHighlights) {
+    try {
+      const parsed = JSON.parse(rawTopHighlights);
+      if (Array.isArray(parsed)) {
+        topHighlights = parsed
+          .filter(
+            (x) =>
+              x && typeof x === "object" && typeof x.text === "string" && x.text.trim().length > 0,
+          )
+          .slice(0, 3)
+          .map((x) => ({
+            text: String(x.text).trim().slice(0, 120),
+            subtitle: typeof x.subtitle === "string" ? x.subtitle.trim().slice(0, 120) : "",
+            isGold: x.isGold === true,
+          }));
+      }
+    } catch {
+      // Bei Parse-Fehler einfach leer lassen
+    }
+  }
+
   const rawLocationId = formData.get("locationId") as string | null;
 
   const parsed = planSchema.parse({
@@ -177,6 +202,7 @@ export async function savePlan(formData: FormData) {
     priceCents: Number(formData.get("priceEur")) * 100,
     billingInterval: formData.get("billingInterval"),
     highlights,
+    topHighlights,
     agb: formData.get("agb") || "",
     availableOnline: formData.get("availableOnline") === "on",
     availableOffline: formData.get("availableOffline") === "on",
@@ -191,6 +217,7 @@ export async function savePlan(formData: FormData) {
     priceCents: parsed.priceCents,
     billingInterval: parsed.billingInterval,
     highlights: parsed.highlights,
+    topHighlights: parsed.topHighlights,
     agb: parsed.agb || null,
     availableOnline: parsed.availableOnline,
     availableOffline: parsed.availableOffline,

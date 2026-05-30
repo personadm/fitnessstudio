@@ -7,6 +7,9 @@ const STUDIO = process.env.STUDIO_NAME ?? "Studio Iron";
 // Etwas tiefer/refiner als das Neon-Grün vorher
 const GREEN = "#7CAE2D";
 
+// Neue Akzentfarbe für Hero & Form (Briefing Mai 2026)
+const PETROL = "#0F6E56";
+
 const HERO_BANNER = "/images/coaches-tina-erik.jpg";
 
 const BENEFIT_IMAGES = [
@@ -54,85 +57,125 @@ export default async function LandingPage() {
 
   return (
     <main className="min-h-screen bg-cream">
-      {/* ─── Top Bar ─── */}
+      {/* ─── Top Bar (Logo + Studio-Name, kein Anmelden-Link mehr) ─── */}
       <header className="border-b border-ink/10">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 text-[11px] uppercase tracking-[0.14em]">
-          <span className="font-mono">{STUDIO}</span>
-          <a
-            href="#email"
-            className="font-mono underline underline-offset-4 hover:text-ink-soft"
+        <div className="mx-auto flex max-w-7xl items-center gap-4 px-6 py-4">
+          <img
+            src={LOGO_URL}
+            alt="Deine Gesundheitscoaches"
+            width={44}
+            height={44}
+            className="h-11 w-11 flex-shrink-0"
+            loading="eager"
+          />
+          <span
+            className="text-lg font-semibold tracking-tight md:text-xl"
+            style={{ color: PETROL }}
           >
-            Direkt anmelden →
-          </a>
+            Deine Gesundheitscoaches
+          </span>
         </div>
       </header>
 
-      {/* ─── HERO ─── */}
+      {/* ─── HERO (Bild-1 Vorlage) ─── */}
       <section>
-        <div className="mx-auto max-w-7xl px-6 py-16 md:py-24">
-          <div className="grid grid-cols-12 gap-x-10 gap-y-12 md:gap-x-16">
-            {/* Left */}
-            <div className="col-span-12 lg:col-span-7">
-              <p className="label mb-6" style={{ color: GREEN }}>
-                Ganzheitlich Fit
-              </p>
-              <h1
-                className="text-display-italic text-6xl leading-[1] md:text-[110px] md:leading-[0.95]"
-                style={{ color: GREEN }}
+        <div className="mx-auto max-w-7xl px-6 py-12 md:py-16 lg:py-20">
+          <div className="grid grid-cols-1 gap-x-12 gap-y-10 lg:grid-cols-12">
+            {/* Linke Spalte: Text-Inhalt */}
+            <div className="lg:col-span-7">
+              {/* Pille */}
+              <div
+                className="inline-block rounded-full px-4 py-2 text-sm font-medium"
+                style={{
+                  backgroundColor: "rgba(15,110,86,0.08)",
+                  color: PETROL,
+                }}
               >
-                Unser Angebot
-                <br />
-                per Email
+                Seit über 25 Jahren · über 6.000 Menschen begleitet
+              </div>
+
+              {/* H1 */}
+              <h1 className="mt-7 text-4xl font-bold leading-[1.1] tracking-tight text-[#2C2C2A] md:text-5xl lg:text-[3.5rem]">
+                Abnehmen, das endlich bleibt — ohne Hungern und ohne Diätstress.
               </h1>
 
-              <p className="mt-10 max-w-xl text-display text-xl leading-relaxed text-ink-soft md:text-2xl">
-                Wohlfühlfigur, schmerzfreie Gelenke, neue Energie — ganzheitlich, ohne Diätstress
-                und ohne Leistungsdruck.
+              {/* Grüne Betonungszeile */}
+              <p
+                className="mt-5 text-xl font-semibold leading-snug md:text-2xl"
+                style={{ color: PETROL }}
+              >
+                Auch wenn bisher jede Diät gescheitert ist.
               </p>
 
-              <ul className="mt-12 space-y-5">
-                {["Wohlfühlfigur", "Schmerzfreie Gelenke", "Mehr Energie"].map((item) => (
-                    <li
-                      key={item}
-                      className="flex items-center gap-4 text-2xl md:text-3xl"
-                      style={{ color: GREEN }}
+              {/* Fließtext */}
+              <p className="mt-5 max-w-2xl text-base leading-relaxed text-[#5F5E5A] md:text-lg">
+                Ganzheitlich und ohne Leistungsdruck — für mehr Energie, weniger
+                Schmerzen und ein gutes Gefühl im eigenen Körper. Deinen
+                Gratis-Start-Plan bekommst du sofort per Mail — kein Anruf, kein Druck.
+              </p>
+
+              {/* 3 Beweis-Punkte mit Häkchen */}
+              <ul className="mt-7 space-y-3">
+                {[
+                  "Bis zu 15 kg leichter — wie Elke (47)",
+                  "9 kg runter, wieder voller Energie — wie Dieter (60)",
+                  "10 kg leichter & endlich schmerzfrei — wie Christel (69)",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-3">
+                    <span
+                      className="mt-0.5 inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full"
+                      style={{
+                        backgroundColor: "rgba(15,110,86,0.1)",
+                        color: PETROL,
+                      }}
+                      aria-hidden
                     >
-                      <span
-                        className="inline-block h-3 w-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: GREEN }}
-                        aria-hidden
-                      />
-                      <span className="text-display">{item}</span>
-                    </li>
-                  ),
-                )}
+                      ✓
+                    </span>
+                    <span className="text-base leading-snug text-[#2C2C2A] md:text-lg">
+                      {item}
+                    </span>
+                  </li>
+                ))}
               </ul>
+
+              {/* Gold-Hinweis-Pille */}
+              <div
+                className="mt-8 inline-flex items-center gap-3 rounded-xl px-4 py-3"
+                style={{
+                  backgroundColor: "#FAEEDA",
+                  color: "#854F0B",
+                }}
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden
+                >
+                  <path
+                    d="M12 1l3 6 6 1-4.5 4.5L18 19l-6-3-6 3 1.5-6.5L3 8l6-1 3-6z"
+                    fill="currentColor"
+                    opacity="0.15"
+                  />
+                  <path
+                    d="M12 2l2.39 4.84L20 7.66l-4 3.9.94 5.46L12 14.42l-4.94 2.6.94-5.46-4-3.9 5.61-.82L12 2z"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <span className="text-sm font-semibold leading-snug">
+                  Von gesetzlichen Krankenkassen bezuschusst
+                </span>
+              </div>
             </div>
 
-            {/* Right */}
-            <div className="col-span-12 lg:col-span-5">
-              <div className="mb-8 flex justify-end">
-                <img
-                  src={LOGO_URL}
-                  alt="Deine Gesundheitscoaches"
-                  width={120}
-                  height={120}
-                  className="h-24 w-24 md:h-28 md:w-28"
-                  loading="eager"
-                />
-              </div>
-
-              <div className="space-y-6">
-                <div>
-                  <p className="label mb-3">Was passiert</p>
-                  <p className="text-base leading-relaxed text-ink-soft">
-                    Trag deine E-Mail-Adresse ein. Du bekommst sofort dein persönliches
-                    Gratis-Start-Angebot in dein Postfach — ganz entspannt und einfach
-                    durchlesen. Wir freuen uns auf dich!
-                  </p>
-                </div>
-                <LeadForm locations={locations} />
-              </div>
+            {/* Rechte Spalte: Formular-Karte */}
+            <div className="lg:col-span-5">
+              <LeadForm locations={locations} />
             </div>
           </div>
         </div>
