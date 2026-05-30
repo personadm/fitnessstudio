@@ -100,3 +100,45 @@ export const funnelStepSchema = z.object({
   bodyHtml: z.string().min(1, "Inhalt fehlt."),
 });
 export type FunnelStepInput = z.infer<typeof funnelStepSchema>;
+
+// ─────────────────────────────────────────────────────────────
+// Standort-Verwaltung (Admin)
+// ─────────────────────────────────────────────────────────────
+
+export const locationSchema = z.object({
+  name: z.string().trim().min(1, "Name fehlt."),
+  street: z.string().trim().optional().or(z.literal("")),
+  postalCode: z.string().trim().optional().or(z.literal("")),
+  city: z.string().trim().optional().or(z.literal("")),
+  phone: z.string().trim().optional().or(z.literal("")),
+  email: z.string().trim().optional().or(z.literal("")),
+  active: z.boolean().default(true),
+  sortOrder: z.coerce.number().int().default(0),
+});
+export type LocationInput = z.infer<typeof locationSchema>;
+
+// ─────────────────────────────────────────────────────────────
+// Club-Anmeldung (Admin-internes Formular)
+// ─────────────────────────────────────────────────────────────
+
+export const clubSignupSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Bitte gültige E-Mail-Adresse angeben."),
+  firstName: z.string().trim().min(1, "Vorname fehlt."),
+  lastName: z.string().trim().min(1, "Nachname fehlt."),
+  gender: z.enum(["MAENNLICH", "WEIBLICH", "DIVERS"], {
+    errorMap: () => ({ message: "Bitte Geschlecht angeben." }),
+  }),
+  phone: z.string().trim().optional().or(z.literal("")),
+  birthDate: z.string().trim().optional().or(z.literal("")),
+  street: z.string().trim().optional().or(z.literal("")),
+  postalCode: z.string().trim().optional().or(z.literal("")),
+  city: z.string().trim().optional().or(z.literal("")),
+  iban: z.string().trim().optional().or(z.literal("")),
+  contractStartDate: z.string().trim().optional().or(z.literal("")),
+  pricingPlanId: z.string().trim().optional().or(z.literal("")),
+  locationId: z.string().trim().optional().or(z.literal("")),
+  notes: z.string().trim().optional().or(z.literal("")),
+  staff: z.string().trim().min(1, "Mitarbeiter-Name fehlt."),
+  signupMode: z.enum(["OFFLINE", "ONLINE"]).default("OFFLINE"),
+});
+export type ClubSignupInput = z.infer<typeof clubSignupSchema>;
