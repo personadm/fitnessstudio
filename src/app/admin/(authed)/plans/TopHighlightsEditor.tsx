@@ -122,7 +122,7 @@ export function TopHighlightsEditor({ defaultValue }: Props) {
                 type="text"
                 value={item.subtitle}
                 onChange={(e) => update(idx, { subtitle: e.target.value })}
-                placeholder="Untertitel (optional, z.B. „persönlicher Start")"
+                placeholder={`Untertitel (optional, z.B. „persönlicher Start")`}
                 maxLength={120}
                 className="w-full rounded border border-ink/20 bg-white px-3 py-2 text-sm outline-none focus:border-ink"
               />

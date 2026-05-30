@@ -300,12 +300,12 @@ export function SignupForm({
         <Testimonial
           initials="EJ"
           name="Elke, 47"
-          quote="„15 kg weniger, 8 cm Bauchumfang verloren – und endlich schmerzfrei.""
+          quote={`„15 kg weniger, 8 cm Bauchumfang verloren – und endlich schmerzfrei."`}
         />
         <Testimonial
           initials="CS"
           name="Christel, 69"
-          quote="„Die OP wurde überflüssig, 10 kg runter und neue Lebensfreude.""
+          quote={`„Die OP wurde überflüssig, 10 kg runter und neue Lebensfreude."`}
         />
       </div>
 
