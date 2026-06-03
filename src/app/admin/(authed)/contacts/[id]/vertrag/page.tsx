@@ -265,14 +265,14 @@ function AGBText({ locationName }: { locationName: string }) {
       heading: "2. Angebote und Leistungsbeschreibungen",
       paragraphs: [
         "Die Darstellung der Produkte im Online-Shop stellt kein rechtlich bindendes Angebot, sondern eine Aufforderung zur Abgabe einer Bestellung dar. Leistungsbeschreibungen auf den Websites des Verkäufers haben nicht den Charakter einer Zusicherung oder Garantie.",
-        "Alle Angebote gelten „solange der Vorrat reicht", wenn nicht bei den Produkten etwas anderes vermerkt ist.",
+        `Alle Angebote gelten „solange der Vorrat reicht", wenn nicht bei den Produkten etwas anderes vermerkt ist.`,
       ],
     },
     {
       heading: "3. Bestellvorgang und Vertragsabschluss",
       paragraphs: [
         "Der Kunde kann aus dem Sortiment des Verkäufers Produkte unverbindlich auswählen. Nach Eingabe der persönlichen Daten gelangt der Kunde innerhalb des Buchungsprozesses zur Auswahl der Versandarten und der Festlegung der Zahlungsinformationen zum Abschluss des Bestellvorgangs.",
-        "Über die Schaltfläche „Bestellung aufgeben" gibt der Kunde einen verbindlichen Antrag zum Kauf der ausgewählten Waren oder Dienstleistungen ab.",
+        `Über die Schaltfläche „Bestellung aufgeben" gibt der Kunde einen verbindlichen Antrag zum Kauf der ausgewählten Waren oder Dienstleistungen ab.`,
         "Der Verkäufer schickt daraufhin dem Kunden eine automatische Empfangsbestätigung per E-Mail zu. Der Kaufvertrag kommt erst dann zustande, wenn der Verkäufer das bestellte Produkt innerhalb von 2 Tagen versendet, übergibt oder den Versand innerhalb von 2 Tagen mit einer zweiten E-Mail bestätigt hat.",
       ],
     },
