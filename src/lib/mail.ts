@@ -255,7 +255,7 @@ function pricingTemplate({
           p.agb
             ? `<tr><td colspan="2" style="padding-top:16px;">
           <details style="font-size:12px;line-height:1.5;color:#5A554F;">
-            <summary style="cursor:pointer;font-family:'Courier New',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#8A857E;margin-bottom:8px;">AGB &amp; Vertragsbedingungen anzeigen</summary>
+            <summary style="cursor:pointer;font-family:'Courier New',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#8A857E;margin-bottom:8px;">AGB anzeigen</summary>
             <div style="white-space:pre-wrap;padding:12px;background:#FAF7F2;border:1px solid #E8E2D5;margin-top:8px;">${escapeHtml(p.agb)}</div>
           </details>
         </td></tr>`
@@ -326,7 +326,7 @@ function signupConfirmTemplate(opts: {
           <p style="font-family:'Courier New',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8A857E;margin:0 0 24px;">${STUDIO_NAME}</p>
           <h1 style="font-size:28px;line-height:1.2;margin:0 0 16px;font-weight:400;">Hallo ${opts.firstName}, willkommen.</h1>
           <p style="font-size:16px;line-height:1.6;margin:0 0 24px;">Deine Anmeldung für das Angebot <strong>${opts.planName}</strong> (${formatPrice(opts.priceCents)} ${billingSuffix(opts.billingInterval)}) ist bei uns eingegangen.</p>
-          <p style="font-size:16px;line-height:1.6;margin:0 0 24px;">Wir melden uns in den nächsten Werktagen bei dir mit dem Vertrag und allen weiteren Schritten.</p>
+          <p style="font-size:16px;line-height:1.6;margin:0 0 24px;">Wir melden uns in den nächsten Werktagen bei dir mit allen weiteren Schritten zu deinem Start.</p>
           <p style="font-size:14px;line-height:1.6;color:#3A3530;margin:0;">Bis dahin: schön, dass du dabei bist.</p>
         </td></tr>
       </table>
