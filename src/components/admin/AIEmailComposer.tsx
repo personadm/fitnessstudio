@@ -1,312 +1,317 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 
-type Tone = "warm" | "professionell" | "kurz" | "motivierend";
-type Kind = "newsletter" | "funnel";
+const PETROL = "#0F6E56";
 
 interface Props {
-  kind: Kind;
+  kind: "funnel" | "newsletter";
   onGenerated: (subject: string, bodyHtml: string) => void;
 }
 
-interface UploadedImage {
-  base64: string; // raw, ohne Data-URI-Prefix
-  mediaType: string;
-  preview: string; // Data-URI für Vorschau
-}
+type Position =
+  | "erste"
+  | "agitate"
+  | "solution"
+  | "proof"
+  | "objection"
+  | "offer"
+  | "deadline"
+  | "standalone";
 
-const TONES: { value: Tone; label: string; hint: string }[] = [
-  { value: "warm", label: "Warm & locker", hint: "persönlich, wie der Trainer" },
-  { value: "professionell", label: "Professionell", hint: "sachlich, kompetent" },
-  { value: "kurz", label: "Kurz & knapp", hint: "max. 4 Sätze, direkt" },
-  { value: "motivierend", label: "Motivierend", hint: "Drive, Action, Energie" },
-];
+const POSITION_LABELS: Record<Position, { label: string; hint: string }> = {
+  erste: {
+    label: "1. Mail / Willkommen",
+    hint: "Reine Wertvermittlung. Kein Verkauf.",
+  },
+  agitate: {
+    label: "Pain agitieren",
+    hint: "Problem benennen, Schmerz fühlbar machen.",
+  },
+  solution: {
+    label: "Lösung zeigen",
+    hint: "Lösung präsentieren + erstes Mini-Win.",
+  },
+  proof: {
+    label: "Beweise / Testimonials",
+    hint: "Vorher/Nachher, pain-based hooks.",
+  },
+  objection: {
+    label: "Einwände behandeln",
+    hint: `„Aber ich habe keine Zeit…", „Aber ich bin zu alt…"`,
+  },
+  offer: {
+    label: "Konkretes Angebot",
+    hint: "Konditionen, Garantie, was passiert beim Klick.",
+  },
+  deadline: {
+    label: "Letzte Mail / Deadline",
+    hint: "Klare Deadline + finaler Pitch.",
+  },
+  standalone: {
+    label: "Newsletter / Einzelmail",
+    hint: "Provide value + soft CTA.",
+  },
+};
 
-const MAX_IMAGES = 3;
-
+/**
+ * KI-Mail-Generator mit Hormozis E-Mail-Frameworks.
+ *
+ * Frameworks: Mozi-Minute-Struktur (Subject + Reward + Meat + CTA + PS),
+ * Value Equation, Reward-Loops, Pain-based Testimonial-Hooks, Anti-Patterns
+ * (keine Bilder, max 1–2 Links, keine Geld-Sprache im Body).
+ *
+ * Generiert EINE Mail. Ruft `onGenerated(subject, bodyHtml)` wenn der User
+ * die generierte Mail übernehmen will.
+ */
 export function AIEmailComposer({ kind, onGenerated }: Props) {
-  const [open, setOpen] = useState(false);
-  const [images, setImages] = useState<UploadedImage[]>([]);
-  const [brief, setBrief] = useState("");
-  const [tone, setTone] = useState<Tone>("warm");
-  const [state, setState] = useState<"idle" | "loading" | "error" | "success">("idle");
-  const [errorMsg, setErrorMsg] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [zielgruppe, setZielgruppe] = useState("");
+  const [zielDerMail, setZielDerMail] = useState("");
+  const [painPoints, setPainPoints] = useState("");
+  const [position, setPosition] = useState<Position>(
+    kind === "newsletter" ? "standalone" : "erste",
+  );
+  const [ton, setTon] = useState<"direkt" | "empathisch" | "story">("empathisch");
+  const [zusatzkontext, setZusatzkontext] = useState("");
 
-  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
-    if (files.length === 0) return;
-
-    const remaining = MAX_IMAGES - images.length;
-    const toProcess = files.slice(0, remaining);
-
-    setErrorMsg("");
-    const newImages: UploadedImage[] = [];
-
-    for (const file of toProcess) {
-      try {
-        const compressed = await compressImage(file);
-        newImages.push(compressed);
-      } catch (err) {
-        console.error("Komprimierung fehlgeschlagen:", err);
-        setErrorMsg(`Bild "${file.name}" konnte nicht verarbeitet werden.`);
-      }
-    }
-
-    if (newImages.length > 0) {
-      setImages([...images, ...newImages]);
-    }
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  }
-
-  function removeImage(index: number) {
-    setImages(images.filter((_, i) => i !== index));
-  }
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState<{
+    subject: string;
+    previewText: string;
+    bodyHtml: string;
+    rationale: string;
+  } | null>(null);
 
   async function generate() {
-    if (!brief.trim()) {
-      setErrorMsg("Bitte gib ein Briefing ein.");
-      setState("error");
-      return;
-    }
-
-    setState("loading");
-    setErrorMsg("");
+    setLoading(true);
+    setError("");
+    setResult(null);
 
     try {
-      const res = await fetch("/api/admin/ai-compose", {
+      const res = await fetch("/api/admin/funnels/generate-step", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          brief: brief.trim(),
-          tone,
-          kind,
-          images: images.map((img) => ({ base64: img.base64, mediaType: img.mediaType })),
+          zielgruppe,
+          zielDerMail,
+          painPoints: painPoints || undefined,
+          position,
+          ton,
+          zusatzkontext: zusatzkontext || undefined,
         }),
       });
       const data = await res.json();
-
-      if (!data.ok) {
-        setErrorMsg(data.message ?? "Fehler bei der Generierung.");
-        setState("error");
-        return;
+      if (data.ok) {
+        setResult(data.step);
+      } else {
+        setError(data.message ?? "Generierung fehlgeschlagen.");
       }
-
-      onGenerated(data.subject, data.bodyHtml);
-      setState("success");
-      // Bleibt offen, zeigt Erfolg, User kann nochmal generieren oder schließen
-    } catch (err) {
-      console.error(err);
-      setErrorMsg("Verbindungsfehler.");
-      setState("error");
+    } catch {
+      setError("Verbindung zum KI-Service fehlgeschlagen.");
+    } finally {
+      setLoading(false);
     }
   }
 
-  if (!open) {
+  function reset() {
+    setResult(null);
+    setError("");
+  }
+
+  function accept() {
+    if (!result) return;
+    onGenerated(result.subject, result.bodyHtml);
+    reset();
+  }
+
+  const canGenerate =
+    zielgruppe.trim().length > 5 && zielDerMail.trim().length > 5 && !loading;
+
+  // ── Vorschau-Modus ─────────────────────────────────────
+  if (result) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="mb-6 w-full border border-acid_dark bg-acid/30 px-5 py-4 text-left hover:bg-acid/50 transition-colors"
-      >
-        <p className="font-mono text-xs uppercase tracking-[0.12em] text-ink">
-          ✨ Mit KI generieren
-        </p>
-        <p className="mt-1 text-sm text-ink-soft">
-          Foto + Stichworte → fertige Mail. Ton wählbar.
-        </p>
-      </button>
+      <div className="border border-ink/15">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-ink/15 bg-ink/5 p-4">
+          <div>
+            <p className="label">Vorschau</p>
+            <p className="mt-1 text-base font-medium">{result.subject}</p>
+            {result.previewText && (
+              <p className="mt-1 text-xs italic text-muted">
+                Inbox-Preview: „{result.previewText}"
+              </p>
+            )}
+          </div>
+          <div className="flex flex-shrink-0 gap-2">
+            <button
+              type="button"
+              onClick={reset}
+              className="rounded-md border border-ink/20 bg-white px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] hover:bg-ink/5"
+            >
+              Verwerfen
+            </button>
+            <button
+              type="button"
+              onClick={accept}
+              className="rounded-md px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-white"
+              style={{ backgroundColor: PETROL }}
+            >
+              Übernehmen ↓
+            </button>
+          </div>
+        </div>
+
+        {result.rationale && (
+          <div
+            className="border-b border-ink/10 px-4 py-2 text-xs italic"
+            style={{ backgroundColor: "rgba(15,110,86,0.05)" }}
+          >
+            <strong>Strategie:</strong> {result.rationale}
+          </div>
+        )}
+
+        <div
+          className="prose prose-sm max-w-none p-4 text-sm"
+          dangerouslySetInnerHTML={{ __html: result.bodyHtml }}
+        />
+      </div>
     );
   }
 
+  // ── Eingabe-Form ───────────────────────────────────────
   return (
-    <div className="mb-6 border border-acid_dark bg-acid/10 p-6">
-      <div className="mb-5 flex items-center justify-between">
-        <p className="label">✨ KI-Texter</p>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted hover:text-ink"
-        >
-          Schließen
-        </button>
+    <div className="space-y-4">
+      <div
+        className="rounded border-l-2 p-3 text-xs"
+        style={{ borderColor: PETROL, backgroundColor: "rgba(15,110,86,0.05)" }}
+      >
+        <strong>Hormozi-Mail-Generator.</strong> Die KI schreibt nach Mozi-Minute-Struktur
+        (Subject + Reward + Meat + CTA + PS), unter 200 Wörter, ohne Bilder, ohne Geld-Sprache
+        im Body — alles im warmen du-Ton der Gesundheitscoaches.
       </div>
 
-      <div className="space-y-5">
-        {/* Foto-Upload */}
-        <div>
-          <p className="label mb-2">Fotos (optional, max. {MAX_IMAGES})</p>
+      <Field
+        label="Zielgruppe"
+        placeholder="z.B. Frauen 50+ aus dem Münsterland mit Übergewicht und Knieschmerzen"
+        value={zielgruppe}
+        onChange={setZielgruppe}
+        multiline
+      />
 
-          {images.length > 0 && (
-            <div className="mb-3 grid grid-cols-3 gap-2">
-              {images.map((img, i) => (
-                <div
-                  key={i}
-                  className="relative aspect-square border border-ink/20 overflow-hidden bg-ink/5"
-                >
-                  <img src={img.preview} alt="" className="h-full w-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(i)}
-                    className="absolute top-1 right-1 bg-ink/80 text-cream font-mono text-xs px-2 py-0.5 hover:bg-ink"
-                    aria-label="Entfernen"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+      <Field
+        label="Ziel dieser Mail"
+        placeholder="z.B. Soll Vertrauen aufbauen + zeigen, dass schnelle Ergebnisse möglich sind"
+        value={zielDerMail}
+        onChange={setZielDerMail}
+        multiline
+      />
 
-          {images.length < MAX_IMAGES && (
-            <label className="block cursor-pointer border border-dashed border-ink/30 bg-cream/50 p-6 text-center hover:border-ink/60 hover:bg-cream transition-colors">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                multiple
-                onChange={handleFileSelect}
-                disabled={state === "loading"}
-                className="sr-only"
-              />
-              <p className="font-mono text-xs uppercase tracking-[0.1em] text-muted">
-                Bilder auswählen
-              </p>
-              <p className="mt-1 text-xs text-muted">
-                JPG, PNG, WEBP — werden auf 1200px komprimiert
-              </p>
-            </label>
-          )}
-        </div>
+      <Field
+        label="Pain Points der Zielgruppe (optional)"
+        placeholder="z.B. vergebliche Diäten, Knieschmerzen, Scham im Spiegel, müde im Alltag"
+        value={painPoints}
+        onChange={setPainPoints}
+        multiline
+      />
 
-        {/* Briefing */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <label className="block">
-          <span className="label mb-2 block">Worum geht's? (Briefing)</span>
-          <textarea
-            value={brief}
-            onChange={(e) => setBrief(e.target.value)}
-            disabled={state === "loading"}
-            rows={4}
-            placeholder="Z.B.: Neuer HYROX-Kurs ab Montag mit Anna. Anmeldung über Tresen oder Antwort-Mail. Warm halten, persönlich, kein Marketing-Sprech."
-            className="w-full border border-ink/20 bg-cream/50 p-3 text-sm outline-none focus:border-ink resize-y"
-            maxLength={2000}
-          />
-          <p className="mt-1 font-mono text-[10px] text-muted text-right">
-            {brief.length} / 2000
-          </p>
+          <span className="label mb-1.5 block">Position im Funnel</span>
+          <select
+            value={position}
+            onChange={(e) => setPosition(e.target.value as Position)}
+            className="w-full border border-ink/20 bg-white px-3 py-2 text-sm outline-none focus:border-ink"
+          >
+            {Object.entries(POSITION_LABELS).map(([key, { label }]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-[11px] italic text-muted">{POSITION_LABELS[position].hint}</p>
         </label>
 
-        {/* Ton */}
-        <fieldset>
-          <legend className="label mb-3">Ton</legend>
-          <div className="grid grid-cols-2 gap-2">
-            {TONES.map((t) => {
-              const selected = tone === t.value;
-              return (
-                <label
-                  key={t.value}
-                  className={`cursor-pointer border p-3 transition-colors ${
-                    selected
-                      ? "border-ink bg-ink text-cream"
-                      : "border-ink/20 hover:border-ink/40 bg-cream/50"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name={`ai-tone-${kind}`}
-                    value={t.value}
-                    checked={selected}
-                    onChange={() => setTone(t.value)}
-                    className="sr-only"
-                  />
-                  <p className="font-mono text-xs uppercase tracking-[0.1em]">
-                    {selected ? "✓ " : ""}
-                    {t.label}
-                  </p>
-                  <p className={`mt-1 text-xs ${selected ? "text-cream/70" : "text-muted"}`}>
-                    {t.hint}
-                  </p>
-                </label>
-              );
-            })}
-          </div>
-        </fieldset>
-
-        {/* Action */}
-        <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-ink/10">
-          <button
-            type="button"
-            onClick={generate}
-            disabled={state === "loading" || !brief.trim()}
-            className="bg-ink px-5 py-2.5 font-mono text-xs uppercase tracking-[0.12em] text-acid disabled:opacity-50 hover:bg-ink-soft"
+        <label className="block">
+          <span className="label mb-1.5 block">Tonalität</span>
+          <select
+            value={ton}
+            onChange={(e) => setTon(e.target.value as typeof ton)}
+            className="w-full border border-ink/20 bg-white px-3 py-2 text-sm outline-none focus:border-ink"
           >
-            {state === "loading"
-              ? "Generiert…"
-              : state === "success"
-              ? "Nochmal generieren"
-              : "Mail generieren"}
-          </button>
-          {state === "loading" && (
-            <p className="font-mono text-xs text-muted">
-              KI denkt nach — kann 10–20 Sekunden dauern…
-            </p>
-          )}
-          {state === "success" && (
-            <p className="font-mono text-xs text-acid_dark">
-              ✓ Mail generiert — Felder unten ausgefüllt. Editierbar.
-            </p>
-          )}
-        </div>
+            <option value="empathisch">Empathisch (warm, ohne Druck)</option>
+            <option value="direkt">Direkt (klar, ergebnisorientiert)</option>
+            <option value="story">Story-Mode (längere Geschichten)</option>
+          </select>
+        </label>
+      </div>
 
-        {state === "error" && errorMsg && (
-          <p role="alert" className="text-sm text-red-700 border border-red-300 bg-red-50 p-3">
-            {errorMsg}
-          </p>
+      <Field
+        label="Zusatzkontext (optional)"
+        placeholder="z.B. Funnel läuft im Winter, Schwerpunkt Krankenkassen-Erstattung, oder Vorgeschichte"
+        value={zusatzkontext}
+        onChange={setZusatzkontext}
+        multiline
+      />
+
+      {error && (
+        <p role="alert" className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800">
+          {error}
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={generate}
+          disabled={!canGenerate}
+          className="rounded-md px-5 py-2.5 font-mono text-xs uppercase tracking-[0.12em] text-white disabled:cursor-not-allowed disabled:opacity-50"
+          style={{ backgroundColor: PETROL }}
+        >
+          {loading ? "Generiere Mail… (10–30 Sek)" : "Mail generieren ✦"}
+        </button>
+        {loading && (
+          <span className="text-xs text-muted">
+            Die KI schreibt eine Mail nach Hormozi-Frameworks. Bitte kurz warten.
+          </span>
         )}
       </div>
     </div>
   );
 }
 
-/**
- * Komprimiert ein Bild client-seitig auf max. 1200px Breite, JPEG quality 0.82.
- * Reduziert die Größe drastisch — typisch von 3-5MB Original auf 50-150KB.
- */
-async function compressImage(file: File): Promise<UploadedImage> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const maxWidth = 1200;
-        const ratio = img.width > maxWidth ? maxWidth / img.width : 1;
-        const w = Math.round(img.width * ratio);
-        const h = Math.round(img.height * ratio);
-
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          reject(new Error("Canvas wird nicht unterstützt"));
-          return;
-        }
-        ctx.drawImage(img, 0, 0, w, h);
-
-        const dataUri = canvas.toDataURL("image/jpeg", 0.82);
-        const base64 = dataUri.split(",")[1];
-
-        resolve({
-          base64,
-          mediaType: "image/jpeg",
-          preview: dataUri,
-        });
-      };
-      img.onerror = () => reject(new Error("Bild konnte nicht geladen werden"));
-      img.src = e.target?.result as string;
-    };
-    reader.onerror = () => reject(new Error("Datei konnte nicht gelesen werden"));
-    reader.readAsDataURL(file);
-  });
+function Field({
+  label,
+  placeholder,
+  value,
+  onChange,
+  multiline,
+}: {
+  label: string;
+  placeholder?: string;
+  value: string;
+  onChange: (v: string) => void;
+  multiline?: boolean;
+}) {
+  return (
+    <label className="block">
+      <span className="label mb-1.5 block">{label}</span>
+      {multiline ? (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          rows={2}
+          className="w-full border border-ink/20 bg-white p-3 text-sm outline-none focus:border-ink"
+        />
+      ) : (
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="w-full border border-ink/20 bg-white px-3 py-2 text-sm outline-none focus:border-ink"
+        />
+      )}
+    </label>
+  );
 }
