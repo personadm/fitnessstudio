@@ -16,6 +16,8 @@ const TRIGGER_LABELS: Record<string, string> = {
   EHEMALIGER: "Ehemaliger",
 };
 
+const PETROL = "#0F6E56";
+
 export default async function FunnelDetailPage({ params }: PageProps) {
   const { id } = await params;
 
@@ -44,6 +46,25 @@ export default async function FunnelDetailPage({ params }: PageProps) {
   const activeCount = funnel.enrollments.filter((e) => !e.completedAt && !e.cancelledAt).length;
   const completedCount = funnel.enrollments.filter((e) => e.completedAt).length;
   const cancelledCount = funnel.enrollments.filter((e) => e.cancelledAt).length;
+
+  // ─────────────────────────────────────────────────────────────
+  // STEPS NACH GESAMTZEIT SORTIEREN
+  // Nicht nach DB-orderNum, sondern nach (delayDays * 24 + delayHours).
+  // Dadurch erscheint die Mail mit "sofort" ganz oben, danach "3h",
+  // "1d", "3d" usw. — egal in welcher Reihenfolge Tim sie angelegt hat.
+  // Wochenplan-Modus bleibt unverändert (sortiert nach orderNum, weil dort
+  // die Wartezeit über Wochenrhythmus berechnet wird).
+  // ─────────────────────────────────────────────────────────────
+  const isScheduled = funnel.scheduleWeekday !== null;
+  const sortedSteps = isScheduled
+    ? funnel.steps
+    : [...funnel.steps].sort((a, b) => {
+        const aHours = a.delayDays * 24 + ((a as { delayHours?: number }).delayHours ?? 0);
+        const bHours = b.delayDays * 24 + ((b as { delayHours?: number }).delayHours ?? 0);
+        if (aHours !== bHours) return aHours - bHours;
+        // Bei identischer Wartezeit: nach orderNum als Tiebreaker
+        return a.orderNum - b.orderNum;
+      });
 
   return (
     <div className="p-8 md:p-12">
@@ -74,59 +95,84 @@ export default async function FunnelDetailPage({ params }: PageProps) {
         {/* Hauptbereich: Schritte */}
         <div className="space-y-12 lg:col-span-2">
           <section>
-            <p className="label mb-4">Schritte ({funnel.steps.length})</p>
-            {funnel.steps.length === 0 ? (
+            <div className="mb-4 flex items-baseline justify-between gap-3">
+              <p className="label">Schritte ({sortedSteps.length})</p>
+              {!isScheduled && sortedSteps.length > 1 && (
+                <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
+                  sortiert nach Wartezeit ↑
+                </p>
+              )}
+            </div>
+            {sortedSteps.length === 0 ? (
               <p className="border border-ink/15 p-8 text-center text-sm text-muted">
                 Noch keine Schritte. Füg unten den ersten hinzu.
               </p>
             ) : (
               <div className="border border-ink/15 divide-y divide-ink/10">
-                {funnel.steps.map((step) => (
-                  <div key={step.id} className="p-5">
-                    <div className="mb-3 flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
-                          Schritt {step.orderNum} ·{" "}
-                          {funnel.scheduleWeekday !== null
-                            ? formatScheduledStep(
-                                step.orderNum,
-                                funnel.scheduleWeekday,
-                                funnel.scheduleWeekInterval,
-                                funnel.scheduleHour,
-                                funnel.scheduleMinute,
-                              )
-                            : `Wartezeit: ${formatWaitTime(step.delayDays, (step as { delayHours?: number }).delayHours ?? 0)}`}
-                        </p>
-                        <p className="mt-1 text-base font-medium">{step.subject}</p>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <Link
-                          href={`/admin/funnels/${funnel.id}/steps/${step.id}`}
-                          className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink hover:underline"
-                        >
-                          Bearbeiten
-                        </Link>
-                        <form action={deleteFunnelStep.bind(null, step.id, funnel.id)}>
-                          <button
-                            type="submit"
-                            className="font-mono text-[11px] uppercase tracking-[0.1em] text-red-700 hover:underline"
+                {sortedSteps.map((step, idx) => {
+                  const delayHours = (step as { delayHours?: number }).delayHours ?? 0;
+                  const totalHours = step.delayDays * 24 + delayHours;
+                  return (
+                    <div key={step.id} className="p-5">
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-4">
+                          {/* Zeit-Marker links — visuelle Sortierungs-Anker */}
+                          {!isScheduled && (
+                            <div
+                              className="flex-shrink-0 rounded-md px-2.5 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.05em] text-white"
+                              style={{
+                                backgroundColor: totalHours === 0 ? PETROL : "rgba(15,110,86,0.75)",
+                              }}
+                              title={`Wartezeit ab Funnel-Start: ${formatWaitTime(step.delayDays, delayHours)}`}
+                            >
+                              {formatWaitTimeShort(step.delayDays, delayHours)}
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
+                              Schritt {idx + 1} ·{" "}
+                              {isScheduled
+                                ? formatScheduledStep(
+                                    step.orderNum,
+                                    funnel.scheduleWeekday!,
+                                    funnel.scheduleWeekInterval,
+                                    funnel.scheduleHour,
+                                    funnel.scheduleMinute,
+                                  )
+                                : `Wartezeit: ${formatWaitTime(step.delayDays, delayHours)}`}
+                            </p>
+                            <p className="mt-1 text-base font-medium">{step.subject}</p>
+                          </div>
+                        </div>
+                        <div className="flex flex-shrink-0 items-center gap-4">
+                          <Link
+                            href={`/admin/funnels/${funnel.id}/steps/${step.id}`}
+                            className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink hover:underline"
                           >
-                            Löschen
-                          </button>
-                        </form>
+                            Bearbeiten
+                          </Link>
+                          <form action={deleteFunnelStep.bind(null, step.id, funnel.id)}>
+                            <button
+                              type="submit"
+                              className="font-mono text-[11px] uppercase tracking-[0.1em] text-red-700 hover:underline"
+                            >
+                              Löschen
+                            </button>
+                          </form>
+                        </div>
                       </div>
+                      <details className="mt-3">
+                        <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-[0.1em] text-muted hover:text-ink">
+                          Inhalt anzeigen
+                        </summary>
+                        <div className="mt-3 max-h-60 overflow-auto border border-ink/10 bg-ink/5 p-4 font-mono text-xs whitespace-pre-wrap break-all">
+                          {step.bodyHtml}
+                        </div>
+                      </details>
+                      <TestMailForm stepId={step.id} />
                     </div>
-                    <details className="mt-3">
-                      <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-[0.1em] text-muted hover:text-ink">
-                        Inhalt anzeigen
-                      </summary>
-                      <div className="mt-3 max-h-60 overflow-auto border border-ink/10 bg-ink/5 p-4 font-mono text-xs whitespace-pre-wrap break-all">
-                        {step.bodyHtml}
-                      </div>
-                    </details>
-                    <TestMailForm stepId={step.id} />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
@@ -372,6 +418,14 @@ function formatWaitTime(days: number, hours: number): string {
   if (days > 0) parts.push(`${days} ${days === 1 ? "Tag" : "Tage"}`);
   if (hours > 0) parts.push(`${hours} ${hours === 1 ? "Stunde" : "Stunden"}`);
   return parts.join(" + ");
+}
+
+/** Kurze Variante für den Zeit-Marker links neben jedem Schritt. */
+function formatWaitTimeShort(days: number, hours: number): string {
+  if (days === 0 && hours === 0) return "sofort";
+  if (days === 0) return `+${hours}h`;
+  if (hours === 0) return `+${days}d`;
+  return `+${days}d ${hours}h`;
 }
 
 const WEEKDAY_LABELS: Record<number, string> = {
