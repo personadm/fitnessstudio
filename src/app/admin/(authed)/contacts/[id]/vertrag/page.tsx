@@ -351,13 +351,49 @@ function PrintStyles() {
       dangerouslySetInnerHTML={{
         __html: `
 @media print {
-  .no-print { display: none !important; }
-  body { background: #fff !important; }
-  .print-area { padding: 0 !important; max-width: 100% !important; }
-  .agb-page { page-break-before: always; }
-  /* Tabellen-Zeilen nicht über Seitenumbruch brechen */
-  tr, h3, h4 { page-break-inside: avoid; }
+  /* Schritt 1: Wirklich ALLES verstecken (auch das Admin-Layout drumherum:
+     Sidebar mit Kontakte/Standorte/Tarife, Top-Header etc.) */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Schritt 2: Nur die Vertrags-Druckbereich plus seine Kinder wieder sichtbar */
+  .print-area,
+  .print-area * {
+    visibility: visible !important;
+  }
+
+  /* Schritt 3: Druckbereich an den oberen Seitenrand setzen — sonst hätte er
+     den vertikalen Platz, den die versteckte Sidebar früher gebraucht hat */
+  .print-area {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Schritt 4: no-print explizit weg (z.B. der Drucken-Button selbst) */
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  .agb-page {
+    page-break-before: always;
+  }
+
+  /* Tabellen-Zeilen + Überschriften nicht mitten zerreißen */
+  tr, h3, h4 {
+    page-break-inside: avoid;
+  }
 }
+
 @page {
   size: A4;
   margin: 18mm 16mm;
