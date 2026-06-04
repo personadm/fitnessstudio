@@ -200,12 +200,23 @@ export default async function ContactDetail({ params }: PageProps) {
 
   return (
     <div className="p-4 md:p-8 lg:p-12">
-      <Link
-        href="/admin/contacts"
-        className="font-mono text-xs uppercase tracking-[0.12em] text-muted hover:text-ink"
-      >
-        ← Zurück zu Kontakten
-      </Link>
+      {/* Top-Bar: Zurück-Link + Drucken-Button rechts */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link
+          href="/admin/contacts"
+          className="font-mono text-xs uppercase tracking-[0.12em] text-muted hover:text-ink"
+        >
+          ← Zurück zu Kontakten
+        </Link>
+
+        <Link
+          href={`/admin/contacts/${contact.id}/vertrag`}
+          className="inline-flex items-center gap-2 rounded-md border border-ink/20 bg-white px-4 py-2 font-mono text-xs uppercase tracking-[0.12em] text-ink hover:border-ink/40 hover:bg-ink/5"
+        >
+          <span aria-hidden>🖨</span>
+          <span>Drucken</span>
+        </Link>
+      </div>
 
       <div className="mt-6 mb-8 md:mb-12">
         <div className="flex flex-wrap items-baseline gap-3">
