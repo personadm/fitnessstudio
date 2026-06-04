@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { PrintButton } from "./PrintButton";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -84,14 +85,7 @@ export default async function VertragPage({ params }: PageProps) {
           <Link href={`/admin/contacts/${contact.id}`} className="text-sm text-gray-600 hover:text-gray-900">
             ← Zurück zum Kontakt
           </Link>
-          <button
-            type="button"
-            onClick={() => (typeof window !== "undefined" ? window.print() : null)}
-            className="rounded-md px-4 py-2 text-sm font-semibold text-white"
-            style={{ backgroundColor: PETROL }}
-          >
-            🖨 Vertrag drucken
-          </button>
+          <PrintButton />
         </div>
       </div>
 
