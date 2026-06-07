@@ -298,6 +298,9 @@ model FunnelStep {
 
   @@unique([funnelId, orderNum])
   @@index([funnelId])
+scheduleWeekday Int?
+  scheduleHour    Int?
+  scheduleMinute  Int?
 }
 
 model FunnelEnrollment {
