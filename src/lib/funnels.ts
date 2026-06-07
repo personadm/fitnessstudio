@@ -29,6 +29,9 @@ export type ProcessResult = {
   skippedSteps?: number;
 };
 
+// ─────────────────────────────────────────────────────────────
+// DUE-DATE-BERECHNUNG — Klassisch / Hybrid / Legacy-Wochenplan
+// ─────────────────────────────────────────────────────────────
 /**
  * Berechnet den frühesten Sendezeitpunkt eines Schritts für eine Enrollment.
  *
@@ -36,12 +39,10 @@ export type ProcessResult = {
  *   1) KLASSISCH (step.scheduleWeekday === null): genau `delayDays + delayHours`
  *      nach Funnel-Start.
  *   2) HYBRID (step.scheduleWeekday gesetzt): frühestens nach `delayDays +
- *      delayHours` nach Funnel-Start, dann nächster passender Wochentag um
- *      die konfigurierte Uhrzeit.
+ *      delayHours`, dann nächster passender Wochentag um konfigurierte Uhrzeit.
  *   3) LEGACY-WOCHENPLAN: wenn der Step keine eigenen Schedule-Felder hat,
- *      aber der Funnel funnel-weit auf Wochenplan steht, wird die alte
- *      Logik angewendet (alle Steps am gleichen Wochentag, Step N = Step 1
- *      + (N-1) * Wochen-Intervall). Wird bei der Migration eliminiert.
+ *      aber der Funnel funnel-weit auf Wochenplan steht. Backwards-compat
+ *      für bestehende Funnels — wird durch die 002-Migration eliminiert.
  */
 function calculateDueAt(
   step: {
@@ -75,8 +76,7 @@ function calculateDueAt(
     ).getTime();
   }
 
-  // LEGACY-WOCHENPLAN: Step hat keine eigenen Schedule-Felder,
-  // aber Funnel ist im alten Wochenplan-Modus
+  // LEGACY-WOCHENPLAN: Step hat keine eigenen Felder, Funnel hat Wochenplan
   if (
     funnelLegacy.scheduleWeekday !== null &&
     funnelLegacy.scheduleWeekday !== undefined
@@ -92,11 +92,7 @@ function calculateDueAt(
       first.getTime() +
       stepIndex *
         funnelLegacy.scheduleWeekInterval *
-        7 *
-        24 *
-        60 *
-        60 *
-        1000
+        7 * 24 * 60 * 60 * 1000
     );
   }
 
@@ -105,9 +101,7 @@ function calculateDueAt(
 }
 
 /**
- * Nächster passender Wochentag NACH einem gegebenen Datum.
- * Wenn das Datum bereits auf dem Wochentag liegt UND die Uhrzeit noch nicht
- * vorbei ist, wird dieser Tag zurückgegeben. Sonst der NÄCHSTE Wochentag X.
+ * Nächster passender Wochentag NACH einem gegebenen Datum (inkl. Zeit).
  */
 function nextWeekdayOccurrence(
   earliest: Date,
@@ -121,8 +115,7 @@ function nextWeekdayOccurrence(
   const currentWeekday = result.getDay();
   let daysToAdd = (targetWeekday - currentWeekday + 7) % 7;
 
-  // Wenn wir heute schon am Zielwochentag sind, aber die Uhrzeit verpasst haben
-  // → eine Woche weiter
+  // Heute der Zielwochentag aber Uhrzeit verpasst → eine Woche weiter
   if (daysToAdd === 0 && result.getTime() < earliest.getTime()) {
     daysToAdd = 7;
   }
@@ -131,25 +124,89 @@ function nextWeekdayOccurrence(
   return result;
 }
 
-export async function processFunnels(): Promise<ProcessResult> {
-  const now = Date.now();
-  if (now - lastRunAt < MIN_INTERVAL_MS) {
+// ─────────────────────────────────────────────────────────────
+// MAIN ENTRY: processFunnels({ force?: boolean })
+// ─────────────────────────────────────────────────────────────
+/**
+ * Hauptverarbeitungs-Funktion. Wird vom Cron und vom manuellen
+ * "Jetzt verarbeiten"-Button aufgerufen.
+ *
+ * Rate-Limit: alle 5 Minuten. Kann mit `{ force: true }` umgangen werden
+ * (für manuelle Trigger aus der Admin-UI).
+ */
+export async function processFunnels(
+  opts: { force?: boolean } = {},
+): Promise<ProcessResult> {
+  const nowMs = Date.now();
+  if (!opts.force && nowMs - lastRunAt < MIN_INTERVAL_MS) {
     return { skipped: true, reason: "rate_limited" };
   }
-  lastRunAt = now;
+  lastRunAt = nowMs;
 
-  await enrollIntoMatchingFunnels();
+  const enrolled = await enrollIntoMatchingFunnels();
   const stats = await processFunnelsInner();
-  return { skipped: false, ...stats };
+  return { skipped: false, enrolled, ...stats };
 }
 
-export async function enrollIntoMatchingFunnels(): Promise<number> {
+// ─────────────────────────────────────────────────────────────
+// ENROLLMENT: kann global ODER für einen spezifischen Kontakt aufgerufen werden
+// ─────────────────────────────────────────────────────────────
+/**
+ * Schreibt Kontakte in passende Funnels ein.
+ *
+ * Zwei Aufruf-Modi:
+ *   - Global (ohne Args): alle Kontakte werden geprüft. Wird vom Cron-Job
+ *     und vom Funnel-Prozessor selbst aufgerufen.
+ *   - Targeted (mit contactId + status): nur dieser eine Kontakt wird in
+ *     passende Funnels eingeschrieben. Wird aus updateContactStatus +
+ *     createClubContact aufgerufen — direkt nach Status-Wechsel.
+ *
+ * Returnt: Anzahl der neuen Enrollments.
+ */
+export async function enrollIntoMatchingFunnels(
+  contactId?: string,
+  status?: ContactStatus | FunnelTrigger,
+): Promise<number> {
   const funnels = await db.funnel.findMany({
     where: { active: true },
     select: { id: true, name: true, trigger: true, locationId: true },
   });
 
   let enrolled = 0;
+
+  // ── TARGETED: nur ein spezifischer Kontakt ──
+  if (contactId && status) {
+    const contact = await db.contact.findUnique({
+      where: { id: contactId },
+      select: { id: true, locationId: true },
+    });
+    if (!contact) return 0;
+
+    for (const funnel of funnels) {
+      const targetStatus = triggerToStatus(funnel.trigger);
+      if (status !== targetStatus) continue;
+      if (funnel.locationId && contact.locationId !== funnel.locationId) continue;
+
+      try {
+        await db.funnelEnrollment.create({
+          data: { funnelId: funnel.id, contactId: contact.id },
+        });
+        await db.contactEvent.create({
+          data: {
+            contactId: contact.id,
+            type: "FUNNEL_ENROLLED",
+            meta: { funnelId: funnel.id, funnelName: funnel.name },
+          },
+        });
+        enrolled++;
+      } catch {
+        // @@unique([funnelId, contactId]) → schon eingeschrieben, ok
+      }
+    }
+    return enrolled;
+  }
+
+  // ── GLOBAL: alle passenden Kontakte ──
   for (const funnel of funnels) {
     const targetStatus = triggerToStatus(funnel.trigger);
     const candidates = await db.contact.findMany({
@@ -174,13 +231,16 @@ export async function enrollIntoMatchingFunnels(): Promise<number> {
         });
         enrolled++;
       } catch {
-        // unique constraint @@unique([funnelId, contactId]) → schon eingeschrieben, ok
+        // schon eingeschrieben — ok
       }
     }
   }
   return enrolled;
 }
 
+// ─────────────────────────────────────────────────────────────
+// INNERE LOOP: Mails versenden + Skip-Logik
+// ─────────────────────────────────────────────────────────────
 async function processFunnelsInner() {
   let sent = 0;
   let cancelled = 0;
@@ -214,7 +274,6 @@ async function processFunnelsInner() {
       // Auto-Stop: Status verlassen?
       const statusMismatch =
         funnel.autoStop && enrollment.contact.status !== targetStatus;
-      // Standort-Mismatch
       const locationMismatch =
         !!funnel.locationId &&
         enrollment.contact.locationId !== funnel.locationId;
@@ -247,12 +306,8 @@ async function processFunnelsInner() {
       };
 
       // ─────────────────────────────────────────────────────────
-      // STEPS NACH dueAt SORTIEREN
+      // STEPS NACH BERECHNETEM dueAt SORTIEREN
       // ─────────────────────────────────────────────────────────
-      // Wir berechnen pro Step die Fälligkeit für DIESE Enrollment und
-      // sortieren danach. Damit funktioniert das `break` bei "noch nicht
-      // fällig" korrekt, egal in welcher orderNum-Reihenfolge die Steps
-      // angelegt wurden.
       const stepsWithDueAt = funnel.steps.map((step) => ({
         step,
         dueAt: calculateDueAt(step, enrollment.startedAt, funnelLegacy),
@@ -260,7 +315,7 @@ async function processFunnelsInner() {
       stepsWithDueAt.sort((a, b) => a.dueAt - b.dueAt);
 
       // ─────────────────────────────────────────────────────────
-      // SKIP-CHECK: welche Steps sind "historisch verspätet"?
+      // SKIP-CHECK
       // ─────────────────────────────────────────────────────────
       // Wenn für diese Enrollment bereits ein zeitlich SPÄTERER Step
       // versendet wurde, dürfen frühere Steps NICHT mehr rausgehen.
@@ -281,7 +336,7 @@ async function processFunnelsInner() {
       for (const { step, dueAt } of stepsWithDueAt) {
         if (sentStepIds.has(step.id)) continue;
 
-        // SKIP: dieser Step liegt zeitlich vor einem bereits gesendeten Step
+        // SKIP-Step: zeitlich vor einem bereits gesendeten
         if (skipStepIds.has(step.id)) {
           try {
             await db.funnelStepEvent.create({
@@ -312,8 +367,7 @@ async function processFunnelsInner() {
           continue;
         }
 
-        // Noch nicht fällig? → break (Steps sind sortiert, alle weiteren
-        // sind ebenfalls noch nicht fällig)
+        // Noch nicht fällig? → break (Steps sind sortiert)
         if (nowMs < dueAt) break;
 
         // → SENDEN
@@ -348,7 +402,7 @@ async function processFunnelsInner() {
           sentStepIds.add(step.id);
           sent++;
 
-          // Throttle gegen Resend-Rate-Limit (10/sek Pro-Plan, defensiv 8/sek)
+          // Throttle gegen Resend-Rate-Limit
           await sleep(125);
         } catch (err) {
           console.error("[funnels] send failed", err);
@@ -356,7 +410,7 @@ async function processFunnelsInner() {
         }
       }
 
-      // Enrollment komplett durchgelaufen?
+      // Enrollment komplett durch?
       if (sentStepIds.size >= funnel.steps.length) {
         await db.funnelEnrollment.update({
           where: { id: enrollment.id },

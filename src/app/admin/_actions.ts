@@ -23,6 +23,17 @@ async function requireAdmin() {
   return s;
 }
 
+/**
+ * Parst einen optional gesetzten Integer aus FormData.
+ * Returnt null bei leerem String, fehlendem Feld oder NaN.
+ * Wird für Hybrid-Modus-Felder (scheduleWeekday/Hour/Minute) genutzt.
+ */
+function parseOptionalInt(value: FormDataEntryValue | null): number | null {
+  if (value === null || value === "") return null;
+  const n = parseInt(String(value), 10);
+  return Number.isFinite(n) ? n : null;
+}
+
 // ─────────────────────────────────────────────────────────────
 // CONTACTS
 // ─────────────────────────────────────────────────────────────
@@ -406,6 +417,15 @@ export async function deleteFunnel(funnelId: string) {
   redirect("/admin/funnels");
 }
 
+/**
+ * Legt einen neuen Funnel-Schritt an.
+ *
+ * Hybrid-Modus: wenn `scheduleWeekday` aus dem FormData gesetzt ist (0-6),
+ * gilt für diesen Step:
+ *   → frühestens nach delayDays + delayHours nach Funnel-Start
+ *   → dann am nächsten passenden Wochentag um die angegebene Uhrzeit
+ * Wenn `scheduleWeekday` leer/null → klassischer Modus (genau nach Wartezeit).
+ */
 export async function addFunnelStep(funnelId: string, formData: FormData) {
   await requireAdmin();
   const parsed = funnelStepSchema.parse({
@@ -415,6 +435,20 @@ export async function addFunnelStep(funnelId: string, formData: FormData) {
     subject: formData.get("subject"),
     bodyHtml: formData.get("bodyHtml"),
   });
+
+  // Hybrid-Modus-Felder — außerhalb des Zod-Schemas validiert
+  const scheduleWeekday = parseOptionalInt(formData.get("scheduleWeekday"));
+  const scheduleHour = parseOptionalInt(formData.get("scheduleHour"));
+  const scheduleMinute = parseOptionalInt(formData.get("scheduleMinute"));
+  if (scheduleWeekday !== null && (scheduleWeekday < 0 || scheduleWeekday > 6)) {
+    throw new Error("Wochentag muss zwischen 0 (Sonntag) und 6 (Samstag) liegen.");
+  }
+  if (scheduleHour !== null && (scheduleHour < 0 || scheduleHour > 23)) {
+    throw new Error("Stunde muss zwischen 0 und 23 liegen.");
+  }
+  if (scheduleMinute !== null && (scheduleMinute < 0 || scheduleMinute > 59)) {
+    throw new Error("Minute muss zwischen 0 und 59 liegen.");
+  }
 
   const lastStep = await db.funnelStep.findFirst({
     where: { funnelId },
@@ -431,6 +465,11 @@ export async function addFunnelStep(funnelId: string, formData: FormData) {
       delayHours: parsed.delayHours,
       subject: parsed.subject,
       bodyHtml: parsed.bodyHtml,
+      // Hybrid-Modus: nur setzen wenn scheduleWeekday gegeben ist.
+      // Hour/Minute defaulten dann auf 9:00 falls nicht mitgesendet.
+      scheduleWeekday,
+      scheduleHour: scheduleWeekday !== null ? (scheduleHour ?? 9) : null,
+      scheduleMinute: scheduleWeekday !== null ? (scheduleMinute ?? 0) : null,
     },
   });
   revalidatePath(`/admin/funnels/${funnelId}`);
@@ -444,8 +483,8 @@ export async function deleteFunnelStep(stepId: string, funnelId: string) {
 
 /**
  * Aktualisiert einen bestehenden Funnel-Schritt.
- * Anwendung: User korrigiert nachträglich Links, Betreff oder ganzen Body.
- * Reihenfolge (orderNum) bleibt unverändert.
+ * Anwendung: User korrigiert nachträglich Links, Betreff, ganzen Body
+ * oder den Hybrid-Modus. Reihenfolge (orderNum) bleibt unverändert.
  */
 export async function updateFunnelStep(
   stepId: string,
@@ -462,6 +501,20 @@ export async function updateFunnelStep(
     bodyHtml: formData.get("bodyHtml"),
   });
 
+  // Hybrid-Modus-Felder — außerhalb des Zod-Schemas validiert
+  const scheduleWeekday = parseOptionalInt(formData.get("scheduleWeekday"));
+  const scheduleHour = parseOptionalInt(formData.get("scheduleHour"));
+  const scheduleMinute = parseOptionalInt(formData.get("scheduleMinute"));
+  if (scheduleWeekday !== null && (scheduleWeekday < 0 || scheduleWeekday > 6)) {
+    throw new Error("Wochentag muss zwischen 0 (Sonntag) und 6 (Samstag) liegen.");
+  }
+  if (scheduleHour !== null && (scheduleHour < 0 || scheduleHour > 23)) {
+    throw new Error("Stunde muss zwischen 0 und 23 liegen.");
+  }
+  if (scheduleMinute !== null && (scheduleMinute < 0 || scheduleMinute > 59)) {
+    throw new Error("Minute muss zwischen 0 und 59 liegen.");
+  }
+
   await db.funnelStep.update({
     where: { id: stepId },
     data: {
@@ -469,6 +522,9 @@ export async function updateFunnelStep(
       delayHours: parsed.delayHours,
       subject: parsed.subject,
       bodyHtml: parsed.bodyHtml,
+      scheduleWeekday,
+      scheduleHour: scheduleWeekday !== null ? (scheduleHour ?? 9) : null,
+      scheduleMinute: scheduleWeekday !== null ? (scheduleMinute ?? 0) : null,
     },
   });
 
