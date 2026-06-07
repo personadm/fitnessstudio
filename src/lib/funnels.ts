@@ -143,7 +143,7 @@ export async function processFunnels(): Promise<ProcessResult> {
   return { skipped: false, ...stats };
 }
 
-async function enrollIntoMatchingFunnels(): Promise<number> {
+export async function enrollIntoMatchingFunnels(): Promise<number> {
   const funnels = await db.funnel.findMany({
     where: { active: true },
     select: { id: true, name: true, trigger: true, locationId: true },
