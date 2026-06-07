@@ -12,30 +12,26 @@ interface Props {
   initialBodyHtml: string;
   initialDelayDays: number;
   initialDelayHours: number;
-  scheduleMode: boolean;
+  initialScheduleWeekday: number | null;
+  initialScheduleHour: number | null;
+  initialScheduleMinute: number | null;
+  /**
+   * Hinweis-Banner falls Funnel-weite Legacy-Schedule-Settings noch aktiv sind.
+   */
+  funnelLegacyScheduleEnabled: boolean;
   action: (formData: FormData) => Promise<unknown>;
 }
 
-/**
- * Funnel-Step bearbeiten mit WYSIWYG-Editor (TipTap).
- *
- * DEFENSIVE FIXES gegen den "Mail wird beim Re-Edit kaputt"-Bug:
- *
- * 1) Die `initialBodyHtml`-Prop wird in eine useRef gepackt → der Wert bleibt
- *    bit-genau stabil für die gesamte Lebensdauer der Komponente, egal wie
- *    oft die Page re-rendered wird (z.B. durch router.refresh()). Wenn der
- *    RichTextEditor intern einen useEffect auf `initialHtml`-Änderungen
- *    hat, würde der ohne diesen Fix bei jedem Re-Render erneut feuern und
- *    den Editor-Inhalt zurücksetzen.
- *
- * 2) Stabiler `key={stepId}` auf RichTextEditor → React behält dieselbe
- *    Editor-Instanz für die gesamte Edit-Session. Re-Mounts werden vermieden.
- *
- * 3) Nach erfolgreichem Speichern wird router.refresh() NICHT mehr automatisch
- *    aufgerufen, wenn die Server-Action ohne Redirect zurückkommt. Stattdessen
- *    zeigt die UI eine kurze Erfolgsmeldung. Damit kann der User danach ohne
- *    Reset weiter editieren ODER manuell zur Funnel-Seite zurückkehren.
- */
+const WEEKDAY_LABELS: Record<number, string> = {
+  0: "Sonntag",
+  1: "Montag",
+  2: "Dienstag",
+  3: "Mittwoch",
+  4: "Donnerstag",
+  5: "Freitag",
+  6: "Samstag",
+};
+
 export function EditStepForm({
   stepId,
   funnelId,
@@ -43,21 +39,30 @@ export function EditStepForm({
   initialBodyHtml,
   initialDelayDays,
   initialDelayHours,
-  scheduleMode,
+  initialScheduleWeekday,
+  initialScheduleHour,
+  initialScheduleMinute,
+  funnelLegacyScheduleEnabled,
   action,
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  // FIX 1: initialBodyHtml in stabiler Ref einfrieren.
-  // .current wird einmal beim ersten Render gesetzt und ändert sich
-  // danach nie wieder — auch nicht wenn die Prop sich ändern würde.
+  // Stable initial reference — schützt vor TipTap-Re-Mount-Bug
   const stableInitialBodyHtml = useRef(initialBodyHtml).current;
 
   const [subject, setSubject] = useState(initialSubject);
   const [bodyHtml, setBodyHtml] = useState(initialBodyHtml);
   const [delayDays, setDelayDays] = useState(initialDelayDays);
   const [delayHours, setDelayHours] = useState(initialDelayHours);
+  const [hybridMode, setHybridMode] = useState(initialScheduleWeekday !== null);
+  const [scheduleWeekday, setScheduleWeekday] = useState(
+    initialScheduleWeekday ?? 3,
+  );
+  const [scheduleHour, setScheduleHour] = useState(initialScheduleHour ?? 9);
+  const [scheduleMinute, setScheduleMinute] = useState(
+    initialScheduleMinute ?? 0,
+  );
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
 
@@ -80,15 +85,21 @@ export function EditStepForm({
       formData.set("bodyHtml", bodyHtml);
       formData.set("delayDays", String(delayDays));
       formData.set("delayHours", String(delayHours));
+      // Hybrid: wenn aktiviert, sende die Schedule-Felder. Sonst empty.
+      if (hybridMode) {
+        formData.set("scheduleWeekday", String(scheduleWeekday));
+        formData.set("scheduleHour", String(scheduleHour));
+        formData.set("scheduleMinute", String(scheduleMinute));
+      } else {
+        formData.set("scheduleWeekday", "");
+        formData.set("scheduleHour", "");
+        formData.set("scheduleMinute", "");
+      }
 
       try {
         await action(formData);
-        // FIX 3: KEIN router.refresh() mehr — das würde die Page re-rendern
-        // und im schlimmsten Fall den Editor zurücksetzen.
-        // Stattdessen: kurze Erfolgsmeldung anzeigen.
         setSavedAt(new Date());
       } catch (err) {
-        // Next.js' redirect() wirft intern eine Exception — durchlassen.
         const msg = err instanceof Error ? err.message : String(err);
         if (msg.includes("NEXT_REDIRECT")) return;
         setError("Speichern fehlgeschlagen: " + msg);
@@ -98,40 +109,105 @@ export function EditStepForm({
 
   return (
     <div className="space-y-8">
-      {/* Wartezeit (nur im klassischen Modus relevant) */}
-      {!scheduleMode && (
-        <section>
-          <p className="label mb-3">Wartezeit nach Eintragung</p>
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              min="0"
-              value={delayDays}
-              onChange={(e) => setDelayDays(parseInt(e.target.value) || 0)}
-              className="w-20 border-b border-ink/20 bg-transparent py-2 text-center focus:border-ink focus:outline-none"
-            />
-            <span className="text-sm">Tage</span>
-            <input
-              type="number"
-              min="0"
-              max="23"
-              value={delayHours}
-              onChange={(e) => setDelayHours(parseInt(e.target.value) || 0)}
-              className="w-20 border-b border-ink/20 bg-transparent py-2 text-center focus:border-ink focus:outline-none"
-            />
-            <span className="text-sm">Stunden</span>
-          </div>
-        </section>
-      )}
+      {/* Wartezeit */}
+      <section>
+        <p className="label mb-3">Wartezeit nach Eintragung</p>
+        <div className="flex items-center gap-3">
+          <input
+            type="number"
+            min="0"
+            value={delayDays}
+            onChange={(e) => setDelayDays(parseInt(e.target.value) || 0)}
+            className="w-20 border-b border-ink/20 bg-transparent py-2 text-center focus:border-ink focus:outline-none"
+          />
+          <span className="text-sm">Tage</span>
+          <input
+            type="number"
+            min="0"
+            max="23"
+            value={delayHours}
+            onChange={(e) => setDelayHours(parseInt(e.target.value) || 0)}
+            className="w-20 border-b border-ink/20 bg-transparent py-2 text-center focus:border-ink focus:outline-none"
+          />
+          <span className="text-sm">Stunden</span>
+        </div>
+      </section>
 
-      {scheduleMode && (
+      {funnelLegacyScheduleEnabled && !hybridMode && (
         <section className="border border-acid bg-acid/20 p-4">
           <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink">
-            ⓘ Dieser Funnel läuft im Wochenplan-Modus — die Wartezeit wird ignoriert.
-            Schritte werden automatisch zum konfigurierten Wochentag versendet.
+            ⓘ Funnel hat alte Wochenplan-Settings — sie greifen für diesen Step
+            solange du den Hybrid-Modus unten nicht aktivierst.
           </p>
         </section>
       )}
+
+      {/* ───────── HYBRID-MODUS ───────── */}
+      <section className="border-t border-ink/15 pt-5">
+        <label className="flex items-start gap-2 text-sm cursor-pointer mb-3">
+          <input
+            type="checkbox"
+            checked={hybridMode}
+            onChange={(e) => setHybridMode(e.target.checked)}
+            className="mt-0.5 h-4 w-4 accent-ink"
+          />
+          <span>
+            <strong>Hybrid-Modus für diesen Step</strong>
+            <br />
+            <span className="font-mono text-[11px] text-muted">
+              Frühestens nach der Wartezeit oben, danach am nächsten
+              Wochentag X um Uhrzeit Y.
+            </span>
+          </span>
+        </label>
+
+        {hybridMode && (
+          <div className="ml-6 space-y-3 border-l-2 border-ink/15 pl-4">
+            <label className="block">
+              <span className="label mb-2 block">Wochentag</span>
+              <select
+                value={scheduleWeekday}
+                onChange={(e) => setScheduleWeekday(parseInt(e.target.value))}
+                className="w-full border border-ink/20 bg-transparent p-2 text-sm outline-none focus:border-ink"
+              >
+                {[1, 2, 3, 4, 5, 6, 0].map((d) => (
+                  <option key={d} value={d}>
+                    {WEEKDAY_LABELS[d]}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="flex gap-3">
+              <label className="block">
+                <span className="label mb-2 block">Stunde</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={23}
+                  value={scheduleHour}
+                  onChange={(e) => setScheduleHour(parseInt(e.target.value) || 0)}
+                  className="w-20 border-b border-ink/20 bg-transparent py-2 text-sm outline-none focus:border-ink focus:outline-none"
+                />
+              </label>
+              <label className="block">
+                <span className="label mb-2 block">Minute</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={59}
+                  step={5}
+                  value={scheduleMinute}
+                  onChange={(e) =>
+                    setScheduleMinute(parseInt(e.target.value) || 0)
+                  }
+                  className="w-20 border-b border-ink/20 bg-transparent py-2 text-sm outline-none focus:border-ink focus:outline-none"
+                />
+              </label>
+            </div>
+          </div>
+        )}
+      </section>
 
       {/* Betreff */}
       <section>
@@ -150,11 +226,6 @@ export function EditStepForm({
       {/* Mail-Inhalt im WYSIWYG-Editor */}
       <section>
         <label className="label mb-2 block">Mail-Inhalt</label>
-        {/*
-          FIX 1 + 2: Stable initialHtml via useRef + stable key={stepId}.
-          React behält dieselbe Editor-Instanz, der Editor sieht nie eine
-          geänderte initialHtml-Prop.
-        */}
         <RichTextEditor
           key={stepId}
           initialHtml={stableInitialBodyHtml}

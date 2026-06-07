@@ -28,8 +28,6 @@ export default async function EditStepPage({ params }: PageProps) {
     notFound();
   }
 
-  const scheduleMode = step.funnel.scheduleWeekday !== null;
-
   // Server-Action mit gebundenen IDs
   const submitAction = updateFunnelStep.bind(null, stepId, funnelId);
 
@@ -41,15 +39,14 @@ export default async function EditStepPage({ params }: PageProps) {
       >
         ← {step.funnel.name}
       </Link>
-
       <h1 className="mt-4 text-display text-4xl leading-tight md:text-5xl">
         Schritt {step.orderNum} bearbeiten
       </h1>
       <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-soft">
-        Hier kannst du Betreff, Wartezeit und den HTML-Body dieses Mail-Schritts anpassen.
-        Änderungen wirken sofort für alle Kontakte, die diesen Schritt noch nicht erhalten haben.
+        Hier kannst du Betreff, Wartezeit, Hybrid-Wochentag und den HTML-Body
+        dieses Mail-Schritts anpassen. Änderungen wirken sofort für alle
+        Kontakte, die diesen Schritt noch nicht erhalten haben.
       </p>
-
       <div className="mt-8">
         <EditStepForm
           stepId={step.id}
@@ -58,7 +55,16 @@ export default async function EditStepPage({ params }: PageProps) {
           initialBodyHtml={step.bodyHtml}
           initialDelayDays={step.delayDays}
           initialDelayHours={(step as { delayHours?: number }).delayHours ?? 0}
-          scheduleMode={scheduleMode}
+          initialScheduleWeekday={
+            (step as { scheduleWeekday?: number | null }).scheduleWeekday ?? null
+          }
+          initialScheduleHour={
+            (step as { scheduleHour?: number | null }).scheduleHour ?? null
+          }
+          initialScheduleMinute={
+            (step as { scheduleMinute?: number | null }).scheduleMinute ?? null
+          }
+          funnelLegacyScheduleEnabled={step.funnel.scheduleWeekday !== null}
           action={submitAction}
         />
       </div>
