@@ -51,20 +51,28 @@ export default async function FunnelDetailPage({ params }: PageProps) {
   // STEPS NACH GESAMTZEIT SORTIEREN
   // Nicht nach DB-orderNum, sondern nach (delayDays * 24 + delayHours).
   // Dadurch erscheint die Mail mit "sofort" ganz oben, danach "3h",
-  // "1d", "3d" usw. — egal in welcher Reihenfolge Tim sie angelegt hat.
-  // Wochenplan-Modus bleibt unverändert (sortiert nach orderNum, weil dort
-  // die Wartezeit über Wochenrhythmus berechnet wird).
+  // "1d", "3d" usw. — egal in welcher Reihenfolge die Steps angelegt wurden.
   // ─────────────────────────────────────────────────────────────
-  const isScheduled = funnel.scheduleWeekday !== null;
-  const sortedSteps = isScheduled
-    ? funnel.steps
-    : [...funnel.steps].sort((a, b) => {
+  // Funnel-weiter Wochenplan-Modus (LEGACY): hier ergeben sich die echten
+  // Sende-Zeitpunkte aus orderNum × scheduleWeekInterval — wir sortieren
+  // also nach orderNum. Sobald mindestens EIN Step eigene Hybrid-Settings
+  // hat (scheduleWeekday auf Step-Ebene), schalten wir die Wartezeit-
+  // basierte Sortierung an, weil die Hybrid-Logik pro Step rechnet.
+  // ─────────────────────────────────────────────────────────────
+  const isLegacyScheduled = funnel.scheduleWeekday !== null;
+  const anyStepHybrid = funnel.steps.some(
+    (s) => (s as { scheduleWeekday?: number | null }).scheduleWeekday != null,
+  );
+  const useTimeOrderedSort = !isLegacyScheduled || anyStepHybrid;
+  const sortedSteps = useTimeOrderedSort
+    ? [...funnel.steps].sort((a, b) => {
         const aHours = a.delayDays * 24 + ((a as { delayHours?: number }).delayHours ?? 0);
         const bHours = b.delayDays * 24 + ((b as { delayHours?: number }).delayHours ?? 0);
         if (aHours !== bHours) return aHours - bHours;
         // Bei identischer Wartezeit: nach orderNum als Tiebreaker
         return a.orderNum - b.orderNum;
-      });
+      })
+    : funnel.steps;
 
   return (
     <div className="p-8 md:p-12">
@@ -112,12 +120,17 @@ export default async function FunnelDetailPage({ params }: PageProps) {
                 {sortedSteps.map((step, idx) => {
                   const delayHours = (step as { delayHours?: number }).delayHours ?? 0;
                   const totalHours = step.delayDays * 24 + delayHours;
+                  // Hybrid-Felder vom Step abfragen (nullable, optional auf älteren Steps)
+                  const stepWeekday = (step as { scheduleWeekday?: number | null }).scheduleWeekday;
+                  const stepHour = (step as { scheduleHour?: number | null }).scheduleHour;
+                  const stepMinute = (step as { scheduleMinute?: number | null }).scheduleMinute;
+                  const isStepHybrid = stepWeekday !== null && stepWeekday !== undefined;
                   return (
                     <div key={step.id} className="p-5">
                       <div className="mb-3 flex items-start justify-between gap-3">
                         <div className="flex items-start gap-4">
                           {/* Zeit-Marker links — visuelle Sortierungs-Anker */}
-                          {!isScheduled && (
+                          {(useTimeOrderedSort || isStepHybrid) && (
                             <div
                               className="flex-shrink-0 rounded-md px-2.5 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.05em] text-white"
                               style={{
@@ -131,7 +144,15 @@ export default async function FunnelDetailPage({ params }: PageProps) {
                           <div>
                             <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
                               Schritt {idx + 1} ·{" "}
-                              {isScheduled
+                              {isStepHybrid
+                                ? formatHybridStep(
+                                    step.delayDays,
+                                    delayHours,
+                                    stepWeekday as number,
+                                    stepHour ?? 9,
+                                    stepMinute ?? 0,
+                                  )
+                                : isLegacyScheduled
                                 ? formatScheduledStep(
                                     step.orderNum,
                                     funnel.scheduleWeekday!,
@@ -452,4 +473,25 @@ function formatScheduledStep(
   }
   const weeks = (orderNum - 1) * weekInterval;
   return `${weeks} ${weeks === 1 ? "Woche" : "Wochen"} nach Schritt 1 (${day} ${time} Uhr)`;
+}
+
+/**
+ * Anzeige für Hybrid-Steps: kombiniert klassische Wartezeit mit Wochentag-Trigger.
+ * "frühestens nach 3 Tagen, dann nächster Mittwoch 09:00" — passt exakt zu dem,
+ * was die Sende-Engine in calculateDueAt() berechnet.
+ */
+function formatHybridStep(
+  days: number,
+  hours: number,
+  weekday: number,
+  hour: number,
+  minute: number,
+): string {
+  const day = WEEKDAY_LABELS[weekday] ?? "?";
+  const time = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  if (days === 0 && hours === 0) {
+    return `nächster ${day} ab Anmeldung, ${time} Uhr`;
+  }
+  const wait = formatWaitTime(days, hours);
+  return `frühestens ${wait} nach Eintragung, dann nächster ${day} ${time} Uhr`;
 }
