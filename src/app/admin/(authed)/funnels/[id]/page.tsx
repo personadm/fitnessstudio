@@ -105,7 +105,7 @@ export default async function FunnelDetailPage({ params }: PageProps) {
           <section>
             <div className="mb-4 flex items-baseline justify-between gap-3">
               <p className="label">Schritte ({sortedSteps.length})</p>
-              {!isScheduled && sortedSteps.length > 1 && (
+              {useTimeOrderedSort && sortedSteps.length > 1 && (
                 <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
                   sortiert nach Wartezeit ↑
                 </p>
