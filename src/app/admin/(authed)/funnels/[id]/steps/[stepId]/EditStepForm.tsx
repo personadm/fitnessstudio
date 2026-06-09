@@ -152,11 +152,11 @@ export function EditStepForm({
             className="mt-0.5 h-4 w-4 accent-ink"
           />
           <span>
-            <strong>Hybrid-Modus für diesen Step</strong>
+            <strong>Fester Wochentag (z.B. immer Mittwoch)</strong>
             <br />
             <span className="font-mono text-[11px] text-muted">
-              Frühestens nach der Wartezeit oben, danach am nächsten
-              Wochentag X um Uhrzeit Y.
+              AN: frühestens nach der Wartezeit oben, dann am nächsten
+              gewählten Wochentag. AUS: genau nach Wartezeit (Vorlauf-Mail).
             </span>
           </span>
         </label>

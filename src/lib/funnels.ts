@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { sendFunnelMail } from "./mail";
+import { calculateDueAt } from "./funnel-schedule";
 import type { ContactStatus, FunnelTrigger } from "@prisma/client";
 
 // Explizites Mapping statt Cast: FunnelTrigger und ContactStatus sind getrennte
@@ -39,100 +40,9 @@ export type ProcessResult = {
   skippedSteps?: number;
 };
 
-// ─────────────────────────────────────────────────────────────
-// DUE-DATE-BERECHNUNG — Klassisch / Hybrid / Legacy-Wochenplan
-// ─────────────────────────────────────────────────────────────
-/**
- * Berechnet den frühesten Sendezeitpunkt eines Schritts für eine Enrollment.
- *
- * Drei Modi:
- *   1) KLASSISCH (step.scheduleWeekday === null): genau `delayDays + delayHours`
- *      nach Funnel-Start.
- *   2) HYBRID (step.scheduleWeekday gesetzt): frühestens nach `delayDays +
- *      delayHours`, dann nächster passender Wochentag um konfigurierte Uhrzeit.
- *   3) LEGACY-WOCHENPLAN: wenn der Step keine eigenen Schedule-Felder hat,
- *      aber der Funnel funnel-weit auf Wochenplan steht. Backwards-compat
- *      für bestehende Funnels — wird durch die 002-Migration eliminiert.
- */
-function calculateDueAt(
-  step: {
-    orderNum: number;
-    delayDays: number;
-    delayHours: number | null;
-    scheduleWeekday: number | null;
-    scheduleHour: number | null;
-    scheduleMinute: number | null;
-  },
-  enrollmentStartedAt: Date,
-  funnelLegacy: {
-    scheduleWeekday: number | null;
-    scheduleWeekInterval: number;
-    scheduleHour: number;
-    scheduleMinute: number;
-  },
-): number {
-  const baseDelayMs =
-    (step.delayDays * 24 + (step.delayHours ?? 0)) * 60 * 60 * 1000;
-  const earliestDueAt = enrollmentStartedAt.getTime() + baseDelayMs;
-
-  // HYBRID: Step hat eigene Schedule-Felder
-  if (step.scheduleWeekday !== null && step.scheduleWeekday !== undefined) {
-    const earliestDate = new Date(earliestDueAt);
-    return nextWeekdayOccurrence(
-      earliestDate,
-      step.scheduleWeekday,
-      step.scheduleHour ?? 9,
-      step.scheduleMinute ?? 0,
-    ).getTime();
-  }
-
-  // LEGACY-WOCHENPLAN: Step hat keine eigenen Felder, Funnel hat Wochenplan
-  if (
-    funnelLegacy.scheduleWeekday !== null &&
-    funnelLegacy.scheduleWeekday !== undefined
-  ) {
-    const first = nextWeekdayOccurrence(
-      enrollmentStartedAt,
-      funnelLegacy.scheduleWeekday,
-      funnelLegacy.scheduleHour,
-      funnelLegacy.scheduleMinute,
-    );
-    const stepIndex = step.orderNum - 1;
-    return (
-      first.getTime() +
-      stepIndex *
-        funnelLegacy.scheduleWeekInterval *
-        7 * 24 * 60 * 60 * 1000
-    );
-  }
-
-  // KLASSISCH
-  return earliestDueAt;
-}
-
-/**
- * Nächster passender Wochentag NACH einem gegebenen Datum (inkl. Zeit).
- */
-function nextWeekdayOccurrence(
-  earliest: Date,
-  targetWeekday: number,
-  hour: number,
-  minute: number,
-): Date {
-  const result = new Date(earliest);
-  result.setHours(hour, minute, 0, 0);
-
-  const currentWeekday = result.getDay();
-  let daysToAdd = (targetWeekday - currentWeekday + 7) % 7;
-
-  // Heute der Zielwochentag aber Uhrzeit verpasst → eine Woche weiter
-  if (daysToAdd === 0 && result.getTime() < earliest.getTime()) {
-    daysToAdd = 7;
-  }
-
-  result.setDate(result.getDate() + daysToAdd);
-  return result;
-}
+// Termin-Berechnung (calculateDueAt / nextWeekdayOccurrence) lebt jetzt in
+// src/lib/funnel-schedule.ts — als reine, server-unabhängige Single-Source,
+// die Versand-Engine UND Admin-Vorschau gemeinsam nutzen.
 
 // ─────────────────────────────────────────────────────────────
 // MAIN ENTRY: processFunnels({ force?: boolean })

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { updateFunnel, deleteFunnel, deleteFunnelStep } from "@/app/admin/_actions";
 import { AddFunnelStepForm } from "./AddFunnelStepForm";
 import { TestMailForm } from "@/components/admin/TestMailForm";
+import { FunnelSchedulePreview } from "@/components/admin/FunnelSchedulePreview";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -196,6 +197,38 @@ export default async function FunnelDetailPage({ params }: PageProps) {
                 })}
               </div>
             )}
+          </section>
+
+          <section>
+            <div className="mb-4 flex items-baseline justify-between gap-3">
+              <p className="label">Sende-Vorschau</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
+                so läuft's für eine Beispiel-Eintragung
+              </p>
+            </div>
+            <FunnelSchedulePreview
+              steps={funnel.steps.map((s) => ({
+                id: s.id,
+                orderNum: s.orderNum,
+                delayDays: s.delayDays,
+                delayHours: (s as { delayHours?: number }).delayHours ?? 0,
+                scheduleWeekday:
+                  (s as { scheduleWeekday?: number | null }).scheduleWeekday ??
+                  null,
+                scheduleHour:
+                  (s as { scheduleHour?: number | null }).scheduleHour ?? null,
+                scheduleMinute:
+                  (s as { scheduleMinute?: number | null }).scheduleMinute ??
+                  null,
+                subject: s.subject,
+              }))}
+              funnelLegacy={{
+                scheduleWeekday: funnel.scheduleWeekday,
+                scheduleWeekInterval: funnel.scheduleWeekInterval,
+                scheduleHour: funnel.scheduleHour,
+                scheduleMinute: funnel.scheduleMinute,
+              }}
+            />
           </section>
 
           <section>

@@ -102,11 +102,12 @@ export function AddFunnelStepForm({ funnelId, isFirst, scheduleEnabled }: Props)
               className="mt-0.5 h-4 w-4 accent-ink"
             />
             <span>
-              <strong>Hybrid-Modus für diesen Step</strong>
+              <strong>Fester Wochentag (z.B. immer Mittwoch)</strong>
               <br />
               <span className="font-mono text-[11px] text-muted">
-                Frühestens nach der Wartezeit oben, danach am nächsten
-                Wochentag X um Uhrzeit Y. Sonst genau nach Wartezeit.
+                AN: Mail geht frühestens nach der Wartezeit oben, dann am
+                nächsten gewählten Wochentag raus. AUS: genau nach Wartezeit
+                („X Tage nach Eintragung", ideal für Vorlauf-Mails).
               </span>
             </span>
           </label>
@@ -155,9 +156,10 @@ export function AddFunnelStepForm({ funnelId, isFirst, scheduleEnabled }: Props)
               </div>
 
               <p className="font-mono text-[11px] text-muted">
-                Beispiel: Wartezeit „3 Tage" + Hybrid „Mittwoch 9:00" → bei
-                Dienstag-Eintragung kommt die Mail am Mittwoch der Folgewoche
-                um 9:00 (frühestens Tag 3 = Freitag, dann nächster Mittwoch).
+                Tipp für aufeinanderfolgende Mittwoche: jede weitere Wochen-Mail
+                braucht 7 Tage mehr Wartezeit als die vorige (z.B. 4 → 11 → 18 →
+                25 Tage). Die Sende-Vorschau unten bestätigt dir die echten
+                Termine sofort — kein Kopfrechnen nötig.
               </p>
             </div>
           )}
