@@ -52,6 +52,10 @@ export default async function PlatformDashboard() {
       {/* Code generieren */}
       <section>
         <p className="label mb-3">Neuen Code erzeugen</p>
+        <p className="mb-3 text-xs text-ink/60">
+          Den Code löst der Kunde unter <span className="font-mono">/onboarding</span> ein —
+          dort entsteht in 2 Schritten sein Studio inkl. Backend.
+        </p>
         <form action={createCode} className="flex flex-wrap items-end gap-3">
           <label className="block flex-1 min-w-[220px]">
             <span className="label mb-2 block">Notiz (optional)</span>

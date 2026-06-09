@@ -65,6 +65,31 @@ export function slugFromHost(host: string | null | undefined, rootDomain: string
   return sub;
 }
 
+/** Erlaubtes Slug-Format: 2–40 Zeichen, a-z/0-9/Bindestrich, nicht am Rand. */
+export const SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/;
+
+/** Erzeugt einen Subdomain-tauglichen Slug aus einem freien Text. */
+export function slugify(input: string): string {
+  const slug = input
+    .toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40)
+    .replace(/-+$/g, "");
+  return slug;
+}
+
+/** True, wenn der Slug für die Plattform reserviert ist (kein Studio). */
+export function isReservedSlug(slug: string): boolean {
+  return RESERVED_SUBDOMAINS.has(slug);
+}
+
 /** True, wenn der Host das Plattform-Backend adressiert (platform.<root>). */
 export function isPlatformHost(host: string | null | undefined, rootDomain: string = ROOT_DOMAIN): boolean {
   if (!host) return false;

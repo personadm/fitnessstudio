@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function LoginForm({ redirectTo }: { redirectTo: string }) {
+export function LoginForm({ redirectTo, studioSlug = "" }: { redirectTo: string; studioSlug?: string }) {
   const router = useRouter();
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -21,6 +21,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
         body: JSON.stringify({
           email: fd.get("email"),
           password: fd.get("password"),
+          ...(studioSlug ? { studio: studioSlug } : {}),
         }),
       });
       const data = await res.json();

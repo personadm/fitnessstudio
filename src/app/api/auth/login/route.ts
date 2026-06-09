@@ -27,9 +27,19 @@ export async function POST(req: NextRequest) {
 
     const { email, password } = result.data;
 
-    // Multi-Tenant: Studio aus der Subdomain bestimmen; der AdminUser wird
-    // pro Studio gesucht (E-Mail ist nur pro Studio eindeutig).
-    const studioId = await resolveStudioIdFromHost(req.headers.get("host"));
+    // Multi-Tenant: Studio bestimmen. Bevorzugt expliziter Slug (z. B. aus
+    // /admin/login?studio=…), sonst aus der Subdomain (Fallback: Default-Studio).
+    const studioSlug = typeof json.studio === "string" ? json.studio.trim().toLowerCase() : "";
+    let studioId: string | null = null;
+    if (studioSlug) {
+      const s = await db.studio.findUnique({ where: { slug: studioSlug }, select: { id: true } });
+      studioId = s?.id ?? null;
+    }
+    if (!studioId) {
+      studioId = await resolveStudioIdFromHost(req.headers.get("host"));
+    }
+
+    // Der AdminUser wird pro Studio gesucht (E-Mail nur pro Studio eindeutig).
     const user = await db.adminUser.findUnique({
       where: { studioId_email: { studioId, email } },
     });
