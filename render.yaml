@@ -11,7 +11,11 @@ services:
     runtime: node
     region: frankfurt
     plan: free
-    buildCommand: npm install && npm run db:push && npm run build
+    # Schema-Änderungen NICHT im Build pushen — das verbraucht knappe
+    # DB-Pooler-Verbindungen (EMAXCONNSESSION) und kann mit --accept-data-loss
+    # Daten zerstören. Schema-Änderungen stattdessen bewusst lokal anwenden:
+    #   npm run db:push
+    buildCommand: npm install && npm run build
     startCommand: npm run start
     healthCheckPath: /
     envVars:
