@@ -237,19 +237,32 @@ async function processFunnelsInner() {
       // ─────────────────────────────────────────────────────────
       // SKIP-CHECK
       // ─────────────────────────────────────────────────────────
-      // Wenn für diese Enrollment bereits ein zeitlich SPÄTERER Step
-      // versendet wurde, dürfen frühere Steps NICHT mehr rausgehen.
-      const skipStepIds = new Set<string>();
+      // Ein noch nicht gesendeter Step wird übersprungen (nur als erledigt
+      // markiert, NICHT versendet), wenn einer dieser Gründe greift:
+      //
+      //  1) "retroactive_earlier_step": Für diese Enrollment wurde bereits ein
+      //     zeitlich SPÄTERER Step versendet → frühere dürfen nicht mehr raus.
+      //
+      //  2) "added_after_enrollment": Der Step wurde ERST NACH der Eintragung
+      //     dieses Kontakts angelegt UND sein Sendezeitpunkt liegt bereits in
+      //     der Vergangenheit. Sonst würde ein nachträglich hinzugefügter
+      //     (späterer) Step rückwirkend sofort an alle Alt-Abonnenten feuern.
+      //     Liegt der Zeitpunkt noch in der Zukunft, wird NICHT übersprungen –
+      //     der Step läuft für bestehende Abonnenten zeitversetzt normal weiter.
+      const skipStepIds = new Map<string, string>();
       let maxSentDueAt = -1;
       for (const { step, dueAt } of stepsWithDueAt) {
         if (sentStepIds.has(step.id) && dueAt > maxSentDueAt) {
           maxSentDueAt = dueAt;
         }
       }
+      const startedAtMs = enrollment.startedAt.getTime();
       for (const { step, dueAt } of stepsWithDueAt) {
         if (sentStepIds.has(step.id)) continue;
         if (dueAt < maxSentDueAt) {
-          skipStepIds.add(step.id);
+          skipStepIds.set(step.id, "retroactive_earlier_step");
+        } else if (step.createdAt.getTime() > startedAtMs && dueAt <= nowMs) {
+          skipStepIds.set(step.id, "added_after_enrollment");
         }
       }
 
@@ -275,7 +288,7 @@ async function processFunnelsInner() {
                   funnelName: funnel.name,
                   stepId: step.id,
                   subject: step.subject,
-                  reason: "retroactive_earlier_step",
+                  reason: skipStepIds.get(step.id) ?? "retroactive_earlier_step",
                 },
               },
             })
