@@ -1,8 +1,15 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
-const SECRET_STRING = process.env.TOKEN_SECRET || "dev-secret-please-change-in-production";
-const SECRET = new TextEncoder().encode(SECRET_STRING);
+// In Produktion MUSS TOKEN_SECRET gesetzt sein — sonst könnten mit einem
+// öffentlich bekannten Fallback-Secret gültige Admin-Sessions gefälscht werden.
+const SECRET_STRING = process.env.TOKEN_SECRET;
+if (!SECRET_STRING && process.env.NODE_ENV === "production") {
+  throw new Error("TOKEN_SECRET ist nicht gesetzt.");
+}
+const SECRET = new TextEncoder().encode(
+  SECRET_STRING || "dev-secret-please-change-in-production",
+);
 
 const COOKIE_NAME = "admin_session";
 const ALG = "HS256";
@@ -36,7 +43,8 @@ export async function getSession(): Promise<{ userId: string } | null> {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, SECRET);
-    return { userId: payload.uid as string };
+    if (typeof payload.uid !== "string") return null;
+    return { userId: payload.uid };
   } catch {
     return null;
   }

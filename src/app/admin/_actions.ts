@@ -70,6 +70,9 @@ export async function updateContactStatus(contactId: string, newStatus: ContactS
 
 export async function updateContactNotes(contactId: string, notes: string) {
   await requireAdmin();
+  if (typeof notes !== "string" || notes.length > 10000) {
+    throw new Error("Notiz ist zu lang (max. 10000 Zeichen).");
+  }
   await db.contact.update({ where: { id: contactId }, data: { notes } });
   revalidatePath(`/admin/contacts/${contactId}`);
 }
@@ -210,7 +213,9 @@ export async function savePlan(formData: FormData) {
   const parsed = planSchema.parse({
     name: formData.get("name"),
     description: formData.get("description") || "",
-    priceCents: Number(formData.get("priceEur")) * 100,
+    // Math.round verhindert IEEE-754-Artefakte (z.B. 19.99*100 = 1998.9999…),
+    // die sonst an z.int() in planSchema scheitern.
+    priceCents: Math.round(Number(formData.get("priceEur")) * 100),
     billingInterval: formData.get("billingInterval"),
     highlights,
     topHighlights,
@@ -274,6 +279,9 @@ export async function createList(formData: FormData) {
   const name = (formData.get("name") as string).trim();
   const description = ((formData.get("description") as string) || "").trim();
   if (!name) return;
+  if (name.length > 200) throw new Error("Listenname ist zu lang (max. 200 Zeichen).");
+  if (description.length > 1000)
+    throw new Error("Beschreibung ist zu lang (max. 1000 Zeichen).");
   await db.list.create({ data: { name, description: description || null } });
   revalidatePath("/admin/lists");
 }
@@ -814,6 +822,15 @@ export async function updateCampaign(campaignId: string, formData: FormData) {
     };
   } else {
     if (!targetStatusRaw) throw new Error("Bitte einen Status auswählen.");
+    const VALID_STATUSES: ContactStatus[] = [
+      "INTERESSENT",
+      "NEUKUNDE",
+      "KUNDE",
+      "EHEMALIGER",
+    ];
+    if (!VALID_STATUSES.includes(targetStatusRaw as ContactStatus)) {
+      throw new Error("Ungültiger Status.");
+    }
     updateData = {
       subject,
       bodyHtml,

@@ -314,7 +314,21 @@ function LinkButton({ editor }: { editor: Editor }) {
       return;
     }
 
-    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+    // Nur sichere Schemata zulassen — verhindert javascript:/data:-Injection,
+    // die in Vorschau-Kontexten (dangerouslySetInnerHTML) ausführbar wäre.
+    const allowedProtocols = ["http:", "https:", "mailto:"];
+    let safeUrl: string;
+    try {
+      safeUrl = new URL(url).href;
+      if (!allowedProtocols.includes(new URL(url).protocol)) {
+        throw new Error("invalid protocol");
+      }
+    } catch {
+      window.alert("Nur http://, https:// und mailto:-Links sind erlaubt.");
+      return;
+    }
+
+    editor.chain().focus().extendMarkRange("link").setLink({ href: safeUrl }).run();
   }
 
   return (

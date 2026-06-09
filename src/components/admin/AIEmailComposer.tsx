@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import DOMPurify from "isomorphic-dompurify";
 
 const PETROL = "#0F6E56";
 
@@ -172,7 +173,7 @@ export function AIEmailComposer({ kind, onGenerated }: Props) {
 
         <div
           className="prose prose-sm max-w-none p-4 text-sm"
-          dangerouslySetInnerHTML={{ __html: result.bodyHtml }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(result.bodyHtml) }}
         />
       </div>
     );

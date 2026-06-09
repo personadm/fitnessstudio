@@ -46,6 +46,7 @@ export function LiveActivity() {
   const [newIds, setNewIds] = useState<Set<string>>(new Set());
   const knownIds = useRef<Set<string>>(new Set());
   const isFirstFetch = useRef(true);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,8 +66,12 @@ export function LiveActivity() {
           }
           if (fresh.size > 0) {
             setNewIds(fresh);
-            // Highlight nach 3 Sekunden entfernen
-            setTimeout(() => setNewIds(new Set()), 3000);
+            // Highlight nach 3 Sekunden entfernen — Timer wird referenziert und
+            // beim Unmount gecleart, damit kein State-Update auf unmounted läuft.
+            if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+            highlightTimerRef.current = setTimeout(() => {
+              if (!cancelled) setNewIds(new Set());
+            }, 3000);
           }
         }
         for (const item of data.items) knownIds.current.add(item.id);
@@ -85,6 +90,7 @@ export function LiveActivity() {
     return () => {
       cancelled = true;
       clearInterval(id);
+      if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
     };
   }, []);
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { Prisma } from "@prisma/client";
 import type { ContactStatus, Gender } from "@prisma/client";
 
 export const runtime = "nodejs";
@@ -161,15 +162,26 @@ export async function POST(req: NextRequest) {
   let skipped = 0;
   const errors: { row: number; email: string; reason: string }[] = [];
 
+  // ── Phase 1: Zeilen validieren & parsen (kein DB-Zugriff) ──
   // Inner-Batch-Duplikate: Wenn dieselbe Mail mehrmals in der Datei steht,
   // verarbeiten wir nur die ERSTE und überspringen den Rest.
+  type PreparedRow = {
+    rowNum: number;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    gender: Gender | undefined;
+    birthDate: Date | undefined;
+    city: string | null;
+    phone: string | undefined;
+  };
+  const prepared: PreparedRow[] = [];
   const seenInBatch = new Set<string>();
 
   for (let i = 0; i < body.rows.length; i++) {
     const raw = body.rows[i];
     const rowNum = i + 1;
 
-    // E-Mail extrahieren und normalisieren
     const email = String(raw.email ?? "").trim().toLowerCase();
     if (!email) {
       skipped++;
@@ -185,95 +197,140 @@ export async function POST(req: NextRequest) {
     }
     seenInBatch.add(email);
 
-    const firstName = raw.firstName?.trim() || null;
-    const lastName = raw.lastName?.trim() || null;
-    const gender = normalizeGender(raw.gender);
-    const birthDate = parseBirthDate(raw.birthDate);
-    const city = raw.city?.trim() || null;
-    const phone = cleanPhone(raw.phone);
+    prepared.push({
+      rowNum,
+      email,
+      firstName: raw.firstName?.trim() || null,
+      lastName: raw.lastName?.trim() || null,
+      gender: normalizeGender(raw.gender),
+      birthDate: parseBirthDate(raw.birthDate),
+      city: raw.city?.trim() || null,
+      phone: cleanPhone(raw.phone),
+    });
+  }
 
+  // ── Phase 2: Bestehende Kontakte in EINER Query laden (statt N) ──
+  const emails = prepared.map((p) => p.email);
+  const existingList = emails.length
+    ? await db.contact.findMany({
+        where: { email: { in: emails } },
+        select: { id: true, email: true },
+      })
+    : [];
+  const existingMap = new Map(existingList.map((c) => [c.email, c.id]));
+
+  // ── Phase 3: Partitionieren ──
+  const toCreate = prepared.filter((p) => !existingMap.has(p.email));
+  const existingRows = prepared.filter((p) => existingMap.has(p.email));
+  if (strategy === "skip") {
+    skipped += existingRows.length;
+  }
+
+  // ── Phase 4: Neue Kontakte gebündelt anlegen (createMany + Events) ──
+  if (toCreate.length > 0) {
     try {
-      const existing = await db.contact.findUnique({ where: { email } });
+      const createData: Prisma.ContactCreateManyInput[] = toCreate.map((p) => ({
+        email: p.email,
+        firstName: p.firstName,
+        lastName: p.lastName,
+        gender: p.gender,
+        ...(p.birthDate ? { birthDate: p.birthDate } : {}),
+        ...(p.city ? { city: p.city } : {}),
+        ...(p.phone ? { phone: p.phone } : {}),
+        ...(locationId ? { locationId } : {}),
+        status: targetStatus,
+        source: "IMPORT",
+        // Bei KUNDE/EHEMALIGER pragmatische Defaults für Membership-Dates.
+        // signupAt nicht setzen — das ist Anmeldeformular-Sache.
+        ...(targetStatus === "KUNDE" ? { memberSince: new Date() } : {}),
+        ...(targetStatus === "EHEMALIGER" ? { memberUntil: new Date() } : {}),
+      }));
+      const res = await db.contact.createMany({ data: createData, skipDuplicates: true });
+      created += res.count;
 
-      if (existing) {
-        if (strategy === "skip") {
-          skipped++;
-          continue;
-        }
-
-        const updateData: {
-          status?: ContactStatus;
-          firstName?: string | null;
-          lastName?: string | null;
-          gender?: Gender;
-          birthDate?: Date | null;
-          city?: string | null;
-          phone?: string | null;
-          locationId?: string | null;
-        } = {};
-
-        if (strategy === "update_status") {
-          updateData.status = targetStatus;
-          // Standort beim "nur Status updaten" trotzdem setzen — User hat ihn
-          // explizit gewählt, das ist die häufige Intention beim Bulk-Import
-          // einer Standort-Liste mit gemischten Statuses.
-          if (locationId !== null) updateData.locationId = locationId;
-        } else if (strategy === "update_all") {
-          updateData.status = targetStatus;
-          if (firstName) updateData.firstName = firstName;
-          if (lastName) updateData.lastName = lastName;
-          if (gender) updateData.gender = gender;
-          if (birthDate) updateData.birthDate = birthDate;
-          if (city) updateData.city = city;
-          if (phone) updateData.phone = phone;
-          if (locationId !== null) updateData.locationId = locationId;
-        }
-
-        await db.contact.update({ where: { email }, data: updateData });
-        await db.contactEvent.create({
-          data: {
-            contactId: existing.id,
-            type: "IMPORTED_UPDATED",
-            meta: { strategy, targetStatus, rowNum },
-          },
-        });
-        updated++;
-      } else {
-        // Neu anlegen — alle vorhandenen Felder aus der Zeile
-        const newContact = await db.contact.create({
-          data: {
-            email,
-            firstName,
-            lastName,
-            gender,
-            ...(birthDate ? { birthDate } : {}),
-            ...(city ? { city } : {}),
-            ...(phone ? { phone } : {}),
-            ...(locationId ? { locationId } : {}),
-            status: targetStatus,
-            source: "IMPORT",
-            // Bei KUNDE/EHEMALIGER pragmatische Defaults für Membership-Dates.
-            // signupAt nicht setzen — das ist Anmeldeformular-Sache.
-            ...(targetStatus === "KUNDE" ? { memberSince: new Date() } : {}),
-            ...(targetStatus === "EHEMALIGER" ? { memberUntil: new Date() } : {}),
-          },
-        });
-        await db.contactEvent.create({
-          data: {
-            contactId: newContact.id,
-            type: "IMPORTED_CREATED",
-            meta: { targetStatus, rowNum },
-          },
-        });
-        created++;
-      }
-    } catch (err) {
-      console.error("[import] row failed", rowNum, err);
-      errors.push({
-        row: rowNum,
-        email,
-        reason: err instanceof Error ? err.message : "Unbekannter Fehler",
+      // IDs der angelegten Kontakte nachladen, um die Event-Logs zu schreiben.
+      const createdContacts = await db.contact.findMany({
+        where: { email: { in: toCreate.map((p) => p.email) } },
+        select: { id: true, email: true },
       });
+      const createdMap = new Map(createdContacts.map((c) => [c.email, c.id]));
+      const createEvents: Prisma.ContactEventCreateManyInput[] = [];
+      for (const p of toCreate) {
+        const id = createdMap.get(p.email);
+        if (id) {
+          createEvents.push({
+            contactId: id,
+            type: "IMPORTED_CREATED",
+            meta: { targetStatus, rowNum: p.rowNum },
+          });
+        }
+      }
+      if (createEvents.length) await db.contactEvent.createMany({ data: createEvents });
+    } catch (err) {
+      console.error("[import] bulk create failed", err);
+      const reason = err instanceof Error ? err.message : "Bulk-Insert fehlgeschlagen";
+      for (const p of toCreate) errors.push({ row: p.rowNum, email: p.email, reason });
+    }
+  }
+
+  // ── Phase 5: Bestehende Kontakte aktualisieren ──
+  if (strategy !== "skip" && existingRows.length > 0) {
+    if (strategy === "update_status") {
+      // Einheitliche Daten → ein einziges updateMany.
+      const data: Prisma.ContactUncheckedUpdateManyInput = { status: targetStatus };
+      if (locationId !== null) data.locationId = locationId;
+      try {
+        const res = await db.contact.updateMany({
+          where: { email: { in: existingRows.map((p) => p.email) } },
+          data,
+        });
+        updated += res.count;
+        await db.contactEvent.createMany({
+          data: existingRows.map((p) => ({
+            contactId: existingMap.get(p.email) as string,
+            type: "IMPORTED_UPDATED",
+            meta: { strategy, targetStatus, rowNum: p.rowNum },
+          })),
+        });
+      } catch (err) {
+        console.error("[import] bulk update_status failed", err);
+        const reason = err instanceof Error ? err.message : "Bulk-Update fehlgeschlagen";
+        for (const p of existingRows) errors.push({ row: p.rowNum, email: p.email, reason });
+      }
+    } else {
+      // update_all: pro Zeile individuelle Daten → atomare Transaktions-Chunks.
+      // Chunking vermeidet eine einzige riesige Transaktion auf dem Pooler.
+      const CHUNK = 200;
+      for (let off = 0; off < existingRows.length; off += CHUNK) {
+        const chunk = existingRows.slice(off, off + CHUNK);
+        try {
+          await db.$transaction(
+            chunk.map((p) => {
+              const updateData: Prisma.ContactUncheckedUpdateInput = { status: targetStatus };
+              if (p.firstName) updateData.firstName = p.firstName;
+              if (p.lastName) updateData.lastName = p.lastName;
+              if (p.gender) updateData.gender = p.gender;
+              if (p.birthDate) updateData.birthDate = p.birthDate;
+              if (p.city) updateData.city = p.city;
+              if (p.phone) updateData.phone = p.phone;
+              if (locationId !== null) updateData.locationId = locationId;
+              return db.contact.update({ where: { email: p.email }, data: updateData });
+            }),
+          );
+          await db.contactEvent.createMany({
+            data: chunk.map((p) => ({
+              contactId: existingMap.get(p.email) as string,
+              type: "IMPORTED_UPDATED",
+              meta: { strategy, targetStatus, rowNum: p.rowNum },
+            })),
+          });
+          updated += chunk.length;
+        } catch (err) {
+          console.error("[import] bulk update_all chunk failed", err);
+          const reason = err instanceof Error ? err.message : "Bulk-Update fehlgeschlagen";
+          for (const p of chunk) errors.push({ row: p.rowNum, email: p.email, reason });
+        }
+      }
     }
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import DOMPurify from "isomorphic-dompurify";
 
 interface Props {
   kind: "funnel" | "newsletter";
@@ -144,7 +145,7 @@ export function DocxImporter({ onGenerated }: Props) {
           <div className="max-h-96 overflow-auto border border-ink/15 bg-white p-5">
             <div
               className="prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: html }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
             />
           </div>
         </div>

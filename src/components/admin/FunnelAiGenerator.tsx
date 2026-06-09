@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import DOMPurify from "isomorphic-dompurify";
 
 const PETROL = "#0F6E56";
 
@@ -303,7 +304,7 @@ export function FunnelAiGenerator({ onAccept }: Props) {
                   <p className="mt-3 text-xs uppercase tracking-wider text-muted">Inhalt</p>
                   <div
                     className="prose prose-sm mt-1 max-w-none text-sm"
-                    dangerouslySetInnerHTML={{ __html: step.bodyHtml }}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(step.bodyHtml) }}
                   />
                   {step.rationale && (
                     <p className="mt-3 border-t border-ink/10 pt-2 text-xs italic text-muted">

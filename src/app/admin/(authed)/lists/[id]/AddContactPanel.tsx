@@ -78,11 +78,16 @@ export function AddContactPanel({ listId, locations }: Props) {
       return;
     }
 
+    // AbortController verhindert, dass eine langsamere ältere Antwort eine
+    // neuere überschreibt (Race Condition bei schnellem Tippen).
+    const controller = new AbortController();
+
     setSearching(true);
     debounceRef.current = setTimeout(async () => {
       try {
         const res = await fetch(
           `/api/admin/contacts/search?q=${encodeURIComponent(query.trim())}&listId=${encodeURIComponent(listId)}`,
+          { signal: controller.signal },
         );
         if (res.ok) {
           const data = await res.json();
@@ -90,15 +95,17 @@ export function AddContactPanel({ listId, locations }: Props) {
         } else {
           setResults([]);
         }
-      } catch {
+      } catch (err) {
+        if ((err as Error).name === "AbortError") return;
         setResults([]);
       } finally {
-        setSearching(false);
+        if (!controller.signal.aborted) setSearching(false);
       }
     }, 300);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
+      controller.abort();
     };
   }, [query, listId]);
 

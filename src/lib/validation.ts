@@ -22,14 +22,23 @@ export const signupSchema = z
     // Im neuen Hero-Form von /anmelden nicht mehr abgefragt — optional.
     gender: z.enum(["MAENNLICH", "WEIBLICH", "DIVERS"]).optional().nullable(),
     phone: z.string().trim().optional().or(z.literal("")),
-    birthDate: z.string().trim().min(1, "Geburtsdatum fehlt."),
+    birthDate: z
+      .string()
+      .trim()
+      .min(1, "Geburtsdatum fehlt.")
+      .refine((v) => !Number.isNaN(Date.parse(v)), "Ungültiges Geburtsdatum."),
     street: z.string().trim().min(1, "Straße fehlt."),
     postalCode: z.string().trim().min(4, "PLZ fehlt."),
     city: z.string().trim().min(1, "Stadt fehlt."),
     // IBAN und Vertragsstart: im neuen UI nicht mehr abgefragt — optional.
     // /api/signup speichert null wenn leer (Prisma erlaubt das).
     iban: z.string().trim().optional().or(z.literal("")),
-    contractStartDate: z.string().trim().optional().or(z.literal("")),
+    contractStartDate: z
+      .string()
+      .trim()
+      .optional()
+      .or(z.literal(""))
+      .refine((v) => !v || !Number.isNaN(Date.parse(v)), "Ungültiges Vertragsstart-Datum."),
     pricingPlanId: z.string().min(1, "Bitte einen Tarif auswählen."),
     locationId: z.string().trim().optional().nullable(),
     ref: z.string().optional(),

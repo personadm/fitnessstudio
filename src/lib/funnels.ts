@@ -2,8 +2,18 @@ import { db } from "./db";
 import { sendFunnelMail } from "./mail";
 import type { ContactStatus, FunnelTrigger } from "@prisma/client";
 
+// Explizites Mapping statt Cast: FunnelTrigger und ContactStatus sind getrennte
+// Prisma-Enums. Ein Cast würde stillschweigend brechen, falls sich die Enums je
+// auseinanderentwickeln. Der Record erzwingt zur Compile-Zeit Vollständigkeit.
+const TRIGGER_TO_STATUS: Record<FunnelTrigger, ContactStatus> = {
+  INTERESSENT: "INTERESSENT",
+  NEUKUNDE: "NEUKUNDE",
+  KUNDE: "KUNDE",
+  EHEMALIGER: "EHEMALIGER",
+};
+
 function triggerToStatus(t: FunnelTrigger): ContactStatus {
-  return t as unknown as ContactStatus;
+  return TRIGGER_TO_STATUS[t];
 }
 
 function renderTemplate(

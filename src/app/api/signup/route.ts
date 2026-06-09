@@ -4,11 +4,21 @@ import { signupSchema } from "@/lib/validation";
 import { sendSignupConfirmation } from "@/lib/mail";
 import { enrollIntoMatchingFunnels } from "@/lib/funnels";
 import { notifyOnlineSignup } from "@/lib/push";
+import { checkRateLimit, clientIp } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
+    // Abuse-Schutz: max. 5 Anmeldungen pro IP in 10 Minuten.
+    const rl = checkRateLimit(`signup:${clientIp(req)}`, 5, 10 * 60 * 1000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { ok: false, message: "Zu viele Anfragen. Bitte versuche es in ein paar Minuten erneut." },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+      );
+    }
+
     const json = await req.json();
     const result = signupSchema.safeParse(json);
 

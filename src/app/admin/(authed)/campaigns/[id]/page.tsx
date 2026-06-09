@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import DOMPurify from "isomorphic-dompurify";
 import { db } from "@/lib/db";
 import { deleteCampaign } from "@/app/admin/_actions";
 import { CampaignSendButton } from "./CampaignSendButton";
@@ -95,7 +96,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
           <div className="border border-ink/15 bg-cream p-6">
             <div
               className="prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: campaign.bodyHtml }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(campaign.bodyHtml) }}
             />
           </div>
         </div>

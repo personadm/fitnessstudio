@@ -7,3 +7,10 @@ build/
 .env.production
 .DS_Store
 *.log
+
+# ECC (lokaler Installations-Status / Runtime)
+.claude/ecc/install-state.json
+.claude/ecc/runtime/
+
+# TypeScript incremental build cache
+tsconfig.tsbuildinfo

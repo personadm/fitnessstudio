@@ -4,11 +4,21 @@ import { leadSchema } from "@/lib/validation";
 import { generateToken } from "@/lib/tokens";
 import { sendDoiMail } from "@/lib/mail";
 import { enrollIntoMatchingFunnels } from "@/lib/funnels";
+import { checkRateLimit, clientIp } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
+    // Spam-/Abuse-Schutz: max. 5 Einträge pro IP in 10 Minuten.
+    const rl = checkRateLimit(`leads:${clientIp(req)}`, 5, 10 * 60 * 1000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { ok: false, message: "Zu viele Anfragen. Bitte versuche es in ein paar Minuten erneut." },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+      );
+    }
+
     const json = await req.json();
     const result = leadSchema.safeParse(json);
 
@@ -44,11 +54,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Existierender Kontakt? Daten updaten, neuen DOI-Token vergeben.
+    // Atomares upsert statt findUnique→create/update: verhindert eine Race
+    // Condition bei gleichzeitigen Submits (Doppelklick/Retry), die sonst am
+    // Unique-Constraint auf `email` mit einem 500er scheitern würde.
     // lastName/gender bleiben optional — wenn leer/null, vorherigen Wert nicht
     // überschreiben (damit ein nachgelagertes Profil nicht verschwindet).
-    const existing = await db.contact.findUnique({ where: { email } });
-
     const updateData: Record<string, unknown> = {
       firstName,
       doiToken,
@@ -60,23 +70,23 @@ export async function POST(req: NextRequest) {
     if (gender) updateData.gender = gender;
     if (resolvedLocationId) updateData.locationId = resolvedLocationId;
 
-    const contact = existing
-      ? await db.contact.update({ where: { email }, data: updateData })
-      : await db.contact.create({
-          data: {
-            email,
-            firstName,
-            lastName: lastName || "",
-            gender: gender ?? null,
-            locationId: resolvedLocationId,
-            status: "INTERESSENT",
-            source: "LANDING",
-            doiToken,
-            doiSentAt: new Date(),
-            consentText,
-            consentIp: ip,
-          },
-        });
+    const contact = await db.contact.upsert({
+      where: { email },
+      update: updateData,
+      create: {
+        email,
+        firstName,
+        lastName: lastName || "",
+        gender: gender ?? null,
+        locationId: resolvedLocationId,
+        status: "INTERESSENT",
+        source: "LANDING",
+        doiToken,
+        doiSentAt: new Date(),
+        consentText,
+        consentIp: ip,
+      },
+    });
 
     // Schon bestätigt? Keine neue DOI-Mail, freundlich antworten.
     if (contact.doiConfirmedAt) {

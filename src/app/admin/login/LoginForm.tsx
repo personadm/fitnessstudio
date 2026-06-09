@@ -25,7 +25,12 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
       });
       const data = await res.json();
       if (data.ok) {
-        router.push(redirectTo);
+        // Open-Redirect-Schutz: nur interne Admin-Pfade zulassen.
+        const safeTarget =
+          redirectTo.startsWith("/admin") && !redirectTo.startsWith("//")
+            ? redirectTo
+            : "/admin";
+        router.push(safeTarget);
         router.refresh();
       } else {
         setState("error");

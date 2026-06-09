@@ -67,9 +67,9 @@ model Location {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  contacts         Contact[]
-  plans            PricingPlan[]
-  funnels          Funnel[]
+  contacts          Contact[]
+  plans             PricingPlan[]
+  funnels           Funnel[]
   targetedCampaigns Campaign[]
 
   @@index([active, sortOrder])
@@ -80,13 +80,13 @@ model Location {
 // ─────────────────────────────────────────────────────────────
 
 model Contact {
-  id        String        @id @default(cuid())
-  email     String        @unique
+  id        String    @id @default(cuid())
+  email     String    @unique
   firstName String?
   lastName  String?
   gender    Gender?
   phone     String?
-  birthDate DateTime?     @db.Date
+  birthDate DateTime? @db.Date
 
   status ContactStatus @default(INTERESSENT)
   source ContactSource @default(LANDING)
@@ -139,6 +139,8 @@ model Contact {
   @@index([locationId])
   @@index([status, locationId])
   @@index([optedOutAt])
+  @@index([pricingPlanId])
+  @@index([doiConfirmedAt])
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -146,20 +148,20 @@ model Contact {
 // ─────────────────────────────────────────────────────────────
 
 model PricingPlan {
-  id              String          @id @default(cuid())
-  name            String
-  description     String?
-  priceCents      Int
-  billingInterval BillingInterval @default(MONATLICH)
-  highlights      String[]
+  id               String          @id @default(cuid())
+  name             String
+  description      String?
+  priceCents       Int
+  billingInterval  BillingInterval @default(MONATLICH)
+  highlights       String[]
   // Bis zu 3 hervorgehobene Vorteile fürs Anmeldeseiten-Hero
   // Format: [{ "text": "...", "subtitle": "...", "isGold": false }, ...]
-  topHighlights   Json     @default("[]")
-  agb             String? // Tarif-spezifischer AGB-Text, wird auf Anmeldeseite gezeigt
-  availableOnline  Boolean @default(true)  // Sichtbar im Online-Formular /anmelden
-  availableOffline Boolean @default(true)  // Sichtbar im Club-Formular /admin/club-anmeldung
-  active          Boolean         @default(true)
-  sortOrder       Int             @default(0)
+  topHighlights    Json            @default("[]")
+  agb              String? // Tarif-spezifischer AGB-Text, wird auf Anmeldeseite gezeigt
+  availableOnline  Boolean         @default(true) // Sichtbar im Online-Formular /anmelden
+  availableOffline Boolean         @default(true) // Sichtbar im Club-Formular /admin/club-anmeldung
+  active           Boolean         @default(true)
+  sortOrder        Int             @default(0)
 
   locationId String?
   location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
@@ -195,10 +197,11 @@ model ContactList {
   list    List    @relation(fields: [listId], references: [id], onDelete: Cascade)
 
   @@id([contactId, listId])
+  @@index([listId])
 }
 
 model Campaign {
-  id          String    @id @default(cuid())
+  id String @id @default(cuid())
 
   // Empfänger-Targeting: ENTWEDER listId ODER targetStatus muss gesetzt sein.
   // targetLocationId schränkt die Empfänger zusätzlich auf einen Standort ein.
@@ -218,6 +221,8 @@ model Campaign {
   events CampaignEvent[]
 
   @@index([targetStatus, targetLocationId])
+  @@index([listId])
+  @@index([status, scheduledAt])
 }
 
 model CampaignEvent {
@@ -253,11 +258,11 @@ model ContactEvent {
 // ─────────────────────────────────────────────────────────────
 
 model Funnel {
-  id        String        @id @default(cuid())
-  name      String
-  trigger   FunnelTrigger
-  active    Boolean       @default(true)
-  autoStop  Boolean       @default(true)
+  id       String        @id @default(cuid())
+  name     String
+  trigger  FunnelTrigger
+  active   Boolean       @default(true)
+  autoStop Boolean       @default(true)
 
   // Standort-Filter: wenn gesetzt, nur Kontakte an diesem Standort
   // werden eingeschrieben. null = alle Standorte (Default).
@@ -269,9 +274,9 @@ model Funnel {
   // jeder Schritt fällig am Wochentag X, alle Y Wochen, um Z Uhr.
   // 0=So, 1=Mo, 2=Di, 3=Mi, 4=Do, 5=Fr, 6=Sa (entspricht JS Date.getDay())
   scheduleWeekday      Int?
-  scheduleWeekInterval Int    @default(1)
-  scheduleHour         Int    @default(9)
-  scheduleMinute       Int    @default(0)
+  scheduleWeekInterval Int  @default(1)
+  scheduleHour         Int  @default(9)
+  scheduleMinute       Int  @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -284,23 +289,25 @@ model Funnel {
 }
 
 model FunnelStep {
-  id        String   @id @default(cuid())
-  funnelId  String
-  funnel    Funnel   @relation(fields: [funnelId], references: [id], onDelete: Cascade)
-  orderNum  Int
-  delayDays Int
-  delayHours Int     @default(0)
-  subject   String
-  bodyHtml  String
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  funnelId   String
+  funnel     Funnel   @relation(fields: [funnelId], references: [id], onDelete: Cascade)
+  orderNum   Int
+  delayDays  Int
+  delayHours Int      @default(0)
+  subject    String
+  bodyHtml   String
+  createdAt  DateTime @default(now())
+
+  // Hybrid-Schedule (optional pro Step): siehe calculateDueAt in src/lib/funnels.ts
+  scheduleWeekday Int?
+  scheduleHour    Int?
+  scheduleMinute  Int?
 
   events FunnelStepEvent[]
 
   @@unique([funnelId, orderNum])
   @@index([funnelId])
-scheduleWeekday Int?
-  scheduleHour    Int?
-  scheduleMinute  Int?
 }
 
 model FunnelEnrollment {
@@ -329,6 +336,7 @@ model FunnelStepEvent {
   sentAt       DateTime         @default(now())
 
   @@unique([enrollmentId, stepId])
+  @@index([stepId])
 }
 
 // ─────────────────────────────────────────────────────────────
