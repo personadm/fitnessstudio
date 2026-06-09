@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { createCode, revokeCode, reactivateCode } from "./_actions";
+import { DeleteStudioButton } from "./DeleteStudioButton";
 
 // Dashboard liest Live-Daten — nie statisch cachen.
 export const dynamic = "force-dynamic";
@@ -164,6 +165,7 @@ export default async function PlatformDashboard() {
                   <th className="px-3 py-2">Kontakte</th>
                   <th className="px-3 py-2">Admins</th>
                   <th className="px-3 py-2">Seit</th>
+                  <th className="px-3 py-2">Aktion</th>
                 </tr>
               </thead>
               <tbody>
@@ -181,6 +183,9 @@ export default async function PlatformDashboard() {
                     <td className="px-3 py-2 tabular-nums">{s._count.contacts}</td>
                     <td className="px-3 py-2 tabular-nums">{s._count.adminUsers}</td>
                     <td className="px-3 py-2 text-ink/60">{dateFmt.format(s.createdAt)}</td>
+                    <td className="px-3 py-2">
+                      <DeleteStudioButton id={s.id} name={s.name} contacts={s._count.contacts} />
+                    </td>
                   </tr>
                 ))}
               </tbody>

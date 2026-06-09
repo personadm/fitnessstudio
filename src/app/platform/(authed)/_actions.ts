@@ -53,6 +53,26 @@ export async function reactivateCode(formData: FormData) {
   revalidatePath("/platform");
 }
 
+/**
+ * Löscht ein Studio inkl. ALLER mandanten-bezogenen Daten.
+ * Standorte, Kontakte, Tarife, Listen, Kampagnen, Funnels und Admins hängen per
+ * `onDelete: Cascade` am Studio und werden von der DB automatisch mitgelöscht.
+ * Der zugehörige Aktivierungs-Code wird über `onDelete: SetNull` entkoppelt und
+ * bleibt (als bereits eingelöst) erhalten. Nicht umkehrbar.
+ */
+export async function deleteStudio(formData: FormData) {
+  await requirePlatform();
+  const id = formData.get("id") as string;
+  if (!id) return;
+  try {
+    await db.studio.delete({ where: { id } });
+  } catch (err) {
+    // Bereits gelöscht o. ä. → idempotent behandeln, Dashboard neu laden.
+    console.error("[platform] deleteStudio failed", err);
+  }
+  revalidatePath("/platform");
+}
+
 export async function platformLogout() {
   await destroyPlatformSession();
   redirect("/platform/login");

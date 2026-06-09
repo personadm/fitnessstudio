@@ -52,7 +52,7 @@ const setupSchema = z.object({
   adminName: z.string().trim().max(80).optional(),
   paletteKey: z.string().trim().max(40).optional(),
   logoDataUrl: z.string().max(MAX_LOGO_CHARS, "Logo ist zu groß (max ~700 KB).").optional(),
-  landingJson: z.string().max(20_000).optional(),
+  landingJson: z.string().max(60_000).optional(),
   locationName: z.string().trim().min(2, "Standort-Name zu kurz.").max(80),
   city: z.string().trim().max(80).optional(),
   planName: z.string().trim().min(2, "Tarif-Name zu kurz.").max(80),

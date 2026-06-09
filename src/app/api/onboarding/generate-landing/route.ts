@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isCodeRedeemable } from "@/app/onboarding/_actions";
-import { fetchWebsiteText, generateLandingContent } from "@/lib/landingAi";
+import { fetchWebsiteContent, generateLandingContent } from "@/lib/landingAi";
 import { checkRateLimit, clientIp } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
@@ -46,10 +46,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const websiteText = await fetchWebsiteText(url);
+    const { text: websiteText, images } = await fetchWebsiteContent(url);
     const content = await generateLandingContent({
       websiteText,
       studioName: studioName || "dein Studio",
+      images,
     });
     return NextResponse.json({ ok: true, content });
   } catch (err) {

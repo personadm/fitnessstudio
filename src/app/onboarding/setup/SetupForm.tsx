@@ -3,7 +3,7 @@
 import { useActionState, useRef, useState } from "react";
 import { completeOnboarding, type OnboardingState } from "../_actions";
 import { PALETTES } from "@/lib/palettes";
-import { defaultLandingContent, MAX_BENEFITS, type LandingContent } from "@/lib/landing";
+import { defaultLandingContent, MAX_BULLETS, type LandingContent } from "@/lib/landing";
 
 const BILLING_OPTIONS = [
   { value: "MONATLICH", label: "Monatlich" },
@@ -40,21 +40,21 @@ export function SetupForm({ code }: { code: string }) {
   function updateLanding<K extends keyof LandingContent>(key: K, value: LandingContent[K]) {
     setLanding((prev) => ({ ...prev, [key]: value }));
   }
-  function updateBenefit(i: number, field: "title" | "text", value: string) {
-    setLanding((prev) => {
-      const benefits = prev.benefits.map((b, idx) => (idx === i ? { ...b, [field]: value } : b));
-      return { ...prev, benefits };
-    });
+  function updateBullet(i: number, value: string) {
+    setLanding((prev) => ({
+      ...prev,
+      heroBullets: prev.heroBullets.map((b, idx) => (idx === i ? value : b)),
+    }));
   }
-  function addBenefit() {
+  function addBullet() {
     setLanding((prev) =>
-      prev.benefits.length >= MAX_BENEFITS
+      prev.heroBullets.length >= MAX_BULLETS
         ? prev
-        : { ...prev, benefits: [...prev.benefits, { title: "", text: "" }] },
+        : { ...prev, heroBullets: [...prev.heroBullets, ""] },
     );
   }
-  function removeBenefit(i: number) {
-    setLanding((prev) => ({ ...prev, benefits: prev.benefits.filter((_, idx) => idx !== i) }));
+  function removeBullet(i: number) {
+    setLanding((prev) => ({ ...prev, heroBullets: prev.heroBullets.filter((_, idx) => idx !== i) }));
   }
 
   async function generateFromWebsite() {
@@ -157,62 +157,68 @@ export function SetupForm({ code }: { code: string }) {
         </p>
       </Section>
 
-      {/* Editierbare Landing-Inhalte */}
-      <Section title="Landingpage-Texte" hint="Erscheinen auf deiner öffentlichen Seite.">
+      {/* Editierbare Landing-Inhalte. Weitere Inhalte (Testimonials, Bilder,
+          Prozess-Schritte) erzeugt die KI aus deiner Website und bleiben beim
+          Speichern erhalten — du kannst sie später im Admin anpassen. */}
+      <Section title="Landingpage-Texte" hint="Erscheinen oben auf deiner öffentlichen Seite.">
+        <LabeledInput
+          label="Vertrauenszeile (optional)"
+          value={landing.trustBadge}
+          onChange={(v) => updateLanding("trustBadge", v)}
+        />
         <LabeledInput label="Headline" value={landing.headline} onChange={(v) => updateLanding("headline", v)} />
         <LabeledInput
-          label="Subheadline"
+          label="Subheadline (Betonungszeile)"
           value={landing.subheadline}
           onChange={(v) => updateLanding("subheadline", v)}
         />
         <LabeledTextarea label="Intro" value={landing.intro} onChange={(v) => updateLanding("intro", v)} />
 
         <div className="space-y-3">
-          <span className="label block">Vorteile</span>
-          {landing.benefits.map((b, i) => (
+          <span className="label block">Beweis-Punkte (mit Häkchen im Hero)</span>
+          {landing.heroBullets.map((b, i) => (
             <div key={i} className="flex flex-wrap items-start gap-2 border-l-2 border-ink/15 pl-3">
               <input
-                value={b.title}
-                onChange={(e) => updateBenefit(i, "title", e.target.value)}
-                placeholder="Titel"
-                className="min-w-[120px] flex-1 border-b border-ink/30 bg-transparent py-1.5 text-sm outline-none focus:border-acid_dark"
-              />
-              <input
-                value={b.text}
-                onChange={(e) => updateBenefit(i, "text", e.target.value)}
-                placeholder="Kurzbeschreibung"
-                className="min-w-[180px] flex-[2] border-b border-ink/30 bg-transparent py-1.5 text-sm outline-none focus:border-acid_dark"
+                value={b}
+                onChange={(e) => updateBullet(i, e.target.value)}
+                placeholder="z. B. Persönliche Betreuung von Tag 1"
+                className="min-w-[180px] flex-1 border-b border-ink/30 bg-transparent py-1.5 text-sm outline-none focus:border-acid_dark"
               />
               <button
                 type="button"
-                onClick={() => removeBenefit(i)}
+                onClick={() => removeBullet(i)}
                 className="px-2 py-1 font-mono text-xs text-red-700 hover:underline"
-                aria-label="Vorteil entfernen"
+                aria-label="Punkt entfernen"
               >
                 ✕
               </button>
             </div>
           ))}
-          {landing.benefits.length < MAX_BENEFITS && (
+          {landing.heroBullets.length < MAX_BULLETS && (
             <button
               type="button"
-              onClick={addBenefit}
+              onClick={addBullet}
               className="font-mono text-xs uppercase tracking-[0.1em] text-acid_dark hover:underline"
             >
-              + Vorteil hinzufügen
+              + Punkt hinzufügen
             </button>
           )}
         </div>
 
         <LabeledInput
-          label="Über-uns-Titel"
-          value={landing.aboutTitle}
-          onChange={(v) => updateLanding("aboutTitle", v)}
+          label="Krankenkassen-Hinweis (optional)"
+          value={landing.kassenBadge}
+          onChange={(v) => updateLanding("kassenBadge", v)}
         />
-        <LabeledTextarea
-          label="Über-uns-Text"
-          value={landing.aboutText}
-          onChange={(v) => updateLanding("aboutText", v)}
+        <LabeledInput
+          label="Formular-Titel"
+          value={landing.formTitle}
+          onChange={(v) => updateLanding("formTitle", v)}
+        />
+        <LabeledInput
+          label="Formular-Untertitel"
+          value={landing.formSubtitle}
+          onChange={(v) => updateLanding("formSubtitle", v)}
         />
         <LabeledInput label="Button-Text (CTA)" value={landing.ctaLabel} onChange={(v) => updateLanding("ctaLabel", v)} />
       </Section>

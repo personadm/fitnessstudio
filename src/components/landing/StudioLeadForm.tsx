@@ -2,47 +2,68 @@
 
 import { useState } from "react";
 
+type LocationOption = {
+  id: string;
+  name: string;
+  city: string | null;
+};
+
+type State = "idle" | "loading" | "success" | "error";
+
 /**
- * Lead-Formular für eine Studio-Landingpage. Übergibt den Studio-Slug, damit
- * der Lead dem richtigen Mandanten zugeordnet wird (/api/leads).
+ * Lead-Formular für eine Studio-Landingpage (Hero-Karte „Gratis-Start-Plan").
+ * Sendet den Studio-Slug mit, damit der Lead dem richtigen Mandanten zugeordnet
+ * wird, und die DSGVO-Einwilligung (vom /api/leads-Schema verlangt).
+ * Die Markenfarbe wird per Inline-Style gesetzt, damit jedes Studio sein Branding
+ * bekommt, ohne den Komponenten-Code zu ändern.
  */
 export function StudioLeadForm({
   studioSlug,
+  locations,
+  title,
+  subtitle,
   ctaLabel,
   brandColor,
-  onBrand,
 }: {
   studioSlug: string;
+  locations: LocationOption[];
+  title: string;
+  subtitle: string;
   ctaLabel: string;
   brandColor: string;
-  onBrand: string;
 }) {
-  const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [firstName, setFirstName] = useState("");
+  const [email, setEmail] = useState("");
+  const [locationId, setLocationId] = useState(locations.length === 1 ? locations[0].id : "");
+  const [consent, setConsent] = useState(false);
+  const [state, setState] = useState<State>("idle");
   const [message, setMessage] = useState("");
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const needsLocationChoice = locations.length > 1;
+
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setState("loading");
     setMessage("");
-    const fd = new FormData(e.currentTarget);
     try {
       const res = await fetch("/api/leads", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          firstName: fd.get("firstName"),
-          lastName: fd.get("lastName"),
-          email: fd.get("email"),
+          firstName,
+          email,
+          locationId: locationId || null,
+          consent,
           studio: studioSlug,
         }),
       });
       const data = await res.json();
       if (data.ok) {
-        setState("done");
+        setState("success");
         setMessage(
           data.alreadyConfirmed
             ? "Du bist schon eingetragen – schau in dein Postfach."
-            : "Geschafft! Bitte bestätige die E-Mail in deinem Postfach.",
+            : (data.message ?? "Bitte bestätige deine E-Mail-Adresse."),
         );
       } else {
         setState("error");
@@ -54,53 +75,144 @@ export function StudioLeadForm({
     }
   }
 
-  if (state === "done") {
+  if (state === "success") {
     return (
-      <div className="rounded-lg border-2 border-ink/15 bg-white/70 p-8 text-center">
-        <p className="text-display text-2xl">Fast geschafft 🎉</p>
-        <p className="mt-3 text-sm text-ink/70">{message}</p>
+      <div
+        className="rounded-xl border bg-white p-8 shadow-sm"
+        style={{ borderColor: withAlpha(brandColor, 0.2) }}
+      >
+        <div
+          className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold"
+          style={{ backgroundColor: withAlpha(brandColor, 0.1), color: brandColor }}
+        >
+          ✓ Eingetragen
+        </div>
+        <h3 className="mb-3 text-xl font-semibold text-[#2C2C2A]">Schau in dein Postfach.</h3>
+        <p className="text-sm leading-relaxed text-[#5F5E5A]">{message}</p>
+        <p className="mt-3 text-xs text-[#8A857E]">
+          Nach der Bestätigung schalten wir dein Gratis-Start-Angebot frei.
+        </p>
       </div>
     );
   }
 
+  const canSubmit =
+    consent && firstName.trim() && email.trim() && (!needsLocationChoice || locationId);
+
   return (
-    <form onSubmit={onSubmit} className="space-y-4 rounded-lg border-2 border-ink/15 bg-white/70 p-6 sm:p-8">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <input
-          name="firstName"
-          required
-          placeholder="Vorname"
-          className="w-full border-b-2 border-ink/30 bg-transparent py-2 outline-none focus:border-ink"
-        />
-        <input
-          name="lastName"
-          placeholder="Nachname (optional)"
-          className="w-full border-b-2 border-ink/30 bg-transparent py-2 outline-none focus:border-ink"
-        />
+    <form
+      onSubmit={onSubmit}
+      id="email"
+      className="rounded-xl border border-[#E8E2D5] bg-white p-6 md:p-7"
+    >
+      <h3 className="text-2xl font-semibold text-[#2C2C2A]">{title}</h3>
+      <p className="mt-1 text-sm text-[#5F5E5A]">{subtitle}</p>
+
+      <div className="mt-5 space-y-4">
+        <label className="block">
+          <span className="block text-sm font-medium text-[#2C2C2A]">Vorname</span>
+          <input
+            type="text"
+            required
+            autoComplete="given-name"
+            placeholder="Dein Vorname"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            disabled={state === "loading"}
+            className="mt-1.5 w-full rounded-lg border border-[#D8D2C7] bg-white px-3 py-2.5 text-base placeholder:text-[#A8A39A] outline-none transition-colors focus:border-[#2C2C2A] disabled:opacity-50"
+          />
+        </label>
+
+        <label className="block">
+          <span className="block text-sm font-medium text-[#2C2C2A]">E-Mail-Adresse</span>
+          <input
+            type="email"
+            required
+            autoComplete="email"
+            placeholder="name@mail.de"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={state === "loading"}
+            className="mt-1.5 w-full rounded-lg border border-[#D8D2C7] bg-white px-3 py-2.5 text-base placeholder:text-[#A8A39A] outline-none transition-colors focus:border-[#2C2C2A] disabled:opacity-50"
+          />
+        </label>
+
+        {needsLocationChoice && (
+          <label className="block">
+            <span className="block text-sm font-medium text-[#2C2C2A]">Standort</span>
+            <select
+              required
+              value={locationId}
+              onChange={(e) => setLocationId(e.target.value)}
+              disabled={state === "loading"}
+              className="mt-1.5 w-full rounded-lg border border-[#D8D2C7] bg-white px-3 py-2.5 text-base outline-none transition-colors focus:border-[#2C2C2A] disabled:opacity-50"
+            >
+              <option value="" disabled>
+                Standort wählen…
+              </option>
+              {locations.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                  {l.city ? ` · ${l.city}` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
-      <input
-        type="email"
-        name="email"
-        required
-        placeholder="E-Mail-Adresse"
-        className="w-full border-b-2 border-ink/30 bg-transparent py-2 outline-none focus:border-ink"
-      />
+
+      <label className="mt-5 flex cursor-pointer items-start gap-3 text-xs leading-relaxed text-[#5F5E5A]">
+        <input
+          type="checkbox"
+          checked={consent}
+          onChange={(e) => setConsent(e.target.checked)}
+          required
+          className="mt-0.5 h-4 w-4"
+          style={{ accentColor: brandColor }}
+        />
+        <span>
+          Ich willige ein, dass meine Daten zur Zusendung des Gratis-Start-Angebots
+          verarbeitet werden. Widerruf jederzeit per Klick auf den Abmelde-Link in jeder Mail.
+          Mehr in der{" "}
+          <a href="/datenschutz" className="underline underline-offset-2 hover:text-[#2C2C2A]">
+            Datenschutzerklärung
+          </a>
+          .
+        </span>
+      </label>
+
+      <button
+        type="submit"
+        disabled={state === "loading" || !canSubmit}
+        className="mt-5 w-full rounded-lg px-5 py-3.5 text-base font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+        style={{ backgroundColor: brandColor }}
+      >
+        {state === "loading" ? "Sendet…" : `${ctaLabel} →`}
+      </button>
+
+      <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-[#8A857E]">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+          <path
+            d="M3 5V3.5a3 3 0 016 0V5h.5a1 1 0 011 1v4a1 1 0 01-1 1h-7a1 1 0 01-1-1V6a1 1 0 011-1H3zm1 0h4V3.5a2 2 0 10-4 0V5z"
+            fill="currentColor"
+          />
+        </svg>
+        100 % gratis & unverbindlich · jederzeit abbestellbar
+      </p>
+
       {state === "error" && (
-        <p role="alert" className="text-sm text-red-700">
+        <p role="alert" className="mt-3 text-sm text-red-700">
           {message}
         </p>
       )}
-      <button
-        type="submit"
-        disabled={state === "loading"}
-        style={{ background: brandColor, color: onBrand }}
-        className="w-full py-3.5 font-mono text-sm uppercase tracking-[0.14em] transition-transform hover:-translate-y-0.5 disabled:opacity-60"
-      >
-        {state === "loading" ? "Sende…" : ctaLabel}
-      </button>
-      <p className="text-center text-xs text-ink/45">
-        Kostenlos & unverbindlich. Abmeldung jederzeit möglich.
-      </p>
     </form>
   );
+}
+
+/** #RRGGBB → rgba() mit Alpha (Fallback: Eingabe unverändert). */
+function withAlpha(hex: string, alpha: number): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 }

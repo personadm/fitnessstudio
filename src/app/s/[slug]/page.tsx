@@ -35,17 +35,11 @@ export default async function StudioLandingPage({ params }: PageProps) {
   // Nur aktive Studios sind öffentlich sichtbar.
   if (!studio || studio.status !== "ACTIVE") notFound();
 
-  const plans = await db.pricingPlan.findMany({
-    where: { studioId: studio.id, active: true, availableOnline: true },
+  // Aktive Standorte fürs Hero-Formular (Dropdown nur bei mehreren).
+  const locations = await db.location.findMany({
+    where: { studioId: studio.id, active: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      priceCents: true,
-      billingInterval: true,
-      highlights: true,
-    },
+    select: { id: true, name: true, city: true },
   });
 
   const content = coerceLandingContent(studio.landingContent) ?? defaultLandingContent(studio.name);
@@ -60,7 +54,7 @@ export default async function StudioLandingPage({ params }: PageProps) {
         accentColor: studio.accentColor,
       }}
       content={content}
-      plans={plans}
+      locations={locations}
     />
   );
 }
