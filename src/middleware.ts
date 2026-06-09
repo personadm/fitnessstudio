@@ -12,21 +12,30 @@ const SECRET = new TextEncoder().encode(
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const isApi = pathname.startsWith("/api/");
+  const isPlatform = pathname.startsWith("/platform") || pathname.startsWith("/api/platform");
 
-  // Login selbst ist immer erreichbar
+  // Login-Seiten/-Endpunkte sind immer erreichbar.
   if (pathname === "/admin/login") return NextResponse.next();
+  if (pathname === "/platform/login" || pathname === "/api/platform/login") {
+    return NextResponse.next();
+  }
+
+  // Studio-Admin nutzt admin_session + /admin/login,
+  // Platform-Betreiber nutzt platform_session + /platform/login.
+  const cookieName = isPlatform ? "platform_session" : "admin_session";
+  const loginPath = isPlatform ? "/platform/login" : "/admin/login";
 
   const unauthorized = () => {
     if (isApi) {
       return NextResponse.json({ ok: false, message: "Nicht autorisiert." }, { status: 401 });
     }
     const url = req.nextUrl.clone();
-    url.pathname = "/admin/login";
+    url.pathname = loginPath;
     url.searchParams.set("from", pathname);
     return NextResponse.redirect(url);
   };
 
-  const token = req.cookies.get("admin_session")?.value;
+  const token = req.cookies.get(cookieName)?.value;
   if (!token) return unauthorized();
 
   try {
@@ -38,5 +47,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"],
+  matcher: ["/admin/:path*", "/api/admin/:path*", "/platform/:path*", "/api/platform/:path*"],
 };
