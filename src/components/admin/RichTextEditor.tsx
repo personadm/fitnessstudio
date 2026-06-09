@@ -97,6 +97,10 @@ export function RichTextEditor({ initialHtml = "", onChange, placeholder }: Prop
         heading: { levels: [1, 2] },
       }),
       ImageWithLabel.configure({
+        // KRITISCH: ohne allowBase64 verwirft TipTaps parseHTML beim erneuten
+        // Öffnen alle <img src="data:..."> (Matcher: img[src]:not([src^="data:"])).
+        // Dadurch verschwinden gespeicherte Bilder und die Formatierung bricht.
+        allowBase64: true,
         HTMLAttributes: {
           style: "max-width:100%;height:auto;display:block;",
         },
