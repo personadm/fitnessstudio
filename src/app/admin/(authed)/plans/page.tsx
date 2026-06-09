@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { requireStudioId } from "@/lib/tenant";
 import { savePlan, togglePlanActive, deletePlan } from "@/app/admin/_actions";
 import { TopHighlightsEditor, type TopHighlightEntry } from "./TopHighlightsEditor";
 
@@ -54,12 +55,14 @@ export default async function PlansPage({ searchParams }: PageProps) {
   const isNew = sp.new === "1";
   const filterLocation = sp.location ?? null; // "all" | "global" | locationId
 
+  const studioId = await requireStudioId();
   const [allPlans, locations] = await Promise.all([
     db.pricingPlan.findMany({
+      where: { studioId },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       include: { location: { select: { name: true } } },
     }),
-    db.location.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
+    db.location.findMany({ where: { studioId }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
   ]);
 
   let filteredPlans = allPlans;

@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { requireStudioId } from "@/lib/tenant";
 import { ImportForm } from "./ImportForm";
 
 export const dynamic = "force-dynamic";
 
 export default async function ContactImportPage() {
+  const studioId = await requireStudioId();
   const locations = await db.location.findMany({
+    where: { studioId },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     select: { id: true, name: true },
   });

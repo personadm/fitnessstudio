@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
+import { requireStudioId } from "@/lib/tenant";
 import { updateFunnel, deleteFunnel, deleteFunnelStep } from "@/app/admin/_actions";
 import { AddFunnelStepForm } from "./AddFunnelStepForm";
 import { TestMailForm } from "@/components/admin/TestMailForm";
@@ -21,10 +22,11 @@ const PETROL = "#0F6E56";
 
 export default async function FunnelDetailPage({ params }: PageProps) {
   const { id } = await params;
+  const studioId = await requireStudioId();
 
   const [funnel, locations] = await Promise.all([
-    db.funnel.findUnique({
-      where: { id },
+    db.funnel.findFirst({
+      where: { id, studioId },
       include: {
         location: { select: { id: true, name: true } },
         steps: { orderBy: { orderNum: "asc" } },
@@ -38,7 +40,7 @@ export default async function FunnelDetailPage({ params }: PageProps) {
       },
     }),
     db.location.findMany({
-      where: { active: true },
+      where: { active: true, studioId },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     }),
   ]);

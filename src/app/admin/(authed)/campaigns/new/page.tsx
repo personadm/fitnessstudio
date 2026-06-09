@@ -1,15 +1,18 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { requireStudioId } from "@/lib/tenant";
 import { CampaignFormWithAI } from "./CampaignFormWithAI";
 
 export default async function NewCampaignPage() {
+  const studioId = await requireStudioId();
   const [lists, locations] = await Promise.all([
     db.list.findMany({
+      where: { studioId },
       orderBy: { name: "asc" },
       include: { _count: { select: { contacts: true } } },
     }),
     db.location.findMany({
-      where: { active: true },
+      where: { active: true, studioId },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: { id: true, name: true, city: true },
     }),

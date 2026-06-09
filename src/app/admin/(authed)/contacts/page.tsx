@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { requireStudioId } from "@/lib/tenant";
 import type { ContactStatus } from "@prisma/client";
 import { ContactsTable } from "./ContactsTable";
 
@@ -18,18 +19,21 @@ const STATUS_TABS: Array<{ key: ContactStatus | "ALL"; label: string }> = [
 const STATUS_VALUES: ContactStatus[] = ["INTERESSENT", "NEUKUNDE", "KUNDE", "EHEMALIGER"];
 
 export default async function ContactsPage({ searchParams }: PageProps) {
+  const studioId = await requireStudioId();
   const { status, q, location } = await searchParams;
   const activeStatus =
     status && (STATUS_VALUES as string[]).includes(status) ? (status as ContactStatus) : null;
   const filterLocation = location ?? null;
 
   const locations = await db.location.findMany({
+    where: { studioId },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     select: { id: true, name: true },
   });
 
   const contacts = await db.contact.findMany({
     where: {
+      studioId,
       ...(activeStatus ? { status: activeStatus } : {}),
       ...(filterLocation === "none"
         ? { locationId: null }
@@ -55,6 +59,7 @@ export default async function ContactsPage({ searchParams }: PageProps) {
 
   const counts = await db.contact.groupBy({
     by: ["status"],
+    where: { studioId },
     _count: true,
   });
   const countMap: Record<string, number> = {};

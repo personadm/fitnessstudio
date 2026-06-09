@@ -2,6 +2,8 @@ import { db } from "./db";
 import type { ContactStatus } from "@prisma/client";
 
 export type CampaignTargeting = {
+  // Multi-Tenant: Empfänger werden strikt auf dieses Studio eingeschränkt.
+  studioId: string;
   listId: string | null;
   targetStatus: ContactStatus | null;
   targetLocationId: string | null;
@@ -46,9 +48,11 @@ export async function getCampaignRecipients(
     const rows = await db.contactList.findMany({
       where: {
         listId: targeting.listId,
-        ...(targeting.targetLocationId
-          ? { contact: { locationId: targeting.targetLocationId } }
-          : {}),
+        // Kontakt muss zum Studio gehören (und ggf. Standort).
+        contact: {
+          studioId: targeting.studioId,
+          ...(targeting.targetLocationId ? { locationId: targeting.targetLocationId } : {}),
+        },
       },
       include: { contact: { select } },
     });
@@ -58,6 +62,7 @@ export async function getCampaignRecipients(
   if (targeting.targetStatus) {
     const contacts = await db.contact.findMany({
       where: {
+        studioId: targeting.studioId,
         status: targeting.targetStatus,
         ...(targeting.targetLocationId
           ? { locationId: targeting.targetLocationId }

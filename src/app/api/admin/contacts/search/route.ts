@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { getCurrentStudioId } from "@/lib/tenant";
 import { db } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -20,6 +21,10 @@ export async function GET(req: NextRequest) {
   if (!session) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
+  const studioId = await getCurrentStudioId();
+  if (!studioId) {
+    return NextResponse.json({ ok: false }, { status: 401 });
+  }
 
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get("q") ?? "").trim();
@@ -31,6 +36,7 @@ export async function GET(req: NextRequest) {
 
   const contacts = await db.contact.findMany({
     where: {
+      studioId,
       OR: [
         { email: { contains: q, mode: "insensitive" } },
         { firstName: { contains: q, mode: "insensitive" } },

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { requireStudioId } from "@/lib/tenant";
 import { runFunnelProcessing, toggleFunnelActive } from "@/app/admin/_actions";
 
 const TRIGGER_LABELS: Record<string, string> = {
@@ -10,7 +11,9 @@ const TRIGGER_LABELS: Record<string, string> = {
 };
 
 export default async function FunnelsPage() {
+  const studioId = await requireStudioId();
   const funnels = await db.funnel.findMany({
+    where: { studioId },
     orderBy: { createdAt: "desc" },
     include: {
       location: { select: { name: true } },
@@ -23,11 +26,14 @@ export default async function FunnelsPage() {
     },
   });
 
+  // Enrollment-/Versand-Zahlen über die Funnel-Relation aufs Studio einschränken.
   const [totalActive, totalCompleted, totalCancelled, totalSent] = await Promise.all([
-    db.funnelEnrollment.count({ where: { completedAt: null, cancelledAt: null } }),
-    db.funnelEnrollment.count({ where: { completedAt: { not: null } } }),
-    db.funnelEnrollment.count({ where: { cancelledAt: { not: null } } }),
-    db.funnelStepEvent.count(),
+    db.funnelEnrollment.count({
+      where: { completedAt: null, cancelledAt: null, funnel: { studioId } },
+    }),
+    db.funnelEnrollment.count({ where: { completedAt: { not: null }, funnel: { studioId } } }),
+    db.funnelEnrollment.count({ where: { cancelledAt: { not: null }, funnel: { studioId } } }),
+    db.funnelStepEvent.count({ where: { enrollment: { funnel: { studioId } } } }),
   ]);
 
   return (

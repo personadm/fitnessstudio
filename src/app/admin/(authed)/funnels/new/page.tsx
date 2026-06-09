@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { requireStudioId } from "@/lib/tenant";
 import { createFunnel } from "@/app/admin/_actions";
 
 const TRIGGERS: { value: string; label: string; hint: string }[] = [
@@ -26,8 +27,9 @@ const TRIGGERS: { value: string; label: string; hint: string }[] = [
 ];
 
 export default async function NewFunnelPage() {
+  const studioId = await requireStudioId();
   const locations = await db.location.findMany({
-    where: { active: true },
+    where: { active: true, studioId },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
 

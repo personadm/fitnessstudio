@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { requireStudioId } from "@/lib/tenant";
 import { saveLocation, toggleLocationActive, deleteLocation } from "@/app/admin/_actions";
 
 interface PageProps {
@@ -11,7 +12,9 @@ export default async function LocationsPage({ searchParams }: PageProps) {
   const editingId = sp.edit;
   const isNew = sp.new === "1";
 
+  const studioId = await requireStudioId();
   const locations = await db.location.findMany({
+    where: { studioId },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     include: {
       _count: { select: { contacts: true, plans: true } },

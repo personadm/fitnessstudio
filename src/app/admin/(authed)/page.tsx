@@ -1,15 +1,18 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { requireStudioId } from "@/lib/tenant";
 import { LiveActivity } from "@/components/admin/LiveActivity";
 import { PushSubscribe } from "@/components/admin/PushSubscribe";
 
 export default async function AdminDashboard() {
-  // Status-Statistiken
+  const studioId = await requireStudioId();
+
+  // Status-Statistiken (nur dieses Studio)
   const [interessent, neukunde, kunde, ehemaliger] = await Promise.all([
-    db.contact.count({ where: { status: "INTERESSENT" } }),
-    db.contact.count({ where: { status: "NEUKUNDE" } }),
-    db.contact.count({ where: { status: "KUNDE" } }),
-    db.contact.count({ where: { status: "EHEMALIGER" } }),
+    db.contact.count({ where: { studioId, status: "INTERESSENT" } }),
+    db.contact.count({ where: { studioId, status: "NEUKUNDE" } }),
+    db.contact.count({ where: { studioId, status: "KUNDE" } }),
+    db.contact.count({ where: { studioId, status: "EHEMALIGER" } }),
   ]);
 
   // Phase 6: Neuanmeldungen aktueller Monat
@@ -18,7 +21,7 @@ export default async function AdminDashboard() {
   startOfMonth.setHours(0, 0, 0, 0);
 
   const newSignupsThisMonth = await db.contact.findMany({
-    where: { signupAt: { gte: startOfMonth } },
+    where: { studioId, signupAt: { gte: startOfMonth } },
     orderBy: { signupAt: "desc" },
     select: {
       id: true,
@@ -32,6 +35,7 @@ export default async function AdminDashboard() {
 
   // Letzte 8 Kontakte allgemein
   const recent = await db.contact.findMany({
+    where: { studioId },
     orderBy: { createdAt: "desc" },
     take: 8,
     select: {
@@ -45,10 +49,10 @@ export default async function AdminDashboard() {
   });
 
   const [planCount, listCount, campaignCount, funnelCount] = await Promise.all([
-    db.pricingPlan.count(),
-    db.list.count(),
-    db.campaign.count(),
-    db.funnel.count(),
+    db.pricingPlan.count({ where: { studioId } }),
+    db.list.count({ where: { studioId } }),
+    db.campaign.count({ where: { studioId } }),
+    db.funnel.count({ where: { studioId } }),
   ]);
 
   const monthLabel = new Date().toLocaleDateString("de-DE", { month: "long", year: "numeric" });
@@ -66,10 +70,11 @@ export default async function AdminDashboard() {
       distinct: ["sessionId"],
     }),
     db.contact.count({
-      where: { source: "LANDING", createdAt: { gte: thirtyDaysAgo } },
+      where: { studioId, source: "LANDING", createdAt: { gte: thirtyDaysAgo } },
     }),
     db.contact.count({
       where: {
+        studioId,
         signupAt: { gte: thirtyDaysAgo, not: null },
         source: { in: ["LANDING", "DIRECT"] },
       },

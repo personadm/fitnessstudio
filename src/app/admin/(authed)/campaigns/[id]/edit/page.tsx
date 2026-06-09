@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
+import { requireStudioId } from "@/lib/tenant";
 import { CampaignEditForm } from "./CampaignEditForm";
 
 export const dynamic = "force-dynamic";
@@ -11,10 +12,11 @@ interface PageProps {
 
 export default async function CampaignEditPage({ params }: PageProps) {
   const { id } = await params;
+  const studioId = await requireStudioId();
 
   const [campaign, lists, locations] = await Promise.all([
-    db.campaign.findUnique({
-      where: { id },
+    db.campaign.findFirst({
+      where: { id, studioId },
       select: {
         id: true,
         subject: true,
@@ -26,6 +28,7 @@ export default async function CampaignEditPage({ params }: PageProps) {
       },
     }),
     db.list.findMany({
+      where: { studioId },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -34,6 +37,7 @@ export default async function CampaignEditPage({ params }: PageProps) {
       },
     }),
     db.location.findMany({
+      where: { studioId },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: { id: true, name: true, city: true },
     }),

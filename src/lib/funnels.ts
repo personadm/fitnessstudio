@@ -89,7 +89,7 @@ export async function enrollIntoMatchingFunnels(
 ): Promise<number> {
   const funnels = await db.funnel.findMany({
     where: { active: true },
-    select: { id: true, name: true, trigger: true, locationId: true },
+    select: { id: true, name: true, trigger: true, locationId: true, studioId: true },
   });
 
   let enrolled = 0;
@@ -98,11 +98,13 @@ export async function enrollIntoMatchingFunnels(
   if (contactId && status) {
     const contact = await db.contact.findUnique({
       where: { id: contactId },
-      select: { id: true, locationId: true },
+      select: { id: true, locationId: true, studioId: true },
     });
     if (!contact) return 0;
 
     for (const funnel of funnels) {
+      // Multi-Tenant: nur Funnels desselben Studios berücksichtigen.
+      if (funnel.studioId !== contact.studioId) continue;
       const targetStatus = triggerToStatus(funnel.trigger);
       if (status !== targetStatus) continue;
       if (funnel.locationId && contact.locationId !== funnel.locationId) continue;
@@ -131,6 +133,8 @@ export async function enrollIntoMatchingFunnels(
     const targetStatus = triggerToStatus(funnel.trigger);
     const candidates = await db.contact.findMany({
       where: {
+        // Multi-Tenant: nur Kontakte desselben Studios wie der Funnel.
+        studioId: funnel.studioId,
         status: targetStatus,
         ...(funnel.locationId ? { locationId: funnel.locationId } : {}),
       },

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { requireStudioId } from "@/lib/tenant";
 import { ClubSignupForm } from "@/components/ClubSignupForm";
 
 export const metadata = {
@@ -6,13 +7,14 @@ export const metadata = {
 };
 
 export default async function ClubAnmeldungPage() {
+  const studioId = await requireStudioId();
   const [plans, locations] = await Promise.all([
     db.pricingPlan.findMany({
-      where: { active: true, availableOffline: true },
+      where: { active: true, availableOffline: true, studioId },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     }),
     db.location.findMany({
-      where: { active: true },
+      where: { active: true, studioId },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: { id: true, name: true, city: true },
     }),

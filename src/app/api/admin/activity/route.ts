@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { getCurrentStudioId } from "@/lib/tenant";
 
 export type ActivityKind =
   | "LEAD"
@@ -37,6 +38,10 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
+  const studioId = await getCurrentStudioId();
+  if (!studioId) {
+    return NextResponse.json({ ok: false }, { status: 401 });
+  }
 
   // Letzte 14 Tage
   const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
@@ -44,6 +49,7 @@ export async function GET() {
   const [contacts, funnelEvents, campaignEvents] = await Promise.all([
     db.contact.findMany({
       where: {
+        studioId,
         OR: [
           { createdAt: { gte: since } },
           { doiConfirmedAt: { gte: since } },
@@ -66,7 +72,7 @@ export async function GET() {
       take: 200,
     }),
     db.funnelStepEvent.findMany({
-      where: { sentAt: { gte: since } },
+      where: { sentAt: { gte: since }, enrollment: { funnel: { studioId } } },
       select: {
         id: true,
         sentAt: true,
@@ -91,6 +97,7 @@ export async function GET() {
       where: {
         event: "SENT",
         createdAt: { gte: since },
+        campaign: { studioId },
       },
       select: {
         id: true,
@@ -107,7 +114,7 @@ export async function GET() {
   const campaignContactIds = Array.from(new Set(campaignEvents.map((c) => c.contactId)));
   const campaignContacts = campaignContactIds.length
     ? await db.contact.findMany({
-        where: { id: { in: campaignContactIds } },
+        where: { id: { in: campaignContactIds }, studioId },
         select: { id: true, firstName: true, lastName: true, email: true },
       })
     : [];

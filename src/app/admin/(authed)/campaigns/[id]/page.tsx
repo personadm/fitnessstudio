@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import DOMPurify from "isomorphic-dompurify";
 import { db } from "@/lib/db";
+import { requireStudioId } from "@/lib/tenant";
 import { deleteCampaign } from "@/app/admin/_actions";
 import { CampaignSendButton } from "./CampaignSendButton";
 import { RestartCampaignButton } from "./RestartCampaignButton";
@@ -20,9 +21,10 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default async function CampaignDetailPage({ params }: PageProps) {
   const { id } = await params;
+  const studioId = await requireStudioId();
 
-  const campaign = await db.campaign.findUnique({
-    where: { id },
+  const campaign = await db.campaign.findFirst({
+    where: { id, studioId },
     include: {
       list: { select: { id: true, name: true, _count: { select: { contacts: true } } } },
       targetLocation: { select: { id: true, name: true } },
@@ -32,6 +34,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
   if (!campaign) notFound();
 
   const recipients = await getCampaignRecipients({
+    studioId,
     listId: campaign.listId,
     targetStatus: campaign.targetStatus,
     targetLocationId: campaign.targetLocationId,

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { requireStudioId } from "@/lib/tenant";
 
 const STATUS_LABELS: Record<string, string> = {
   INTERESSENT: "Interessenten",
@@ -9,7 +10,9 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default async function CampaignsPage() {
+  const studioId = await requireStudioId();
   const campaigns = await db.campaign.findMany({
+    where: { studioId },
     orderBy: { createdAt: "desc" },
     include: {
       list: { select: { name: true } },

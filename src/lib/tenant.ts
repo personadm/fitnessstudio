@@ -8,6 +8,7 @@
  * Verwendung (Phase 2): Middleware/Server-Komponenten lesen den Host,
  * lösen das Studio auf und schränken alle Queries auf `studio.id` ein.
  */
+import { redirect } from "next/navigation";
 import { db } from "./db";
 import { getSession } from "./auth";
 
@@ -171,4 +172,15 @@ export async function getCurrentStudioId(): Promise<string | null> {
     select: { studioId: true },
   });
   return admin?.studioId ?? null;
+}
+
+/**
+ * Wie getCurrentStudioId(), aber leitet bei fehlendem Studio-Kontext direkt
+ * zum Admin-Login um. Für Server-Komponenten (Admin-Seiten) gedacht — gibt
+ * garantiert eine studioId zurück, sodass jede Folge-Query sicher gescoped ist.
+ */
+export async function requireStudioId(): Promise<string> {
+  const id = await getCurrentStudioId();
+  if (!id) redirect("/admin/login");
+  return id;
 }
