@@ -4,6 +4,7 @@ import { leadSchema } from "@/lib/validation";
 import { generateToken } from "@/lib/tokens";
 import { sendDoiMail } from "@/lib/mail";
 import { enrollIntoMatchingFunnels } from "@/lib/funnels";
+import { resolveStudioIdFromHost } from "@/lib/tenant";
 import { checkRateLimit, clientIp } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
@@ -29,6 +30,9 @@ export async function POST(req: NextRequest) {
 
     const { email, firstName, lastName, gender, locationId } = result.data;
 
+    // Multi-Tenant: Studio aus der Subdomain (Fallback: Default-Studio).
+    const studioId = await resolveStudioIdFromHost(req.headers.get("host"));
+
     // IP fürs Consent-Logging (DSGVO-Beleg)
     const ip =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
@@ -47,9 +51,10 @@ export async function POST(req: NextRequest) {
     if (locationId) {
       const loc = await db.location.findUnique({
         where: { id: locationId },
-        select: { id: true, active: true },
+        select: { id: true, active: true, studioId: true },
       });
-      if (loc && loc.active) {
+      // Standort muss aktiv sein UND zum selben Studio gehören.
+      if (loc && loc.active && loc.studioId === studioId) {
         resolvedLocationId = loc.id;
       }
     }
@@ -71,9 +76,10 @@ export async function POST(req: NextRequest) {
     if (resolvedLocationId) updateData.locationId = resolvedLocationId;
 
     const contact = await db.contact.upsert({
-      where: { email },
+      where: { studioId_email: { studioId, email } },
       update: updateData,
       create: {
+        studioId,
         email,
         firstName,
         lastName: lastName || "",

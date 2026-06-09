@@ -4,6 +4,7 @@ import { signupSchema } from "@/lib/validation";
 import { sendSignupConfirmation } from "@/lib/mail";
 import { enrollIntoMatchingFunnels } from "@/lib/funnels";
 import { notifyOnlineSignup } from "@/lib/push";
+import { resolveStudioIdFromHost } from "@/lib/tenant";
 import { checkRateLimit, clientIp } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
@@ -29,15 +30,18 @@ export async function POST(req: NextRequest) {
 
     const data = result.data;
 
-    // Tarif validieren
+    // Multi-Tenant: Studio aus der Subdomain (Fallback: Default-Studio).
+    const studioId = await resolveStudioIdFromHost(req.headers.get("host"));
+
+    // Tarif validieren — muss zum Studio gehören.
     const plan = await db.pricingPlan.findUnique({ where: { id: data.pricingPlanId } });
-    if (!plan || !plan.active) {
+    if (!plan || !plan.active || plan.studioId !== studioId) {
       return NextResponse.json({ ok: false, message: "Tarif nicht verfügbar." }, { status: 400 });
     }
 
-    // Standort-Logik (analog zu /api/leads)
+    // Standort-Logik (analog zu /api/leads) — auf das Studio eingeschränkt.
     const activeLocations = await db.location.findMany({
-      where: { active: true },
+      where: { active: true, studioId },
       select: { id: true },
     });
 
@@ -73,7 +77,7 @@ export async function POST(req: NextRequest) {
 
     let contact =
       (data.ref ? await db.contact.findUnique({ where: { refToken: data.ref } }) : null) ??
-      (await db.contact.findUnique({ where: { email: data.email } }));
+      (await db.contact.findUnique({ where: { studioId_email: { studioId, email: data.email } } }));
 
     // Null-safe Aufbereitung der optionalen Felder:
     //   - iban / contractStartDate werden im neuen UI nicht mehr abgefragt
@@ -87,6 +91,7 @@ export async function POST(req: NextRequest) {
     const genderValue = data.gender ?? null;
 
     const contactData = {
+      studioId,
       email: data.email,
       firstName: data.firstName,
       lastName: data.lastName,

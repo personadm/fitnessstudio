@@ -17,10 +17,16 @@ import { getCampaignRecipients } from "@/lib/campaigns";
 import { sendCampaignMail } from "@/lib/mail";
 import type { ContactStatus, FunnelTrigger } from "@prisma/client";
 
-async function requireAdmin() {
+async function requireAdmin(): Promise<{ userId: string; studioId: string }> {
   const s = await getSession();
   if (!s) redirect("/admin/login");
-  return s;
+  // Studio-ID aus der Session; für Alt-Sessions Fallback über den AdminUser.
+  const studioId =
+    s.studioId ??
+    (await db.adminUser.findUnique({ where: { id: s.userId }, select: { studioId: true } }))
+      ?.studioId;
+  if (!studioId) redirect("/admin/login");
+  return { userId: s.userId, studioId };
 }
 
 /**
@@ -122,7 +128,7 @@ export async function removeContactFromList(contactId: string, listId: string) {
 // ─────────────────────────────────────────────────────────────
 
 export async function saveLocation(formData: FormData) {
-  await requireAdmin();
+  const { studioId } = await requireAdmin();
 
   const id = formData.get("id") as string | null;
   const parsed = locationSchema.parse({
@@ -150,7 +156,7 @@ export async function saveLocation(formData: FormData) {
   if (id) {
     await db.location.update({ where: { id }, data });
   } else {
-    await db.location.create({ data });
+    await db.location.create({ data: { ...data, studioId } });
   }
   revalidatePath("/admin/locations");
   redirect("/admin/locations");
@@ -175,7 +181,7 @@ export async function deleteLocation(locationId: string) {
 // ─────────────────────────────────────────────────────────────
 
 export async function savePlan(formData: FormData) {
-  await requireAdmin();
+  const { studioId } = await requireAdmin();
 
   const id = formData.get("id") as string | null;
   const highlights = (formData.get("highlights") as string)
@@ -245,7 +251,7 @@ export async function savePlan(formData: FormData) {
   if (id) {
     await db.pricingPlan.update({ where: { id }, data });
   } else {
-    await db.pricingPlan.create({ data });
+    await db.pricingPlan.create({ data: { ...data, studioId } });
   }
   revalidatePath("/admin/plans");
   redirect("/admin/plans");
@@ -275,14 +281,14 @@ export async function deletePlan(planId: string) {
 // ─────────────────────────────────────────────────────────────
 
 export async function createList(formData: FormData) {
-  await requireAdmin();
+  const { studioId } = await requireAdmin();
   const name = (formData.get("name") as string).trim();
   const description = ((formData.get("description") as string) || "").trim();
   if (!name) return;
   if (name.length > 200) throw new Error("Listenname ist zu lang (max. 200 Zeichen).");
   if (description.length > 1000)
     throw new Error("Beschreibung ist zu lang (max. 1000 Zeichen).");
-  await db.list.create({ data: { name, description: description || null } });
+  await db.list.create({ data: { studioId, name, description: description || null } });
   revalidatePath("/admin/lists");
 }
 
@@ -297,7 +303,7 @@ export async function deleteList(listId: string) {
 // ─────────────────────────────────────────────────────────────
 
 export async function createCampaign(formData: FormData) {
-  await requireAdmin();
+  const { studioId } = await requireAdmin();
 
   const targetMode = (formData.get("targetMode") as string) || "LIST";
   const listIdRaw = formData.get("listId") as string | null;
@@ -315,6 +321,7 @@ export async function createCampaign(formData: FormData) {
 
   const c = await db.campaign.create({
     data: {
+      studioId,
       listId: parsed.targetMode === "LIST" ? parsed.listId : null,
       targetStatus: parsed.targetMode === "STATUS" ? parsed.targetStatus : null,
       targetLocationId: parsed.targetLocationId || null,
@@ -339,7 +346,7 @@ export async function deleteCampaign(campaignId: string) {
 // ─────────────────────────────────────────────────────────────
 
 export async function createFunnel(formData: FormData) {
-  await requireAdmin();
+  const { studioId } = await requireAdmin();
   const locationIdRaw = formData.get("locationId") as string | null;
   const scheduleEnabled = formData.get("scheduleEnabled") === "on";
   const weekdayRaw = formData.get("scheduleWeekday");
@@ -358,6 +365,7 @@ export async function createFunnel(formData: FormData) {
 
   const f = await db.funnel.create({
     data: {
+      studioId,
       name: parsed.name,
       trigger: parsed.trigger,
       active: parsed.active,
@@ -556,7 +564,7 @@ export type ClubSignupResult =
   | { ok: false; error: string };
 
 export async function createClubContact(formData: FormData): Promise<ClubSignupResult> {
-  await requireAdmin();
+  const { studioId } = await requireAdmin();
 
   try {
     const raw = {
@@ -583,11 +591,12 @@ export async function createClubContact(formData: FormData): Promise<ClubSignupR
 
     // Upsert: falls Mail schon existiert → updaten und Status anheben
     const existing = await db.contact.findUnique({
-      where: { email: parsed.email },
+      where: { studioId_email: { studioId, email: parsed.email } },
       select: { id: true, status: true },
     });
 
     const data = {
+      studioId,
       email: parsed.email,
       firstName: parsed.firstName,
       lastName: parsed.lastName,

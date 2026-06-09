@@ -5,8 +5,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Direkte Verbindung (Port 5432) für Migrationen/db push.
+  // Der Transaction-Pooler (6543, pgbouncer) hängt bei DDL.
+  // Fällt auf DATABASE_URL zurück, falls DIRECT_URL nicht gesetzt ist.
+  directUrl = env("DIRECT_URL")
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -50,6 +54,87 @@ enum FunnelTrigger {
   EHEMALIGER
 }
 
+// Multi-Tenant: Status eines Studios (Mandant)
+enum StudioStatus {
+  ONBOARDING // Code eingelöst, Onboarding-Wizard noch nicht abgeschlossen
+  ACTIVE // Live geschaltet
+  SUSPENDED // Gesperrt (z. B. Zahlungsausfall / manuell)
+}
+
+// Multi-Tenant: Status eines Aktivierungs-Codes
+enum ActivationCodeStatus {
+  UNUSED // generiert, noch nicht eingelöst
+  REDEEMED // eingelöst → Studio erzeugt
+  REVOKED // von dir gesperrt
+}
+
+// ─────────────────────────────────────────────────────────────
+// MULTI-TENANT: STUDIO (Mandant) + AKTIVIERUNGS-CODES + PLATFORM-ADMIN
+// ─────────────────────────────────────────────────────────────
+
+// Ein Studio = ein Mandant. Erkannt an der Subdomain (slug).
+// Alle mandanten-bezogenen Daten verweisen über studioId hierauf.
+model Studio {
+  id     String       @id @default(cuid())
+  slug   String       @unique // Subdomain: <slug>.app.de
+  name   String
+  status StudioStatus @default(ONBOARDING)
+
+  // Branding (ersetzt schrittweise die STUDIO_*-ENV-Variablen, Phase 5)
+  logoUrl      String?
+  primaryColor String? // Haupt-/Markenfarbe (Hex), z. B. Petrol
+  accentColor  String? // Akzentfarbe (Hex)
+  customDomain String? @unique // optionale eigene Domain (späteres Upgrade)
+
+  // E-Mail-Absender pro Studio (ersetzt MAIL_FROM aus ENV)
+  mailFromName  String?
+  mailFromEmail String?
+  mailReplyTo   String?
+
+  onboardingCompletedAt DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  locations      Location[]
+  contacts       Contact[]
+  plans          PricingPlan[]
+  lists          List[]
+  campaigns      Campaign[]
+  funnels        Funnel[]
+  adminUsers     AdminUser[]
+  activationCode ActivationCode?
+
+  @@index([status])
+}
+
+// Die Codes, die DU im Platform-Backend generierst und an Studios verkaufst.
+// Ein Code = eine einmalige Aktivierung = ein Studio-Account.
+model ActivationCode {
+  id        String               @id @default(cuid())
+  code      String               @unique // der Code zum Einlösen
+  label     String? // interne Notiz, z. B. Kundenname / Verkaufsdatum
+  status    ActivationCodeStatus @default(UNUSED)
+  expiresAt DateTime? // optionales Ablaufdatum
+
+  // Gesetzt, sobald der Code im Onboarding eingelöst wurde.
+  studioId String? @unique
+  studio   Studio? @relation(fields: [studioId], references: [id], onDelete: SetNull)
+
+  redeemedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([status])
+}
+
+// Plattform-Betreiber (DU). Komplett getrennt von Studio-AdminUsern.
+model PlatformAdmin {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+}
+
 // ─────────────────────────────────────────────────────────────
 // LOCATION
 // ─────────────────────────────────────────────────────────────
@@ -67,12 +152,17 @@ model Location {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  // Multi-Tenant
+  studioId String
+  studio   Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
   contacts          Contact[]
   plans             PricingPlan[]
   funnels           Funnel[]
   targetedCampaigns Campaign[]
 
   @@index([active, sortOrder])
+  @@index([studioId])
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -81,7 +171,8 @@ model Location {
 
 model Contact {
   id        String    @id @default(cuid())
-  email     String    @unique
+  // E-Mail ist pro Studio eindeutig (siehe @@unique unten), nicht global.
+  email     String
   firstName String?
   lastName  String?
   gender    Gender?
@@ -94,6 +185,10 @@ model Contact {
   street     String?
   postalCode String?
   city       String?
+
+  // Multi-Tenant
+  studioId String
+  studio   Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
 
   locationId String?
   location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
@@ -132,6 +227,7 @@ model Contact {
   unsubscribeToken String?   @unique @default(cuid())
   optedOutAt       DateTime?
 
+  @@unique([studioId, email])
   @@index([status])
   @@index([source])
   @@index([createdAt])
@@ -141,6 +237,8 @@ model Contact {
   @@index([optedOutAt])
   @@index([pricingPlanId])
   @@index([doiConfirmedAt])
+  @@index([studioId])
+  @@index([studioId, status])
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -163,6 +261,10 @@ model PricingPlan {
   active           Boolean         @default(true)
   sortOrder        Int             @default(0)
 
+  // Multi-Tenant
+  studioId String
+  studio   Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
   locationId String?
   location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
 
@@ -172,6 +274,7 @@ model PricingPlan {
   contacts Contact[]
 
   @@index([locationId, active])
+  @@index([studioId, active])
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -180,12 +283,20 @@ model PricingPlan {
 
 model List {
   id          String   @id @default(cuid())
-  name        String   @unique
+  // Name ist pro Studio eindeutig (siehe @@unique unten), nicht global.
+  name        String
   description String?
   createdAt   DateTime @default(now())
 
+  // Multi-Tenant
+  studioId String
+  studio   Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
   contacts  ContactList[]
   campaigns Campaign[]
+
+  @@unique([studioId, name])
+  @@index([studioId])
 }
 
 model ContactList {
@@ -202,6 +313,10 @@ model ContactList {
 
 model Campaign {
   id String @id @default(cuid())
+
+  // Multi-Tenant
+  studioId String
+  studio   Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
 
   // Empfänger-Targeting: ENTWEDER listId ODER targetStatus muss gesetzt sein.
   // targetLocationId schränkt die Empfänger zusätzlich auf einen Standort ein.
@@ -223,6 +338,7 @@ model Campaign {
   @@index([targetStatus, targetLocationId])
   @@index([listId])
   @@index([status, scheduledAt])
+  @@index([studioId])
 }
 
 model CampaignEvent {
@@ -264,6 +380,10 @@ model Funnel {
   active   Boolean       @default(true)
   autoStop Boolean       @default(true)
 
+  // Multi-Tenant
+  studioId String
+  studio   Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
   // Standort-Filter: wenn gesetzt, nur Kontakte an diesem Standort
   // werden eingeschrieben. null = alle Standorte (Default).
   locationId String?
@@ -286,6 +406,7 @@ model Funnel {
 
   @@index([trigger, active])
   @@index([locationId])
+  @@index([studioId, trigger, active])
 }
 
 model FunnelStep {
@@ -345,10 +466,19 @@ model FunnelStepEvent {
 
 model AdminUser {
   id           String   @id @default(cuid())
-  email        String   @unique
+  // E-Mail ist pro Studio eindeutig (siehe @@unique unten), nicht global —
+  // dieselbe Person kann bei mehreren Studios Admin sein.
+  email        String
   passwordHash String
   name         String?
   createdAt    DateTime @default(now())
+
+  // Multi-Tenant
+  studioId String
+  studio   Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+  @@unique([studioId, email])
+  @@index([studioId])
 }
 
 model PushSubscription {

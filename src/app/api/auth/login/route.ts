@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { loginSchema } from "@/lib/validation";
 import { createSession } from "@/lib/auth";
+import { resolveStudioIdFromHost } from "@/lib/tenant";
 import { checkRateLimit, clientIp } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
@@ -25,7 +26,13 @@ export async function POST(req: NextRequest) {
     }
 
     const { email, password } = result.data;
-    const user = await db.adminUser.findUnique({ where: { email } });
+
+    // Multi-Tenant: Studio aus der Subdomain bestimmen; der AdminUser wird
+    // pro Studio gesucht (E-Mail ist nur pro Studio eindeutig).
+    const studioId = await resolveStudioIdFromHost(req.headers.get("host"));
+    const user = await db.adminUser.findUnique({
+      where: { studioId_email: { studioId, email } },
+    });
 
     // Bewusst gleiche Antwort bei nicht gefundenem User & falschem Passwort
     // (verhindert User-Enumeration)
@@ -33,7 +40,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, message: "E-Mail oder Passwort falsch." }, { status: 401 });
     }
 
-    await createSession(user.id);
+    await createSession(user.id, user.studioId);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[/api/auth/login]", err);

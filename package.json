@@ -15,7 +15,9 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
+    "db:backfill-tenant": "tsx prisma/backfill-multitenant.ts",
     "admin:create": "tsx prisma/create-admin.ts",
+    "platform-admin:create": "tsx prisma/create-platform-admin.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

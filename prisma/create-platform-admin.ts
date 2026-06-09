@@ -1,3 +1,9 @@
+/**
+ * Legt einen Platform-Admin an (DU, der Plattform-Betreiber).
+ * Getrennt von den Studio-AdminUsern — dieser Login gilt für /platform.
+ *
+ * Ausführen:  npx tsx prisma/create-platform-admin.ts
+ */
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import readline from "readline/promises";
@@ -7,7 +13,7 @@ const prisma = new PrismaClient();
 async function main() {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
-  const email = (await rl.question("Admin-E-Mail: ")).trim().toLowerCase();
+  const email = (await rl.question("Platform-Admin-E-Mail: ")).trim().toLowerCase();
   const password = await rl.question("Passwort (mind. 12 Zeichen): ");
   const name = (await rl.question("Name (optional): ")).trim() || null;
 
@@ -24,21 +30,14 @@ async function main() {
 
   const passwordHash = await bcrypt.hash(password, 12);
 
-  // Multi-Tenant: Admin wird dem Default-Studio (ältestes Studio) zugeordnet.
-  const studio = await prisma.studio.findFirst({ orderBy: { createdAt: "asc" } });
-  if (!studio) {
-    console.error("✗ Kein Studio vorhanden. Erst Backfill/Onboarding ausführen.");
-    process.exit(1);
-  }
-
-  await prisma.adminUser.upsert({
-    where: { studioId_email: { studioId: studio.id, email } },
+  await prisma.platformAdmin.upsert({
+    where: { email },
     update: { passwordHash, name },
-    create: { studioId: studio.id, email, passwordHash, name },
+    create: { email, passwordHash, name },
   });
 
-  console.log(`\n✓ Admin angelegt/aktualisiert: ${email} (Studio: ${studio.name})`);
-  console.log("  Login auf /admin/login");
+  console.log(`\n✓ Platform-Admin angelegt/aktualisiert: ${email}`);
+  console.log("  Login auf /platform/login");
 }
 
 main()
