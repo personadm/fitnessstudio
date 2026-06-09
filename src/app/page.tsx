@@ -1,6 +1,11 @@
 import { LeadForm } from "@/components/LeadForm";
 import { db } from "@/lib/db";
-import { getTestimonials } from "@/lib/testimonials";
+import { getTestimonials, TESTIMONIALS } from "@/lib/testimonials";
+
+// Live-Daten (Standorte) → pro Request server-rendern statt beim Build statisch
+// vorrendern. Verhindert DB-Zugriffe während `next build` (Deploy bricht sonst
+// ab, wenn der DB-Pooler keine freie Verbindung hat).
+export const dynamic = "force-dynamic";
 
 const STUDIO = process.env.STUDIO_NAME ?? "Studio Iron";
 
@@ -39,21 +44,37 @@ const LOGO_URL =
   "https://static.wixstatic.com/media/fe97c9_89b309723d40451699a7888dfac8593a~mv2.png/v1/fill/w_180,h_180,al_c,q_85,enc_avif,quality_auto/Logo-FB-NEU.png";
 
 export default async function LandingPage() {
-  const [locations, testimonials] = await Promise.all([
-    db.location.findMany({
-      where: { active: true },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      select: {
-        id: true,
-        name: true,
-        city: true,
-        street: true,
-        postalCode: true,
-        phone: true,
-      },
-    }),
-    getTestimonials(),
-  ]);
+  let locations: {
+    id: string;
+    name: string;
+    city: string | null;
+    street: string | null;
+    postalCode: string | null;
+    phone: string | null;
+  }[] = [];
+  let testimonials: Awaited<ReturnType<typeof getTestimonials>> = TESTIMONIALS;
+
+  try {
+    [locations, testimonials] = await Promise.all([
+      db.location.findMany({
+        where: { active: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: {
+          id: true,
+          name: true,
+          city: true,
+          street: true,
+          postalCode: true,
+          phone: true,
+        },
+      }),
+      getTestimonials(),
+    ]);
+  } catch (err) {
+    // DB kurz nicht erreichbar → Seite trotzdem ausliefern (mit Fallback-Daten),
+    // statt die gesamte Startseite mit einem 500er abstürzen zu lassen.
+    console.error("[LandingPage] Daten konnten nicht geladen werden:", err);
+  }
 
   return (
     <main className="min-h-screen bg-cream">
