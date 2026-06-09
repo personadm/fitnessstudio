@@ -6,7 +6,12 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { createSession } from "@/lib/auth";
 import { SLUG_PATTERN, slugify, isReservedSlug } from "@/lib/tenant";
-import type { BillingInterval } from "@prisma/client";
+import { getPalette } from "@/lib/palettes";
+import { coerceLandingContent } from "@/lib/landing";
+import type { BillingInterval, Prisma } from "@prisma/client";
+
+// Logo als Data-URL: nur Bilder, max ~700 KB (Base64 ist ~1/3 größer als binär).
+const MAX_LOGO_CHARS = 950_000;
 
 /** Prüft, ob ein Code einlösbar ist (existiert, UNUSED, nicht abgelaufen). */
 export async function isCodeRedeemable(code: string): Promise<boolean> {
@@ -45,8 +50,9 @@ const setupSchema = z.object({
   adminEmail: z.string().trim().toLowerCase().email("Ungültige E-Mail."),
   adminPassword: z.string().min(12, "Passwort braucht mind. 12 Zeichen."),
   adminName: z.string().trim().max(80).optional(),
-  primaryColor: z.string().trim().max(20).optional(),
-  logoUrl: z.string().trim().url("Logo-URL ungültig.").max(500).optional().or(z.literal("")),
+  paletteKey: z.string().trim().max(40).optional(),
+  logoDataUrl: z.string().max(MAX_LOGO_CHARS, "Logo ist zu groß (max ~700 KB).").optional(),
+  landingJson: z.string().max(20_000).optional(),
   locationName: z.string().trim().min(2, "Standort-Name zu kurz.").max(80),
   city: z.string().trim().max(80).optional(),
   planName: z.string().trim().min(2, "Tarif-Name zu kurz.").max(80),
@@ -68,8 +74,9 @@ export async function completeOnboarding(
     adminEmail: formData.get("adminEmail"),
     adminPassword: formData.get("adminPassword"),
     adminName: formData.get("adminName") || undefined,
-    primaryColor: formData.get("primaryColor") || undefined,
-    logoUrl: formData.get("logoUrl") || undefined,
+    paletteKey: formData.get("paletteKey") || undefined,
+    logoDataUrl: formData.get("logoDataUrl") || undefined,
+    landingJson: formData.get("landingJson") || undefined,
     locationName: formData.get("locationName"),
     city: formData.get("city") || undefined,
     planName: formData.get("planName"),
@@ -102,7 +109,24 @@ export async function completeOnboarding(
 
   const passwordHash = await bcrypt.hash(d.adminPassword, 12);
   const priceCents = Math.round(d.priceEur * 100);
-  const logoUrl = d.logoUrl && d.logoUrl.length > 0 ? d.logoUrl : null;
+
+  // Palette → konkrete Farben.
+  const palette = getPalette(d.paletteKey);
+
+  // Logo: nur akzeptieren, wenn es ein Bild-Data-URL ist.
+  const logoUrl =
+    d.logoDataUrl && d.logoDataUrl.startsWith("data:image/") ? d.logoDataUrl : null;
+
+  // Landing-Inhalte (optional, ggf. KI-generiert + im Formular editiert).
+  let landingContent: Prisma.InputJsonValue | undefined;
+  if (d.landingJson) {
+    try {
+      const coerced = coerceLandingContent(JSON.parse(d.landingJson));
+      if (coerced) landingContent = coerced as unknown as Prisma.InputJsonValue;
+    } catch {
+      /* ungültiges JSON → einfach ohne Landing-Inhalte anlegen */
+    }
+  }
 
   let studioId: string;
   let adminId: string;
@@ -113,8 +137,11 @@ export async function completeOnboarding(
           slug,
           name: d.studioName,
           status: "ACTIVE",
-          primaryColor: d.primaryColor || null,
+          primaryColor: palette.primary,
+          accentColor: palette.accent,
+          paletteKey: palette.key,
           logoUrl,
+          ...(landingContent !== undefined ? { landingContent } : {}),
           mailFromName: d.studioName,
           onboardingCompletedAt: new Date(),
         },

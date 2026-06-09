@@ -81,10 +81,16 @@ model Studio {
   status StudioStatus @default(ONBOARDING)
 
   // Branding (ersetzt schrittweise die STUDIO_*-ENV-Variablen, Phase 5)
-  logoUrl      String?
+  logoUrl      String? @db.Text // Data-URL (hochgeladenes Logo) oder externe URL
   primaryColor String? // Haupt-/Markenfarbe (Hex), z. B. Petrol
   accentColor  String? // Akzentfarbe (Hex)
+  paletteKey   String? // Schlüssel der gewählten Farb-Palette (siehe lib/palettes.ts)
   customDomain String? @unique // optionale eigene Domain (späteres Upgrade)
+
+  // Landingpage-Inhalte (im Onboarding ggf. per KI aus der alten Website erzeugt).
+  // Form: { headline, subheadline, intro, benefits: [{title,text}], aboutTitle,
+  //         aboutText, ctaLabel } — siehe src/lib/landing.ts
+  landingContent Json?
 
   // E-Mail-Absender pro Studio (ersetzt MAIL_FROM aus ENV)
   mailFromName  String?

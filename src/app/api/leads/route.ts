@@ -30,8 +30,17 @@ export async function POST(req: NextRequest) {
 
     const { email, firstName, lastName, gender, locationId } = result.data;
 
-    // Multi-Tenant: Studio aus der Subdomain (Fallback: Default-Studio).
-    const studioId = await resolveStudioIdFromHost(req.headers.get("host"));
+    // Multi-Tenant: bevorzugt expliziter Studio-Slug (von der /s/<slug>-Landing),
+    // sonst aus der Subdomain (Fallback: Default-Studio).
+    const studioSlug = typeof json.studio === "string" ? json.studio.trim().toLowerCase() : "";
+    let studioId: string | null = null;
+    if (studioSlug) {
+      const s = await db.studio.findUnique({ where: { slug: studioSlug }, select: { id: true } });
+      studioId = s?.id ?? null;
+    }
+    if (!studioId) {
+      studioId = await resolveStudioIdFromHost(req.headers.get("host"));
+    }
 
     // IP fürs Consent-Logging (DSGVO-Beleg)
     const ip =
