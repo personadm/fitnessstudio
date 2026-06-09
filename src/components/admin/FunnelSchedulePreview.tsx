@@ -100,6 +100,33 @@ export function FunnelSchedulePreview({ steps, funnelLegacy }: Props) {
   const hasCollision = entries.some((e) => e.collision);
   const hasSkip = entries.some((e) => e.skipped);
 
+  // ── Reihenfolge-Check: Vorlauf-Mails (relativ) vor Wochen-Mails (fester Wochentag) ──
+  // Genau das, was der User will: erst die einzelnen Mails, DANN wöchentlich.
+  const isWeekly = (s: ScheduleStep) =>
+    s.scheduleWeekday !== null && s.scheduleWeekday !== undefined;
+  const isLeadIn = (s: ScheduleStep) =>
+    !isWeekly(s) &&
+    (funnelLegacy.scheduleWeekday === null ||
+      funnelLegacy.scheduleWeekday === undefined);
+
+  const leadInDueAts = entries
+    .filter((e) => isLeadIn(e.step))
+    .map((e) => e.dueAt);
+  const maxLeadInDueAt = leadInDueAts.length
+    ? Math.max(...leadInDueAts)
+    : -Infinity;
+  const maxLeadInDelayDays = steps
+    .filter(isLeadIn)
+    .reduce((m, s) => Math.max(m, s.delayDays), 0);
+  const suggestedWeeklyDelay = maxLeadInDelayDays + 1;
+
+  // Wochen-Mails, die VOR (oder gleichzeitig mit) der letzten Vorlauf-Mail rausgehen
+  const earlyWeekly = entries.filter(
+    (e) => isWeekly(e.step) && e.dueAt <= maxLeadInDueAt,
+  );
+  const earlyWeeklyIds = new Set(earlyWeekly.map((e) => e.step.id));
+  const hasOrderProblem = earlyWeekly.length > 0;
+
   if (steps.length === 0) {
     return (
       <p className="border border-ink/15 p-6 text-center text-sm text-muted">
@@ -153,6 +180,36 @@ export function FunnelSchedulePreview({ steps, funnelLegacy }: Props) {
         )}
       </label>
 
+      {/* Reihenfolge-Warnung: Wochen-Mail kommt vor Vorlauf */}
+      {hasOrderProblem && (
+        <div className="mt-4 border-l-4 border-red-500 bg-red-50 p-4">
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-red-700">
+            ⚠ Wochen-Mail kommt vor dem Vorlauf
+          </p>
+          <p className="mt-2 text-[13px] leading-relaxed text-red-800">
+            Diese Mail(s) gehen am festen Wochentag raus, bevor deine
+            Vorlauf-Mails durch sind — auch wenn morgen schon der Wochentag ist:
+          </p>
+          <ul className="mt-2 space-y-1">
+            {earlyWeekly.map((e) => (
+              <li
+                key={e.step.id}
+                className="text-[13px] leading-relaxed text-red-800"
+              >
+                · „{subjectById.get(e.step.id) || "(ohne Betreff)"}" → Wartezeit
+                auf{" "}
+                <strong>mind. {suggestedWeeklyDelay} Tage</strong> setzen
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 font-mono text-[11px] text-red-700">
+            So kommt erst der Vorlauf, dann die Wochen-Mails. Jede weitere
+            Wochen-Mail braucht 7 Tage mehr (z.B. {suggestedWeeklyDelay} →{" "}
+            {suggestedWeeklyDelay + 7} → {suggestedWeeklyDelay + 14}).
+          </p>
+        </div>
+      )}
+
       {/* Warnungen */}
       {(hasCollision || hasSkip) && (
         <div className="mt-4 space-y-2">
@@ -204,6 +261,9 @@ export function FunnelSchedulePreview({ steps, funnelLegacy }: Props) {
                   )}
                   {entry.collision && !entry.skipped && (
                     <span className="ml-2 text-amber-700">gleicher Slot</span>
+                  )}
+                  {earlyWeeklyIds.has(entry.step.id) && (
+                    <span className="ml-2 text-red-600">vor Vorlauf!</span>
                   )}
                 </p>
                 <p className="mt-1 truncate text-sm font-medium">
