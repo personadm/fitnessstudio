@@ -1,11 +1,28 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { requireStudioId } from "@/lib/tenant";
 import { LiveActivity } from "@/components/admin/LiveActivity";
 import { PushSubscribe } from "@/components/admin/PushSubscribe";
+import { LandingLinkCard } from "@/components/admin/LandingLinkCard";
 
 export default async function AdminDashboard() {
   const studioId = await requireStudioId();
+
+  // Eigene Studio-Infos (für den Landingpage-Link).
+  const studio = await db.studio.findUnique({
+    where: { id: studioId },
+    select: { slug: true, customDomain: true },
+  });
+  const hdrs = await headers();
+  const host = hdrs.get("host") ?? "";
+  const proto = hdrs.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  // Eigene Domain bevorzugen (falls gesetzt), sonst /s/<slug> auf dem aktuellen Host.
+  const landingUrl = studio?.customDomain
+    ? `https://${studio.customDomain}`
+    : studio
+      ? `${proto}://${host}/s/${studio.slug}`
+      : null;
 
   // Status-Statistiken (nur dieses Studio)
   const [interessent, neukunde, kunde, ehemaliger] = await Promise.all([
@@ -105,6 +122,13 @@ export default async function AdminDashboard() {
           + Club-Anmeldung
         </Link>
       </div>
+
+      {/* Landingpage-Link */}
+      {landingUrl && (
+        <div className="mb-8 md:mb-12">
+          <LandingLinkCard url={landingUrl} />
+        </div>
+      )}
 
       {/* Status-Tiles */}
       <div className="mb-8 grid grid-cols-2 gap-3 md:mb-12 md:gap-4 md:grid-cols-4">
