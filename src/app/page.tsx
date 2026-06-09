@@ -1,4 +1,5 @@
 import { LeadForm } from "@/components/LeadForm";
+import { TrackPageView } from "@/components/TrackPageView";
 import { db } from "@/lib/db";
 import { getTestimonials, TESTIMONIALS } from "@/lib/testimonials";
 
@@ -78,6 +79,9 @@ export default async function LandingPage() {
 
   return (
     <main className="min-h-screen bg-cream">
+      {/* Zählt den Seitenaufruf (schreibt PageView fürs Admin-Dashboard) */}
+      <TrackPageView path="/" />
+
       {/* ─── Top Bar (Logo + Studio-Name, kein Anmelden-Link mehr) ─── */}
       <header className="border-b border-ink/10">
         <div className="mx-auto flex max-w-7xl items-center gap-4 px-6 py-4">
