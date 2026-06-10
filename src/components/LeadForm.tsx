@@ -59,6 +59,8 @@ export function LeadForm({ locations }: Props) {
       if (data.ok) {
         setState("success");
         setMessage(data.message ?? "Bitte bestätige deine E-Mail-Adresse.");
+        // Meta-Pixel: Lead-Conversion erst nach erfolgreichem Absenden feuern.
+        window.fbq?.("track", "Lead");
       } else {
         setState("error");
         setMessage(data.message ?? "Etwas ist schiefgelaufen.");

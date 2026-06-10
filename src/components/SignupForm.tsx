@@ -149,6 +149,10 @@ export function SignupForm({
       });
       const data = await res.json();
       if (data.ok) {
+        // Meta-Pixel: Purchase-Conversion feuern, solange der Pixel auf
+        // /anmelden geladen ist (die Danke-Seite hat ihn nicht), dann erst
+        // weiterleiten.
+        window.fbq?.("track", "Purchase", { value: 99.0, currency: "EUR" });
         router.push("/anmelden/danke");
       } else {
         setError(data.message ?? "Anmeldung fehlgeschlagen.");

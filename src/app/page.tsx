@@ -1,5 +1,6 @@
 import { LeadForm } from "@/components/LeadForm";
 import { TrackPageView } from "@/components/TrackPageView";
+import { MetaPixel } from "@/components/MetaPixel";
 import { db } from "@/lib/db";
 import { getTestimonials, TESTIMONIALS } from "@/lib/testimonials";
 
@@ -79,6 +80,8 @@ export default async function LandingPage() {
 
   return (
     <main className="min-h-screen bg-cream">
+      {/* Meta-/Facebook-Pixel (Basis + PageView) */}
+      <MetaPixel />
       {/* Zählt den Seitenaufruf (schreibt PageView fürs Admin-Dashboard) */}
       <TrackPageView path="/" />
 
