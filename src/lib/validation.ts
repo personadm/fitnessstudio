@@ -9,7 +9,7 @@ export const leadSchema = z.object({
   gender: z.enum(["MAENNLICH", "WEIBLICH", "DIVERS"]).optional().nullable(),
   locationId: z.string().trim().optional().nullable(),
   consent: z.literal(true, {
-    errorMap: () => ({ message: "Bitte stimme der Datenverarbeitung zu." }),
+    errorMap: () => ({ message: "Bitte setz noch das Häkchen, dann schicken wir dir dein Angebot." }),
   }),
 });
 export type LeadInput = z.infer<typeof leadSchema>;

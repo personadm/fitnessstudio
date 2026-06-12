@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { leadSchema } from "@/lib/validation";
 import { generateToken } from "@/lib/tokens";
-import { sendDoiMail } from "@/lib/mail";
+import { sendPricingMail } from "@/lib/mail";
 import { enrollIntoMatchingFunnels } from "@/lib/funnels";
 import { resolveStudioIdFromHost } from "@/lib/tenant";
 import { checkRateLimit, clientIp } from "@/lib/rateLimit";
@@ -48,12 +48,9 @@ export async function POST(req: NextRequest) {
       req.headers.get("x-real-ip") ??
       "unknown";
 
-    const consentText =
-      "Ich willige ein, dass meine Daten (Vorname, E-Mail, Standort) zur Zusendung " +
-      "meines Gratis-Start-Angebots verarbeitet werden. Die Einwilligung kann " +
-      "jederzeit widerrufen werden.";
-
-    const doiToken = generateToken();
+    // Soft formulierte E-Mail-Einwilligung von der Landingpage (Single-Opt-In,
+    // gespeichert als DSGVO-Beleg zusammen mit IP + Zeitstempel).
+    const consentText = "Ja, schickt mir mein Gratis-Start-Angebot per E-Mail.";
 
     // Standort validieren — nur falls übergeben
     let resolvedLocationId: string | null = null;
@@ -68,6 +65,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Single-Opt-In: keine Bestätigungsmail mehr. Wir vergeben sofort den
+    // ref-Token für die Anmelde-Seite und markieren den Kontakt als bestätigt.
+    // Vorab lesen, ob der Kontakt bereits onboardet war → verhindert, dass ein
+    // erneutes Eintragen die Angebots-Mail ein zweites Mal auslöst.
+    const existing = await db.contact.findUnique({
+      where: { studioId_email: { studioId, email } },
+      select: { doiConfirmedAt: true, refToken: true },
+    });
+    const alreadyOnboarded = Boolean(existing?.doiConfirmedAt);
+    const refToken = existing?.refToken ?? generateToken();
+    const confirmedAt = existing?.doiConfirmedAt ?? new Date();
+
     // Atomares upsert statt findUnique→create/update: verhindert eine Race
     // Condition bei gleichzeitigen Submits (Doppelklick/Retry), die sonst am
     // Unique-Constraint auf `email` mit einem 500er scheitern würde.
@@ -75,8 +84,8 @@ export async function POST(req: NextRequest) {
     // überschreiben (damit ein nachgelagertes Profil nicht verschwindet).
     const updateData: Record<string, unknown> = {
       firstName,
-      doiToken,
-      doiSentAt: new Date(),
+      doiConfirmedAt: confirmedAt,
+      refToken,
       consentText,
       consentIp: ip,
     };
@@ -96,15 +105,15 @@ export async function POST(req: NextRequest) {
         locationId: resolvedLocationId,
         status: "INTERESSENT",
         source: "LANDING",
-        doiToken,
-        doiSentAt: new Date(),
+        doiConfirmedAt: confirmedAt,
+        refToken,
         consentText,
         consentIp: ip,
       },
     });
 
-    // Schon bestätigt? Keine neue DOI-Mail, freundlich antworten.
-    if (contact.doiConfirmedAt) {
+    // Schon eingetragen & Angebot schon raus? Nicht erneut senden, freundlich antworten.
+    if (alreadyOnboarded) {
       return NextResponse.json({
         ok: true,
         alreadyConfirmed: true,
@@ -112,22 +121,31 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    await sendDoiMail({ to: email, firstName, doiToken });
-
     await db.contactEvent.create({
       data: {
         contactId: contact.id,
-        type: "DOI_REQUESTED",
-        meta: { ip },
+        type: "DOI_CONFIRMED",
+        meta: { ip, mode: "single-opt-in" },
       },
     });
+
+    // Angebots-Mail direkt verschicken (kein Bestätigungs-Klick mehr nötig).
+    // Mail-Fehler nicht an den User durchreichen — der Lead ist gespeichert.
+    try {
+      await sendPricingMail({ to: email, firstName, refToken });
+      await db.contactEvent.create({
+        data: { contactId: contact.id, type: "PRICING_MAIL_SENT" },
+      });
+    } catch (err) {
+      console.error("[/api/leads] sendPricingMail failed", err);
+    }
 
     await enrollIntoMatchingFunnels(contact.id, contact.status);
 
     return NextResponse.json({
       ok: true,
       message:
-        "Bitte bestätige deine E-Mail-Adresse. Direkt danach schalten wir dein Angebot frei.",
+        "Geschafft! Dein Gratis-Start-Angebot ist unterwegs – schau in dein Postfach.",
     });
   } catch (err) {
     console.error("[/api/leads]", err);

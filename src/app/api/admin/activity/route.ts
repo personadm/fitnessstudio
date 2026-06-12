@@ -143,8 +143,8 @@ export async function GET() {
         id: `doi-${c.id}`,
         kind: "DOI_CONFIRMED",
         at: c.doiConfirmedAt.toISOString(),
-        title: `${name} hat die E-Mail bestätigt`,
-        subtitle: "Tarife-Mail ging raus",
+        title: `${name} – Start-Angebot verschickt`,
+        subtitle: "Angebots-Mail ging raus",
         contactId: c.id,
         href,
       });

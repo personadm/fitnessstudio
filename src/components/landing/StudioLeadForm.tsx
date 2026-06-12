@@ -63,7 +63,7 @@ export function StudioLeadForm({
         setMessage(
           data.alreadyConfirmed
             ? "Du bist schon eingetragen – schau in dein Postfach."
-            : (data.message ?? "Bitte bestätige deine E-Mail-Adresse."),
+            : (data.message ?? "Geschafft! Dein Gratis-Start-Angebot ist unterwegs."),
         );
       } else {
         setState("error");
@@ -90,7 +90,7 @@ export function StudioLeadForm({
         <h3 className="mb-3 text-xl font-semibold text-[#2C2C2A]">Schau in dein Postfach.</h3>
         <p className="text-sm leading-relaxed text-[#5F5E5A]">{message}</p>
         <p className="mt-3 text-xs text-[#8A857E]">
-          Nach der Bestätigung schalten wir dein Gratis-Start-Angebot frei.
+          Dein Gratis-Start-Angebot ist gerade unterwegs zu dir.
         </p>
       </div>
     );
@@ -171,9 +171,7 @@ export function StudioLeadForm({
           style={{ accentColor: brandColor }}
         />
         <span>
-          Ich willige ein, dass meine Daten zur Zusendung des Gratis-Start-Angebots
-          verarbeitet werden. Widerruf jederzeit per Klick auf den Abmelde-Link in jeder Mail.
-          Mehr in der{" "}
+          Ja, schickt mir mein Gratis-Start-Angebot per E-Mail. Mehr in der{" "}
           <a href="/datenschutz" className="underline underline-offset-2 hover:text-[#2C2C2A]">
             Datenschutzerklärung
           </a>

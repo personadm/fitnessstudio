@@ -35,35 +35,7 @@ function billingSuffix(interval: string | null | undefined): string {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 1) Double-Opt-In-Mail
-// ─────────────────────────────────────────────────────────────
-
-export async function sendDoiMail(opts: {
-  to: string;
-  firstName?: string | null;
-  doiToken: string;
-}) {
-  const confirmUrl = `${STUDIO_URL}/bestaetigen?token=${opts.doiToken}`;
-  const greeting = opts.firstName ? `Hallo ${opts.firstName},` : "Hallo,";
-  return resend.emails.send({
-    from: FROM,
-    ...REPLY_TO_FIELD,
-    to: opts.to,
-    subject: `Bitte bestätige deine Anmeldung (1 Klick)`,
-    html: doiTemplate({ confirmUrl, greeting }),
-    text:
-      `${greeting}\n\n` +
-      `fast geschafft! Du hast dein Gratis-Start-Angebot bei den Gesundheitscoaches angefordert.\n\n` +
-      `Bitte bestätige einmal kurz, dass du das warst – dann schalten wir dein Angebot sofort frei:\n\n` +
-      `${confirmUrl}\n\n` +
-      `Direkt danach siehst du, wie dein persönlicher Start aussieht.\n\n` +
-      `Falls du das nicht warst, ignoriere diese Mail einfach – dann passiert nichts.\n\n` +
-      `Herzliche Grüße\nTina & Erik – Deine Gesundheitscoaches`,
-  });
-}
-
-// ─────────────────────────────────────────────────────────────
-// 2) Willkommens-/Angebots-Mail (nach DOI)
+// 1) Willkommens-/Angebots-Mail (Single-Opt-In: direkt nach Eintragung)
 // ─────────────────────────────────────────────────────────────
 
 export async function sendPricingMail(opts: {
@@ -99,7 +71,7 @@ export async function sendPricingMail(opts: {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 3) Anmeldebestätigung
+// 2) Anmeldebestätigung
 // ─────────────────────────────────────────────────────────────
 
 export async function sendSignupConfirmation(opts: {
@@ -125,7 +97,7 @@ export async function sendSignupConfirmation(opts: {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 4) Kampagnen / Newsletter (vom Admin manuell ausgelöst)
+// 3) Kampagnen / Newsletter (vom Admin manuell ausgelöst)
 // ─────────────────────────────────────────────────────────────
 
 export async function sendCampaignMail(opts: {
@@ -148,7 +120,7 @@ export async function sendCampaignMail(opts: {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 5) Funnel-Mail (automatische Schritt-Mails aus Funnels)
+// 4) Funnel-Mail (automatische Schritt-Mails aus Funnels)
 // ─────────────────────────────────────────────────────────────
 
 export async function sendFunnelMail(opts: {
@@ -182,36 +154,6 @@ function logoBlock() {
   return `<div style="text-align:center;padding:32px 40px 8px;">
     <img src="${LOGO_URL}" alt="${STUDIO_NAME}" style="max-width:280px;width:100%;height:auto;display:inline-block;" />
   </div>`;
-}
-
-function doiTemplate({ confirmUrl, greeting }: { confirmUrl: string; greeting: string }) {
-  return `<!DOCTYPE html>
-<html lang="de">
-<head><meta charset="utf-8"><style>${shellStyles()}</style></head>
-<body>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:48px 16px;">
-    <tr><td align="center">
-      <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #D8D2C7;">
-        <tr><td>${logoBlock()}</td></tr>
-        <tr><td style="padding:8px 40px 40px;">
-          <p style="font-family:'Courier New',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8A857E;margin:0 0 24px;">${STUDIO_NAME}</p>
-          <p style="font-size:16px;line-height:1.6;margin:0 0 12px;">${greeting}</p>
-          <h1 style="font-size:28px;line-height:1.25;margin:0 0 16px;font-weight:400;">Fast geschafft!</h1>
-          <p style="font-size:16px;line-height:1.6;margin:0 0 16px;">Du hast dein Gratis-Start-Angebot bei den Gesundheitscoaches angefordert.</p>
-          <p style="font-size:16px;line-height:1.6;margin:0 0 32px;">Bitte bestätige einmal kurz, dass du das warst – dann schalten wir dein Angebot sofort frei:</p>
-          <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:#0F6E56;border-radius:8px;">
-            <a href="${confirmUrl}" style="display:inline-block;padding:16px 32px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:600;letter-spacing:0.04em;color:#ffffff;text-decoration:none;">Anmeldung bestätigen →</a>
-          </td></tr></table>
-          <p style="font-size:14px;line-height:1.6;color:#5F5E5A;margin:24px 0 0;">Direkt danach siehst du, wie dein persönlicher Start aussieht.</p>
-          <p style="font-size:13px;line-height:1.6;color:#8A857E;margin:24px 0 0;">Falls der Button nicht funktioniert: <br><a href="${confirmUrl}" style="color:#5F5E5A;word-break:break-all;">${confirmUrl}</a></p>
-          <hr style="border:none;border-top:1px solid #D8D2C7;margin:32px 0;">
-          <p style="font-size:12px;line-height:1.6;color:#8A857E;margin:0;">Falls du das nicht warst, ignoriere diese Mail einfach – dann passiert nichts.</p>
-          <p style="font-size:13px;line-height:1.6;margin:16px 0 0;">Herzliche Grüße<br>Tina & Erik – Deine Gesundheitscoaches</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`;
 }
 
 interface PlanForMail {
@@ -396,7 +338,7 @@ function escapeHtml(s: string): string {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Angebots-Mail-Template (nach DOI-Bestätigung)
+// Angebots-Mail-Template (Single-Opt-In: direkt nach Eintragung)
 // ─────────────────────────────────────────────────────────────
 
 function offerTemplate({ signupUrl, greeting }: { signupUrl: string; greeting: string }) {
