@@ -75,16 +75,17 @@ export async function POST(req: NextRequest) {
     });
     const alreadyOnboarded = Boolean(existing?.doiConfirmedAt);
     const refToken = existing?.refToken ?? generateToken();
-    const confirmedAt = existing?.doiConfirmedAt ?? new Date();
 
     // Atomares upsert statt findUnique→create/update: verhindert eine Race
     // Condition bei gleichzeitigen Submits (Doppelklick/Retry), die sonst am
     // Unique-Constraint auf `email` mit einem 500er scheitern würde.
     // lastName/gender bleiben optional — wenn leer/null, vorherigen Wert nicht
     // überschreiben (damit ein nachgelagertes Profil nicht verschwindet).
+    // doiConfirmedAt wird hier NICHT gesetzt — das passiert weiter unten mit
+    // einem eigenen Zeitstempel NACH dem Anlegen, damit "Angebot verschickt"
+    // im Activity-Feed korrekt über der Eintragung (createdAt) einsortiert wird.
     const updateData: Record<string, unknown> = {
       firstName,
-      doiConfirmedAt: confirmedAt,
       refToken,
       consentText,
       consentIp: ip,
@@ -105,7 +106,6 @@ export async function POST(req: NextRequest) {
         locationId: resolvedLocationId,
         status: "INTERESSENT",
         source: "LANDING",
-        doiConfirmedAt: confirmedAt,
         refToken,
         consentText,
         consentIp: ip,
@@ -120,6 +120,12 @@ export async function POST(req: NextRequest) {
         message: "Du bist schon eingetragen – schau in dein Postfach.",
       });
     }
+
+    // Single-Opt-In bestätigen — Zeitstempel bewusst jetzt (nach createdAt).
+    await db.contact.update({
+      where: { id: contact.id },
+      data: { doiConfirmedAt: new Date() },
+    });
 
     await db.contactEvent.create({
       data: {

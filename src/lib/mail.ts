@@ -380,8 +380,6 @@ function offerTemplate({ signupUrl, greeting }: { signupUrl: string; greeting: s
             <a href="${signupUrl}" style="display:inline-block;padding:16px 32px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">Zu meinem Start-Angebot →</a>
           </td></tr></table>
 
-          <p style="font-size:13px;line-height:1.6;color:#8A857E;margin:0 0 24px;">Falls der Button nicht funktioniert: <br><a href="${signupUrl}" style="color:#5F5E5A;word-break:break-all;">${signupUrl}</a></p>
-
           <hr style="border:none;border-top:1px solid #D8D2C7;margin:16px 0 24px;">
 
           <p style="font-size:13px;line-height:1.5;color:#5F5E5A;margin:0 0 16px;font-style:italic;">Über 6.000 Menschen sind diesen Weg schon mit uns gegangen.</p>
