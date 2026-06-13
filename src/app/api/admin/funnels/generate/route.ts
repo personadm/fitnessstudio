@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import {
-  HORMOZI_SYSTEM_PROMPT,
+  buildFunnelSystemPrompt,
   buildUserPrompt,
   isGeneratedFunnel,
   type FunnelGenerationInput,
 } from "@/lib/funnelAi";
+import { getKnowledgeContent } from "@/lib/knowledge/sync";
 
 export const runtime = "nodejs";
 // KI-Generierung kann bis ~60s dauern bei vielen Steps
@@ -59,6 +60,8 @@ export async function POST(req: NextRequest) {
   }
 
   const userPrompt = buildUserPrompt(input);
+  const knowledge = await getKnowledgeContent();
+  const systemPrompt = buildFunnelSystemPrompt(knowledge);
 
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -71,7 +74,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 8000,
-        system: HORMOZI_SYSTEM_PROMPT,
+        system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
       }),
     });

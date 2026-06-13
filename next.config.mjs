@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // youtubei.js ist ein großes Server-Only-Paket (InnerTube-Client). Nicht in
+  // den Client-Bundle ziehen — zur Laufzeit aus node_modules laden.
+  serverExternalPackages: ["youtubei.js"],
   experimental: {
     serverActions: {
       // Default ist 1MB — zu wenig für Newsletter mit eingebetteten Bildern

@@ -12,6 +12,7 @@ const NAV = [
   { href: "/admin/lists", label: "Listen" },
   { href: "/admin/campaigns", label: "Newsletter" },
   { href: "/admin/funnels", label: "Funnels" },
+  { href: "/admin/knowledge", label: "KI-Wissensbasis" },
 ];
 
 export function AdminSidebar({ adminEmail }: { adminEmail: string }) {

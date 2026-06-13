@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { AdminSidebar } from "@/components/admin/Sidebar";
 import { processFunnels } from "@/lib/funnels";
+import { maybeRunKnowledgeSync } from "@/lib/knowledge/sync";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
@@ -25,6 +26,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     } catch (err) {
       console.error("[funnels] background processing failed", err);
     }
+  });
+
+  // KI-Wissensbasis: täglicher Sync neuer YouTube-Transkripte (E-Mail-Marketing).
+  // Gated auf 1×/24h über KnowledgeBase.lastSyncAt — die meisten Aufrufe sind
+  // ein No-Op. Läuft NACH dem Response, eigener after()-Block, damit ein Fehler
+  // hier die Funnel-Verarbeitung nicht beeinflusst.
+  after(async () => {
+    await maybeRunKnowledgeSync();
   });
 
   return (

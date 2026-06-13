@@ -13,7 +13,7 @@ type Mode = "ai" | "manual";
 
 /**
  * Wrapper mit zwei Modi für die Mail-Erstellung:
- * – KI-generiert (Hormozi-Frameworks)
+ * – KI-generiert (bewährte E-Mail-Marketing-Frameworks)
  * – selbst schreiben (Markdown-Stil + Bild-Upload)
  *
  * Der frühere "Aus Pages-Datei"-Modus (DocxImporter) wurde entfernt.

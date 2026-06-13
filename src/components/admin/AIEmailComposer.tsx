@@ -56,10 +56,10 @@ const POSITION_LABELS: Record<Position, { label: string; hint: string }> = {
 };
 
 /**
- * KI-Mail-Generator mit Hormozis E-Mail-Frameworks.
+ * KI-Mail-Generator mit bewährten E-Mail-Marketing-Frameworks.
  *
- * Frameworks: Mozi-Minute-Struktur (Subject + Reward + Meat + CTA + PS),
- * Value Equation, Reward-Loops, Pain-based Testimonial-Hooks, Anti-Patterns
+ * Frameworks: klare Mail-Struktur (Betreff + Belohnung + Kern + CTA + PS),
+ * Value Equation, Reward-Loops, schmerzbasierte Testimonial-Hooks, Anti-Patterns
  * (keine Bilder, max 1–2 Links, keine Geld-Sprache im Body).
  *
  * Generiert EINE Mail. Ruft `onGenerated(subject, bodyHtml)` wenn der User
@@ -186,8 +186,8 @@ export function AIEmailComposer({ kind, onGenerated }: Props) {
         className="rounded border-l-2 p-3 text-xs"
         style={{ borderColor: PETROL, backgroundColor: "rgba(15,110,86,0.05)" }}
       >
-        <strong>Hormozi-Mail-Generator.</strong> Die KI schreibt nach Mozi-Minute-Struktur
-        (Subject + Reward + Meat + CTA + PS), unter 200 Wörter, ohne Bilder, ohne Geld-Sprache
+        <strong>KI-Mail-Generator.</strong> Die KI schreibt klar strukturiert
+        (Betreff + Belohnung + Kern + CTA + PS), unter 200 Wörter, ohne Bilder, ohne Geld-Sprache
         im Body — alles im warmen du-Ton der Gesundheitscoaches.
       </div>
 
@@ -272,7 +272,7 @@ export function AIEmailComposer({ kind, onGenerated }: Props) {
         </button>
         {loading && (
           <span className="text-xs text-muted">
-            Die KI schreibt eine Mail nach Hormozi-Frameworks. Bitte kurz warten.
+            Die KI schreibt eine Mail nach bewährten E-Mail-Frameworks. Bitte kurz warten.
           </span>
         )}
       </div>

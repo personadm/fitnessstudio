@@ -140,6 +140,28 @@ export const funnelStepSchema = z.object({
 });
 export type FunnelStepInput = z.infer<typeof funnelStepSchema>;
 
+// KI-generierter Funnel (komplett) — wird aus der KI-Vorschau übernommen und
+// als Funnel + Steps angelegt. delayDays/Hours kommen direkt aus der KI.
+export const aiFunnelSchema = z.object({
+  name: z.string().trim().min(1, "Name fehlt.").max(120),
+  trigger: z.enum(["INTERESSENT", "NEUKUNDE", "KUNDE", "EHEMALIGER"], {
+    errorMap: () => ({ message: "Bitte Auslöser wählen." }),
+  }),
+  locationId: z.string().trim().optional().nullable(),
+  steps: z
+    .array(
+      z.object({
+        delayDays: z.coerce.number().int().min(0).max(3650),
+        delayHours: z.coerce.number().int().min(0).max(23).default(0),
+        subject: z.string().trim().min(1, "Betreff fehlt.").max(200),
+        bodyHtml: z.string().min(1, "Inhalt fehlt."),
+      }),
+    )
+    .min(1, "Mindestens ein Schritt nötig.")
+    .max(20),
+});
+export type AiFunnelInput = z.infer<typeof aiFunnelSchema>;
+
 // ─────────────────────────────────────────────────────────────
 // Standort-Verwaltung (Admin)
 // ─────────────────────────────────────────────────────────────

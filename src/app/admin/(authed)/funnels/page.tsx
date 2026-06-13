@@ -53,6 +53,12 @@ export default async function FunnelsPage() {
             </button>
           </form>
           <Link
+            href="/admin/funnels/ki"
+            className="border border-ink px-4 py-2 font-mono text-xs uppercase tracking-[0.12em] hover:bg-ink hover:text-cream"
+          >
+            ✨ Mit KI erstellen
+          </Link>
+          <Link
             href="/admin/funnels/new"
             className="bg-ink px-4 py-2 font-mono text-xs uppercase tracking-[0.12em] text-acid hover:bg-ink-soft"
           >

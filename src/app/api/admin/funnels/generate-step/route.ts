@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import {
-  HORMOZI_STEP_PROMPT,
+  buildStepSystemPrompt,
   buildStepPrompt,
   isGeneratedStep,
   type StepGenerationInput,
 } from "@/lib/funnelAi";
+import { getKnowledgeContent } from "@/lib/knowledge/sync";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -13,7 +14,7 @@ export const maxDuration = 60;
 /**
  * POST /api/admin/funnels/generate-step
  *
- * Generiert EINE einzelne Funnel-Mail nach Hormozi-Frameworks.
+ * Generiert EINE einzelne Funnel-Mail nach bewährten E-Mail-Frameworks.
  *
  * Body: { zielgruppe, zielDerMail, painPoints?, position?, ton?, zusatzkontext? }
  * Response: { ok: true, step: GeneratedStep } oder { ok: false, message }
@@ -52,6 +53,8 @@ export async function POST(req: NextRequest) {
   }
 
   const userPrompt = buildStepPrompt(input);
+  const knowledge = await getKnowledgeContent();
+  const systemPrompt = buildStepSystemPrompt(knowledge);
 
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -64,7 +67,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 2000,
-        system: HORMOZI_STEP_PROMPT,
+        system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
       }),
     });

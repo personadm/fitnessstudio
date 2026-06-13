@@ -30,11 +30,12 @@ interface Props {
 }
 
 /**
- * Hormozi-KI-Funnel-Generator
+ * KI-Funnel-Generator
  *
  * Eigenständige Komponente die nach Eingabe von Zielgruppe + Ziel + Pain Points
- * über /api/admin/funnels/generate einen kompletten Funnel im Hormozi-Stil
- * generiert. Vorschau in der Komponente, dann "Übernehmen" oder "Verwerfen".
+ * über /api/admin/funnels/generate einen kompletten Funnel generiert (nach
+ * bewährten E-Mail-Marketing-Frameworks + laufender Wissensbasis). Vorschau in
+ * der Komponente, dann "Übernehmen" oder "Verwerfen".
  *
  * Einbinden auf der Funnel-Erstellen-Seite. Wenn du nichts an die `onAccept`-
  * Prop hängst, kann der User den generierten Funnel zumindest schon
@@ -130,8 +131,9 @@ export function FunnelAiGenerator({ onAccept }: Props) {
           <h3 className="text-base font-semibold">Funnel mit KI generieren</h3>
         </div>
         <p className="mt-1 text-xs text-muted">
-          Baut einen Funnel nach Hormozi-Frameworks (Mozi-Minute-Struktur, Value Equation,
-          Reward-Loops). Du gibst Zielgruppe + Ziel + Pain Points ein, die KI schreibt die Mails.
+          Baut einen Funnel nach bewährten E-Mail-Marketing-Frameworks (klare Mail-Struktur, Value
+          Equation, Reward-Loops). Du gibst Zielgruppe + Ziel + Pain Points ein, die KI schreibt
+          die Mails.
         </p>
       </div>
 
@@ -229,7 +231,7 @@ export function FunnelAiGenerator({ onAccept }: Props) {
             </button>
             {loading && (
               <span className="text-xs text-muted">
-                Die KI schreibt {anzahlMails} Mails nach Hormozi-Frameworks. Bitte kurz warten.
+                Die KI schreibt {anzahlMails} Mails nach bewährten E-Mail-Frameworks. Bitte kurz warten.
               </span>
             )}
           </div>

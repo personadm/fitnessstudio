@@ -9,6 +9,7 @@ import {
   campaignSchema,
   funnelSchema,
   funnelStepSchema,
+  aiFunnelSchema,
   locationSchema,
   clubSignupSchema,
 } from "@/lib/validation";
@@ -425,6 +426,61 @@ export async function createFunnel(formData: FormData) {
   });
   revalidatePath("/admin/funnels");
   redirect(`/admin/funnels/${f.id}`);
+}
+
+/**
+ * Legt einen komplett von der KI generierten Funnel inkl. aller Schritte an.
+ * Wird aus der KI-Vorschau (KiCreator) übernommen. Gibt die neue Funnel-ID
+ * zurück; die Navigation übernimmt der Client (kein redirect aus der Action,
+ * damit der Client den Erfolg sauber behandeln kann).
+ */
+export async function createFunnelFromAi(input: unknown): Promise<
+  { ok: true; funnelId: string } | { ok: false; message: string }
+> {
+  await requireAdmin();
+
+  const parsed = aiFunnelSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.errors[0]?.message ?? "Ungültige Eingabe." };
+  }
+  const data = parsed.data;
+
+  // Standort validieren (wie in createFunnel): unbekannte ID → alle Standorte.
+  let funnelLocationId = data.locationId || null;
+  if (funnelLocationId) {
+    const loc = await db.location.findFirst({
+      where: { id: funnelLocationId },
+      select: { id: true },
+    });
+    if (!loc) funnelLocationId = null;
+  }
+
+  // Schritte nach Gesamt-Wartezeit sortieren und fortlaufend nummerieren.
+  const sortedSteps = [...data.steps].sort(
+    (a, b) => a.delayDays * 24 + a.delayHours - (b.delayDays * 24 + b.delayHours),
+  );
+
+  const funnel = await db.funnel.create({
+    data: {
+      name: data.name,
+      trigger: data.trigger,
+      active: false, // bewusst inaktiv: erst prüfen, dann scharf schalten
+      autoStop: true,
+      locationId: funnelLocationId,
+      steps: {
+        create: sortedSteps.map((s, i) => ({
+          orderNum: i + 1,
+          delayDays: s.delayDays,
+          delayHours: s.delayHours,
+          subject: s.subject,
+          bodyHtml: s.bodyHtml,
+        })),
+      },
+    },
+  });
+
+  revalidatePath("/admin/funnels");
+  return { ok: true, funnelId: funnel.id };
 }
 
 export async function updateFunnel(funnelId: string, formData: FormData) {

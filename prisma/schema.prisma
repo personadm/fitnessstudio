@@ -382,3 +382,62 @@ model PageView {
   @@index([path, createdAt])
   @@index([sessionId])
 }
+
+// ─────────────────────────────────────────────────────────────
+// KI-WISSENSBASIS (E-Mail-Marketing aus YouTube-Transkripten)
+// ─────────────────────────────────────────────────────────────
+
+// Verarbeitungs-Status eines Quell-Videos. Lineare Pipeline:
+// NEW → (Transkript) → TRANSCRIBED → (Klassifizierung) → RELEVANT/IRRELEVANT
+//   → (Destillierung, nur RELEVANT) → DISTILLED
+// Sackgassen: NO_TRANSCRIPT (kein Untertitel verfügbar), ERROR.
+enum KnowledgeVideoStatus {
+  NEW
+  TRANSCRIBED
+  RELEVANT
+  IRRELEVANT
+  DISTILLED
+  NO_TRANSCRIPT
+  ERROR
+}
+
+// Ein einzelnes Quell-Video (z.B. von Alex Hormozis Kanal).
+model KnowledgeVideo {
+  id          String               @id @default(cuid())
+  youtubeId   String               @unique
+  channelId   String
+  title       String
+  description  String?
+  url         String
+  publishedAt DateTime?
+
+  status      KnowledgeVideoStatus @default(NEW)
+  // Volltext-Transkript (kann groß sein). Null bis abgerufen.
+  transcript  String?
+  // Per-Video destillierte E-Mail-Marketing-Erkenntnisse (Markdown).
+  distilledNotes String?
+  // Letzter Fehlertext (für ERROR-Status / Debugging).
+  error       String?
+
+  discoveredAt DateTime  @default(now())
+  processedAt  DateTime?
+  updatedAt    DateTime  @updatedAt
+
+  @@index([status])
+  @@index([channelId, publishedAt])
+}
+
+// Singleton-Dokument: aggregierte, destillierte Frameworks, die in die
+// KI-Prompts injiziert werden. id ist fix "email-marketing".
+model KnowledgeBase {
+  id          String   @id
+  // Aggregierter Frameworks-Text (Markdown), wird in System-Prompts injiziert.
+  content     String   @default("")
+  // Anzahl Videos, die in die aktuelle content-Version eingeflossen sind.
+  videoCount  Int      @default(0)
+  // Gate für den täglichen Sync (1×/24h) — persistent, überlebt Neustarts.
+  lastSyncAt  DateTime?
+  // Cursor für den Voll-Backfill der Alt-Videos (youtubei.js Continuation).
+  backfillDone Boolean @default(false)
+  updatedAt   DateTime @updatedAt
+}

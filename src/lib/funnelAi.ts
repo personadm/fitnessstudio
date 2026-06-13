@@ -1,13 +1,13 @@
 /**
- * Funnel-AI — System-Prompts mit destillierten Hormozi-Frameworks
+ * Funnel-AI — System-Prompts mit destillierten E-Mail-Marketing-Frameworks.
  *
- * Aus zwei Alex-Hormozi-Videos (YouTube):
- *   1) "How I Make $45 for Every $1 I Spend Through Email" (Mozi Money Minute)
- *   2) "$2.4 Million Email Campaign Breakdown" (Challenge Campaign Strategy)
+ * Die Basis-Frameworks sind fest verankert. Zusätzlich wird zur Laufzeit die
+ * laufend aktualisierte KI-Wissensbasis injiziert (destilliert aus analysierten
+ * Experten-Transkripten, siehe src/lib/knowledge/*).
  *
- * Zwei System-Prompts:
- *   - HORMOZI_SYSTEM_PROMPT      → kompletter Funnel mit mehreren Mails
- *   - HORMOZI_STEP_PROMPT        → eine einzelne Mail (für AIEmailComposer)
+ * Zwei Builder:
+ *   - buildFunnelSystemPrompt(knowledge?) → kompletter Funnel mit mehreren Mails
+ *   - buildStepSystemPrompt(knowledge?)   → eine einzelne Mail
  */
 
 // ─── GEMEINSAME BASIS-FRAMEWORKS ────────────────────────────────────────
@@ -52,7 +52,7 @@ NIE generisch: "Ich war unsicher" oder "Ich wollte mich verbessern."
 ALLE Mails strikt **du-Form**. Niemals Sie. Niemals Englisch (außer Eigennamen). Stil: warm, direkt, ohne Diätstress, ohne Leistungsdruck — passt zum Markenversprechen.`;
 
 // ─── PROMPT FÜR EINEN KOMPLETTEN FUNNEL ────────────────────────────────
-export const HORMOZI_SYSTEM_PROMPT = `${COMMON_FRAMEWORKS}
+const FUNNEL_SYSTEM_BASE = `${COMMON_FRAMEWORKS}
 
 ## Sequenz-Architektur (für mehrteilige Funnels)
 
@@ -95,7 +95,7 @@ Antworte AUSSCHLIESSLICH mit JSON, OHNE Markdown-Codeblock, OHNE einleitenden Te
 bodyHtml ist VALIDES HTML mit <p>, <strong>, <em>, <br>, <a href>. Sonst nichts. Variablen wie {{firstName}} erlaubt. Steps aufsteigend nach Gesamtzeit sortiert. Beginne JETZT mit dem JSON.`;
 
 // ─── PROMPT FÜR EINE EINZELNE MAIL ─────────────────────────────────────
-export const HORMOZI_STEP_PROMPT = `${COMMON_FRAMEWORKS}
+const STEP_SYSTEM_BASE = `${COMMON_FRAMEWORKS}
 
 ## Position der Mail im Funnel
 Du generierst EINE einzelne Mail. Die Position im Funnel wird dir mit dem User-Prompt mitgeteilt:
@@ -122,6 +122,32 @@ Antworte AUSSCHLIESSLICH mit JSON, OHNE Markdown-Codeblock, OHNE einleitenden Te
 }
 
 bodyHtml ist VALIDES HTML mit <p>, <strong>, <em>, <br>, <a href>. Sonst nichts. Variablen wie {{firstName}} und {{lastName}} erlaubt. Beginne JETZT mit dem JSON.`;
+
+// ─── SYSTEM-PROMPT-BUILDER (mit dynamischer Wissensbasis) ───────────────
+/**
+ * Hängt die laufend aktualisierte KI-Wissensbasis an einen Basis-System-Prompt.
+ * Bei leerer Wissensbasis bleibt der Basis-Prompt unverändert (Fallback).
+ */
+function withKnowledge(base: string, knowledge: string): string {
+  const trimmed = knowledge.trim();
+  if (!trimmed) return base;
+  return `${base}
+
+## Aktuelle E-Mail-Marketing-Erkenntnisse (laufend aus Experten-Transkripten destilliert)
+Beziehe die folgenden Frameworks aktiv mit ein, wo sie zur Aufgabe passen. Sie ergänzen — und bei Konflikt präzisieren — die obigen Basis-Frameworks:
+
+${trimmed}`;
+}
+
+/** System-Prompt für einen kompletten Funnel (mehrere Mails). */
+export function buildFunnelSystemPrompt(knowledge = ""): string {
+  return withKnowledge(FUNNEL_SYSTEM_BASE, knowledge);
+}
+
+/** System-Prompt für eine einzelne Mail. */
+export function buildStepSystemPrompt(knowledge = ""): string {
+  return withKnowledge(STEP_SYSTEM_BASE, knowledge);
+}
 
 // ─── INPUT-SCHEMAS ──────────────────────────────────────────────────────
 
