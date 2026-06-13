@@ -66,7 +66,8 @@ export async function GET() {
       take: 200,
     }),
     db.funnelStepEvent.findMany({
-      where: { sentAt: { gte: since } },
+      // skipped: false → nur echte Sends im Feed, keine Skip-Marker
+      where: { sentAt: { gte: since }, skipped: false },
       select: {
         id: true,
         sentAt: true,

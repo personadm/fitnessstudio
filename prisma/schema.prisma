@@ -338,6 +338,10 @@ model FunnelStepEvent {
   stepId       String
   step         FunnelStep       @relation(fields: [stepId], references: [id], onDelete: Cascade)
   sentAt       DateTime         @default(now())
+  // true = Marker für einen übersprungenen Step (Mail wurde NICHT verschickt,
+  // nur als verarbeitet markiert). Steuert, dass der Activity-Feed Skip-Marker
+  // nicht als echten Mailversand anzeigt.
+  skipped      Boolean          @default(false)
 
   @@unique([enrollmentId, stepId])
   @@index([stepId])

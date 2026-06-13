@@ -5,6 +5,30 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM = process.env.MAIL_FROM ?? "onboarding@resend.dev";
 
+// ─────────────────────────────────────────────────────────────
+// Resend-Send-Wrapper
+//
+// WICHTIG: resend.emails.send() wirft KEINE Exception, wenn der Versand
+// scheitert (unverifizierte Domain, geblockter Empfänger, Rate-Limit,
+// Validierungsfehler …). Stattdessen liefert es { data: null, error: {...} }
+// als *erfolgreich aufgelöstes* Promise zurück. Wer nur `await send()` macht
+// und das Ergebnis ignoriert, hält einen Fehlversand fälschlich für Erfolg
+// und protokolliert die Mail als "verschickt", obwohl Resend sie nie
+// angenommen hat. Dieser Wrapper macht aus Resends error-Channel einen echten
+// Throw, damit aufrufende try/catch-Blöcke fehlgeschlagene Sends bemerken.
+type ResendSendPayload = Parameters<typeof resend.emails.send>[0];
+
+async function sendViaResend(payload: ResendSendPayload): Promise<{ id: string }> {
+  const { data, error } = await resend.emails.send(payload);
+  if (error) {
+    throw new Error(`Resend send failed: ${error.name ?? "error"} – ${error.message}`);
+  }
+  if (!data?.id) {
+    throw new Error("Resend send failed: keine Message-ID zurückgeliefert");
+  }
+  return { id: data.id };
+}
+
 // Optional: Antwort-Adresse. Wenn gesetzt, wird sie als reply-to Header
 // in alle Mails geschrieben → wenn der Empfänger auf "Antworten" klickt,
 // geht die Mail an diese Adresse statt an die Absender-Adresse.
@@ -48,7 +72,7 @@ export async function sendPricingMail(opts: {
   const subject = opts.firstName
     ? `Geschafft – hier ist dein Gratis-Start-Angebot, ${opts.firstName}`
     : `Geschafft – hier ist dein Gratis-Start-Angebot`;
-  return resend.emails.send({
+  return sendViaResend({
     from: FROM,
     ...REPLY_TO_FIELD,
     to: opts.to,
@@ -81,7 +105,7 @@ export async function sendSignupConfirmation(opts: {
   priceCents: number;
   billingInterval?: string | null;
 }) {
-  return resend.emails.send({
+  return sendViaResend({
     from: FROM,
     ...REPLY_TO_FIELD,
     to: opts.to,
@@ -110,7 +134,7 @@ export async function sendCampaignMail(opts: {
     bodyHtml: opts.bodyHtml,
     unsubscribeUrl: opts.unsubscribeUrl ?? null,
   });
-  return resend.emails.send({
+  return sendViaResend({
     from: FROM,
     ...REPLY_TO_FIELD,
     to: opts.to,
@@ -133,7 +157,7 @@ export async function sendFunnelMail(opts: {
     bodyHtml: opts.bodyHtml,
     unsubscribeUrl: opts.unsubscribeUrl ?? null,
   });
-  return resend.emails.send({
+  return sendViaResend({
     from: FROM,
     ...REPLY_TO_FIELD,
     to: opts.to,

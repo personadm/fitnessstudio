@@ -191,6 +191,29 @@ async function processFunnelsInner() {
     });
 
     for (const enrollment of enrollments) {
+      // Opt-out: Abgemeldete Kontakte (optedOutAt gesetzt) erhalten NIE wieder
+      // Funnel-Mails — rechtlich zwingend, unabhängig von autoStop. Enrollment
+      // wird beendet, damit sie nicht erneut verarbeitet werden.
+      if (enrollment.contact.optedOutAt) {
+        await db.funnelEnrollment.update({
+          where: { id: enrollment.id },
+          data: { cancelledAt: new Date(), cancelReason: "OPTED_OUT" },
+        });
+        await db.contactEvent.create({
+          data: {
+            contactId: enrollment.contactId,
+            type: "FUNNEL_CANCELLED",
+            meta: {
+              funnelId: funnel.id,
+              funnelName: funnel.name,
+              reason: "OPTED_OUT",
+            },
+          },
+        });
+        cancelled++;
+        continue;
+      }
+
       // Auto-Stop: Status verlassen?
       const statusMismatch =
         funnel.autoStop && enrollment.contact.status !== targetStatus;
@@ -267,7 +290,7 @@ async function processFunnelsInner() {
         if (skipStepIds.has(step.id)) {
           try {
             await db.funnelStepEvent.create({
-              data: { enrollmentId: enrollment.id, stepId: step.id },
+              data: { enrollmentId: enrollment.id, stepId: step.id, skipped: true },
             });
           } catch (err) {
             console.warn("[funnels] skip-marker insert (ignored)", err);
