@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { LoginForm } from "./LoginForm";
 
 interface PageProps {
@@ -8,7 +9,18 @@ interface PageProps {
 
 export default async function LoginPage({ searchParams }: PageProps) {
   const session = await getSession();
-  if (session) redirect("/admin");
+  // Nur weiterleiten, wenn das JWT gültig ist UND der zugehörige Admin-User
+  // wirklich existiert. Sonst (z.B. verwaistes Cookie mit alter User-ID nach
+  // DB-Umbau) würde das authed-Layout sofort zurück hierher leiten →
+  // Endlosschleife. In dem Fall zeigen wir das Login-Formular: einmal neu
+  // einloggen setzt ein frisches Cookie und bricht die Schleife.
+  if (session) {
+    const user = await db.adminUser.findUnique({
+      where: { id: session.userId },
+      select: { id: true },
+    });
+    if (user) redirect("/admin");
+  }
 
   const { from, studio } = await searchParams;
 
