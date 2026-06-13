@@ -238,17 +238,14 @@ async function processFunnelsInner() {
       // SKIP-CHECK
       // ─────────────────────────────────────────────────────────
       // Ein noch nicht gesendeter Step wird übersprungen (nur als erledigt
-      // markiert, NICHT versendet), wenn einer dieser Gründe greift:
+      // markiert, NICHT versendet), wenn für diese Enrollment bereits ein
+      // zeitlich SPÄTERER Step versendet wurde ("retroactive_earlier_step") →
+      // frühere dürfen dann nicht mehr rückwirkend raus.
       //
-      //  1) "retroactive_earlier_step": Für diese Enrollment wurde bereits ein
-      //     zeitlich SPÄTERER Step versendet → frühere dürfen nicht mehr raus.
-      //
-      //  2) "added_after_enrollment": Der Step wurde ERST NACH der Eintragung
-      //     dieses Kontakts angelegt UND sein Sendezeitpunkt liegt bereits in
-      //     der Vergangenheit. Sonst würde ein nachträglich hinzugefügter
-      //     (späterer) Step rückwirkend sofort an alle Alt-Abonnenten feuern.
-      //     Liegt der Zeitpunkt noch in der Zukunft, wird NICHT übersprungen –
-      //     der Step läuft für bestehende Abonnenten zeitversetzt normal weiter.
+      // NACHTRÄGLICH hinzugefügte Steps werden NICHT mehr übersprungen: ihr
+      // Sendezeitpunkt wird in calculateDueAt ab dem Erstell-Datum des Steps
+      // gerechnet (nicht ab Eintragung), sodass Alt-Abonnenten sie zeitversetzt
+      // normal nachgeliefert bekommen — statt sie ganz zu verlieren.
       const skipStepIds = new Map<string, string>();
       let maxSentDueAt = -1;
       for (const { step, dueAt } of stepsWithDueAt) {
@@ -256,13 +253,10 @@ async function processFunnelsInner() {
           maxSentDueAt = dueAt;
         }
       }
-      const startedAtMs = enrollment.startedAt.getTime();
       for (const { step, dueAt } of stepsWithDueAt) {
         if (sentStepIds.has(step.id)) continue;
         if (dueAt < maxSentDueAt) {
           skipStepIds.set(step.id, "retroactive_earlier_step");
-        } else if (step.createdAt.getTime() > startedAtMs && dueAt <= nowMs) {
-          skipStepIds.set(step.id, "added_after_enrollment");
         }
       }
 

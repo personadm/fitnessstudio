@@ -220,6 +220,7 @@ export default async function FunnelDetailPage({ params }: PageProps) {
                 scheduleMinute:
                   (s as { scheduleMinute?: number | null }).scheduleMinute ??
                   null,
+                createdAt: s.createdAt,
                 subject: s.subject,
               }))}
               funnelLegacy={{

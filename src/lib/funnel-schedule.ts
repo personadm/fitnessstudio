@@ -25,6 +25,14 @@ export interface ScheduleStep {
   scheduleWeekday: number | null;
   scheduleHour: number | null;
   scheduleMinute: number | null;
+  /**
+   * Erstell-Zeitpunkt des Schritts. Wird ein Schritt NACHTRÄGLICH zu einem schon
+   * laufenden Funnel hinzugefügt, taktet seine Wartezeit ab hier statt ab der
+   * (evtl. lange zurückliegenden) Eintragung — so bekommen Alt-Abonnenten neue
+   * Mails sauber zeitversetzt nachgeliefert. Optional: fehlt der Wert, gilt der
+   * Eintragungszeitpunkt (z.B. in der Vorschau ohne reale Step-Daten).
+   */
+  createdAt?: Date | null;
 }
 
 export interface FunnelLegacySchedule {
@@ -70,8 +78,19 @@ export function calculateDueAt(
   enrollmentStartedAt: Date,
   funnelLegacy: FunnelLegacySchedule,
 ): number {
+  // Anker = Eintragung ODER (falls später) Erstell-Zeitpunkt des Schritts.
+  // Ein nachträglich zu einem laufenden Funnel hinzugefügter Schritt taktet so
+  // ab dem Hinzufügen, nicht rückwirkend ab der Eintragung. Dadurch laufen neue
+  // Mails für Alt-Abonnenten zeitversetzt nach, statt zu entfallen oder alle auf
+  // einmal zu feuern.
+  const startedAtMs = enrollmentStartedAt.getTime();
+  const createdAtMs = step.createdAt ? step.createdAt.getTime() : startedAtMs;
+  const addedAfterEnrollment = createdAtMs > startedAtMs;
+  const anchorMs = addedAfterEnrollment ? createdAtMs : startedAtMs;
+  const anchorDate = new Date(anchorMs);
+
   const baseDelayMs = (step.delayDays * 24 + (step.delayHours ?? 0)) * HOUR_MS;
-  const earliestDueAt = enrollmentStartedAt.getTime() + baseDelayMs;
+  const earliestDueAt = anchorMs + baseDelayMs;
 
   // FESTER WOCHENTAG / HYBRID: Step hat eigene Schedule-Felder
   if (step.scheduleWeekday !== null && step.scheduleWeekday !== undefined) {
@@ -90,12 +109,15 @@ export function calculateDueAt(
     funnelLegacy.scheduleWeekday !== undefined
   ) {
     const first = nextWeekdayOccurrence(
-      enrollmentStartedAt,
+      anchorDate,
       funnelLegacy.scheduleWeekday,
       funnelLegacy.scheduleHour,
       funnelLegacy.scheduleMinute,
     );
-    const stepIndex = step.orderNum - 1;
+    // Nachträglich hinzugefügter Schritt taktet ab seinem Erstell-Datum (nächster
+    // Plan-Wochentag) — ohne orderNum-Offset, der ihn sonst weit in die Zukunft
+    // schöbe.
+    const stepIndex = addedAfterEnrollment ? 0 : step.orderNum - 1;
     return (
       first.getTime() +
       stepIndex * funnelLegacy.scheduleWeekInterval * 7 * DAY_MS
