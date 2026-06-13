@@ -15,8 +15,8 @@ const COOKIE_NAME = "admin_session";
 const ALG = "HS256";
 const TTL_SECONDS = 60 * 60 * 24 * 7; // 7 Tage
 
-export async function createSession(userId: string, studioId?: string) {
-  const token = await new SignJWT({ uid: userId, sid: studioId })
+export async function createSession(userId: string) {
+  const token = await new SignJWT({ uid: userId })
     .setProtectedHeader({ alg: ALG })
     .setIssuedAt()
     .setExpirationTime(`${TTL_SECONDS}s`)
@@ -37,17 +37,14 @@ export async function destroySession() {
   c.delete(COOKIE_NAME);
 }
 
-export async function getSession(): Promise<{ userId: string; studioId: string | null } | null> {
+export async function getSession(): Promise<{ userId: string } | null> {
   const c = await cookies();
   const token = c.get(COOKIE_NAME)?.value;
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, SECRET);
     if (typeof payload.uid !== "string") return null;
-    // Alt-Sessions (vor Multi-Tenant) haben kein sid → null; wird dann
-    // in getCurrentStudioId() per Lookup über den AdminUser aufgelöst.
-    const studioId = typeof payload.sid === "string" ? payload.sid : null;
-    return { userId: payload.uid, studioId };
+    return { userId: payload.uid };
   } catch {
     return null;
   }

@@ -4,7 +4,6 @@ import { leadSchema } from "@/lib/validation";
 import { generateToken } from "@/lib/tokens";
 import { sendPricingMail } from "@/lib/mail";
 import { enrollIntoMatchingFunnels } from "@/lib/funnels";
-import { resolveStudioIdFromHost } from "@/lib/tenant";
 import { checkRateLimit, clientIp } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
@@ -30,18 +29,6 @@ export async function POST(req: NextRequest) {
 
     const { email, firstName, lastName, gender, locationId } = result.data;
 
-    // Multi-Tenant: bevorzugt expliziter Studio-Slug (von der /s/<slug>-Landing),
-    // sonst aus der Subdomain (Fallback: Default-Studio).
-    const studioSlug = typeof json.studio === "string" ? json.studio.trim().toLowerCase() : "";
-    let studioId: string | null = null;
-    if (studioSlug) {
-      const s = await db.studio.findUnique({ where: { slug: studioSlug }, select: { id: true } });
-      studioId = s?.id ?? null;
-    }
-    if (!studioId) {
-      studioId = await resolveStudioIdFromHost(req.headers.get("host"));
-    }
-
     // IP fürs Consent-Logging (DSGVO-Beleg)
     const ip =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
@@ -57,10 +44,9 @@ export async function POST(req: NextRequest) {
     if (locationId) {
       const loc = await db.location.findUnique({
         where: { id: locationId },
-        select: { id: true, active: true, studioId: true },
+        select: { id: true, active: true },
       });
-      // Standort muss aktiv sein UND zum selben Studio gehören.
-      if (loc && loc.active && loc.studioId === studioId) {
+      if (loc && loc.active) {
         resolvedLocationId = loc.id;
       }
     }
@@ -70,7 +56,7 @@ export async function POST(req: NextRequest) {
     // Vorab lesen, ob der Kontakt bereits onboardet war → verhindert, dass ein
     // erneutes Eintragen die Angebots-Mail ein zweites Mal auslöst.
     const existing = await db.contact.findUnique({
-      where: { studioId_email: { studioId, email } },
+      where: { email },
       select: { doiConfirmedAt: true, refToken: true },
     });
     const alreadyOnboarded = Boolean(existing?.doiConfirmedAt);
@@ -95,10 +81,9 @@ export async function POST(req: NextRequest) {
     if (resolvedLocationId) updateData.locationId = resolvedLocationId;
 
     const contact = await db.contact.upsert({
-      where: { studioId_email: { studioId, email } },
+      where: { email },
       update: updateData,
       create: {
-        studioId,
         email,
         firstName,
         lastName: lastName || "",

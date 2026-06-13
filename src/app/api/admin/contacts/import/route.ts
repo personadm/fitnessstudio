@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { getCurrentStudioId } from "@/lib/tenant";
 import { Prisma } from "@prisma/client";
 import type { ContactStatus, Gender } from "@prisma/client";
 
@@ -110,10 +109,6 @@ export async function POST(req: NextRequest) {
   if (!session) {
     return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
   }
-  const studioId = await getCurrentStudioId();
-  if (!studioId) {
-    return NextResponse.json({ ok: false, message: "Kein Studio-Kontext." }, { status: 400 });
-  }
 
   let body: RequestBody;
   try {
@@ -150,7 +145,7 @@ export async function POST(req: NextRequest) {
   let locationId: string | null = null;
   if (body.locationId) {
     const loc = await db.location.findFirst({
-      where: { id: body.locationId, studioId },
+      where: { id: body.locationId },
       select: { id: true },
     });
     if (!loc) {
@@ -218,7 +213,7 @@ export async function POST(req: NextRequest) {
   const emails = prepared.map((p) => p.email);
   const existingList = emails.length
     ? await db.contact.findMany({
-        where: { studioId, email: { in: emails } },
+        where: { email: { in: emails } },
         select: { id: true, email: true },
       })
     : [];
@@ -235,7 +230,6 @@ export async function POST(req: NextRequest) {
   if (toCreate.length > 0) {
     try {
       const createData: Prisma.ContactCreateManyInput[] = toCreate.map((p) => ({
-        studioId,
         email: p.email,
         firstName: p.firstName,
         lastName: p.lastName,
@@ -256,7 +250,7 @@ export async function POST(req: NextRequest) {
 
       // IDs der angelegten Kontakte nachladen, um die Event-Logs zu schreiben.
       const createdContacts = await db.contact.findMany({
-        where: { studioId, email: { in: toCreate.map((p) => p.email) } },
+        where: { email: { in: toCreate.map((p) => p.email) } },
         select: { id: true, email: true },
       });
       const createdMap = new Map(createdContacts.map((c) => [c.email, c.id]));
@@ -287,7 +281,7 @@ export async function POST(req: NextRequest) {
       if (locationId !== null) data.locationId = locationId;
       try {
         const res = await db.contact.updateMany({
-          where: { studioId, email: { in: existingRows.map((p) => p.email) } },
+          where: { email: { in: existingRows.map((p) => p.email) } },
           data,
         });
         updated += res.count;
@@ -321,7 +315,7 @@ export async function POST(req: NextRequest) {
               if (p.phone) updateData.phone = p.phone;
               if (locationId !== null) updateData.locationId = locationId;
               return db.contact.update({
-                where: { studioId_email: { studioId, email: p.email } },
+                where: { email: p.email },
                 data: updateData,
               });
             }),

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { requireStudioId } from "@/lib/tenant";
 import { PrintButton } from "./PrintButton";
 
 interface PageProps {
@@ -30,10 +29,9 @@ export const dynamic = "force-dynamic";
 
 export default async function VertragPage({ params }: PageProps) {
   const { id } = await params;
-  const studioId = await requireStudioId();
 
   const contact = await db.contact.findFirst({
-    where: { id, studioId },
+    where: { id },
     include: {
       location: true,
       pricingPlan: true,

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { getCurrentStudioId } from "@/lib/tenant";
 import { db } from "@/lib/db";
 import { sendFunnelMail } from "@/lib/mail";
 
@@ -21,10 +20,6 @@ export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ ok: false, message: "Nicht angemeldet." }, { status: 401 });
-  }
-  const studioId = await getCurrentStudioId();
-  if (!studioId) {
-    return NextResponse.json({ ok: false, message: "Kein Studio-Kontext." }, { status: 401 });
   }
 
   let body: { stepId?: unknown; email?: unknown };
@@ -48,7 +43,7 @@ export async function POST(req: NextRequest) {
   }
 
   const step = await db.funnelStep.findFirst({
-    where: { id: stepId, funnel: { studioId } },
+    where: { id: stepId },
     select: {
       id: true,
       subject: true,

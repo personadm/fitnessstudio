@@ -24,20 +24,13 @@ async function main() {
 
   const passwordHash = await bcrypt.hash(password, 12);
 
-  // Multi-Tenant: Admin wird dem Default-Studio (ältestes Studio) zugeordnet.
-  const studio = await prisma.studio.findFirst({ orderBy: { createdAt: "asc" } });
-  if (!studio) {
-    console.error("✗ Kein Studio vorhanden. Erst Backfill/Onboarding ausführen.");
-    process.exit(1);
-  }
-
   await prisma.adminUser.upsert({
-    where: { studioId_email: { studioId: studio.id, email } },
+    where: { email },
     update: { passwordHash, name },
-    create: { studioId: studio.id, email, passwordHash, name },
+    create: { email, passwordHash, name },
   });
 
-  console.log(`\n✓ Admin angelegt/aktualisiert: ${email} (Studio: ${studio.name})`);
+  console.log(`\n✓ Admin angelegt/aktualisiert: ${email}`);
   console.log("  Login auf /admin/login");
 }
 

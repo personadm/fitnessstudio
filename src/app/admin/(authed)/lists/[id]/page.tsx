@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireStudioId } from "@/lib/tenant";
 import { removeContactFromList } from "@/app/admin/_actions";
 import { AddContactPanel } from "./AddContactPanel";
 
@@ -13,11 +12,10 @@ interface PageProps {
 
 export default async function ListDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const studioId = await requireStudioId();
 
   const [list, locations] = await Promise.all([
     db.list.findFirst({
-      where: { id, studioId },
+      where: { id },
       include: {
         contacts: {
           include: {
@@ -36,7 +34,6 @@ export default async function ListDetailPage({ params }: PageProps) {
       },
     }),
     db.location.findMany({
-      where: { studioId },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: { id: true, name: true },
     }),

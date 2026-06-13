@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireStudioId } from "@/lib/tenant";
 import { updateFunnelStep } from "@/app/admin/_actions";
 import { EditStepForm } from "./EditStepForm";
 
@@ -11,10 +10,9 @@ interface PageProps {
 
 export default async function EditStepPage({ params }: PageProps) {
   const { id: funnelId, stepId } = await params;
-  const studioId = await requireStudioId();
 
   const step = await db.funnelStep.findFirst({
-    where: { id: stepId, funnel: { studioId } },
+    where: { id: stepId },
     include: {
       funnel: {
         select: {

@@ -17,16 +17,10 @@ import { getCampaignRecipients } from "@/lib/campaigns";
 import { sendCampaignMail } from "@/lib/mail";
 import type { ContactStatus, FunnelTrigger } from "@prisma/client";
 
-async function requireAdmin(): Promise<{ userId: string; studioId: string }> {
+async function requireAdmin(): Promise<{ userId: string }> {
   const s = await getSession();
   if (!s) redirect("/admin/login");
-  // Studio-ID aus der Session; für Alt-Sessions Fallback über den AdminUser.
-  const studioId =
-    s.studioId ??
-    (await db.adminUser.findUnique({ where: { id: s.userId }, select: { studioId: true } }))
-      ?.studioId;
-  if (!studioId) redirect("/admin/login");
-  return { userId: s.userId, studioId };
+  return { userId: s.userId };
 }
 
 /**
@@ -45,9 +39,9 @@ function parseOptionalInt(value: FormDataEntryValue | null): number | null {
 // ─────────────────────────────────────────────────────────────
 
 export async function updateContactStatus(contactId: string, newStatus: ContactStatus) {
-  const { studioId } = await requireAdmin();
+  await requireAdmin();
   const previous = await db.contact.findFirst({
-    where: { id: contactId, studioId },
+    where: { id: contactId },
     select: { status: true },
   });
   if (!previous) return;
@@ -75,23 +69,22 @@ export async function updateContactStatus(contactId: string, newStatus: ContactS
 }
 
 export async function updateContactNotes(contactId: string, notes: string) {
-  const { studioId } = await requireAdmin();
+  await requireAdmin();
   if (typeof notes !== "string" || notes.length > 10000) {
     throw new Error("Notiz ist zu lang (max. 10000 Zeichen).");
   }
-  const owned = await db.contact.findFirst({ where: { id: contactId, studioId }, select: { id: true } });
+  const owned = await db.contact.findFirst({ where: { id: contactId }, select: { id: true } });
   if (!owned) return;
   await db.contact.update({ where: { id: contactId }, data: { notes } });
   revalidatePath(`/admin/contacts/${contactId}`);
 }
 
 export async function updateContactLocation(contactId: string, locationId: string | null) {
-  const { studioId } = await requireAdmin();
-  const owned = await db.contact.findFirst({ where: { id: contactId, studioId }, select: { id: true } });
+  await requireAdmin();
+  const owned = await db.contact.findFirst({ where: { id: contactId }, select: { id: true } });
   if (!owned) return;
-  // Ziel-Standort muss ebenfalls zum Studio gehören.
   if (locationId) {
-    const loc = await db.location.findFirst({ where: { id: locationId, studioId }, select: { id: true } });
+    const loc = await db.location.findFirst({ where: { id: locationId }, select: { id: true } });
     if (!loc) return;
   }
   await db.contact.update({
@@ -110,19 +103,17 @@ export async function updateContactLocation(contactId: string, locationId: strin
 }
 
 export async function deleteContact(contactId: string) {
-  const { studioId } = await requireAdmin();
-  // deleteMany mit studioId → No-Op bei fremdem Kontakt.
-  await db.contact.deleteMany({ where: { id: contactId, studioId } });
+  await requireAdmin();
+  await db.contact.deleteMany({ where: { id: contactId } });
   revalidatePath("/admin/contacts");
   redirect("/admin/contacts");
 }
 
 export async function addContactToList(contactId: string, listId: string) {
-  const { studioId } = await requireAdmin();
-  // Kontakt UND Liste müssen zum Studio gehören.
+  await requireAdmin();
   const [c, l] = await Promise.all([
-    db.contact.findFirst({ where: { id: contactId, studioId }, select: { id: true } }),
-    db.list.findFirst({ where: { id: listId, studioId }, select: { id: true } }),
+    db.contact.findFirst({ where: { id: contactId }, select: { id: true } }),
+    db.list.findFirst({ where: { id: listId }, select: { id: true } }),
   ]);
   if (!c || !l) return;
   await db.contactList.upsert({
@@ -134,10 +125,10 @@ export async function addContactToList(contactId: string, listId: string) {
 }
 
 export async function removeContactFromList(contactId: string, listId: string) {
-  const { studioId } = await requireAdmin();
+  await requireAdmin();
   const [c, l] = await Promise.all([
-    db.contact.findFirst({ where: { id: contactId, studioId }, select: { id: true } }),
-    db.list.findFirst({ where: { id: listId, studioId }, select: { id: true } }),
+    db.contact.findFirst({ where: { id: contactId }, select: { id: true } }),
+    db.list.findFirst({ where: { id: listId }, select: { id: true } }),
   ]);
   if (!c || !l) return;
   await db.contactList.delete({ where: { contactId_listId: { contactId, listId } } });
@@ -149,7 +140,7 @@ export async function removeContactFromList(contactId: string, listId: string) {
 // ─────────────────────────────────────────────────────────────
 
 export async function saveLocation(formData: FormData) {
-  const { studioId } = await requireAdmin();
+  await requireAdmin();
 
   const id = formData.get("id") as string | null;
   const parsed = locationSchema.parse({
@@ -177,23 +168,23 @@ export async function saveLocation(formData: FormData) {
   if (id) {
     await db.location.update({ where: { id }, data });
   } else {
-    await db.location.create({ data: { ...data, studioId } });
+    await db.location.create({ data });
   }
   revalidatePath("/admin/locations");
   redirect("/admin/locations");
 }
 
 export async function toggleLocationActive(locationId: string) {
-  const { studioId } = await requireAdmin();
-  const loc = await db.location.findFirst({ where: { id: locationId, studioId } });
+  await requireAdmin();
+  const loc = await db.location.findFirst({ where: { id: locationId } });
   if (!loc) return;
   await db.location.update({ where: { id: locationId }, data: { active: !loc.active } });
   revalidatePath("/admin/locations");
 }
 
 export async function deleteLocation(locationId: string) {
-  const { studioId } = await requireAdmin();
-  await db.location.deleteMany({ where: { id: locationId, studioId } });
+  await requireAdmin();
+  await db.location.deleteMany({ where: { id: locationId } });
   revalidatePath("/admin/locations");
 }
 
@@ -202,7 +193,7 @@ export async function deleteLocation(locationId: string) {
 // ─────────────────────────────────────────────────────────────
 
 export async function savePlan(formData: FormData) {
-  const { studioId } = await requireAdmin();
+  await requireAdmin();
 
   const id = formData.get("id") as string | null;
   const highlights = (formData.get("highlights") as string)
@@ -269,40 +260,39 @@ export async function savePlan(formData: FormData) {
     locationId: parsed.locationId || null,
   };
 
-  // Zugeordneter Standort (falls gesetzt) muss zum Studio gehören.
+  // Zugeordneter Standort (falls gesetzt) muss existieren.
   if (data.locationId) {
     const loc = await db.location.findFirst({
-      where: { id: data.locationId, studioId },
+      where: { id: data.locationId },
       select: { id: true },
     });
     if (!loc) data.locationId = null;
   }
 
   if (id) {
-    // Nur eigenen Tarif bearbeiten.
-    const owned = await db.pricingPlan.findFirst({ where: { id, studioId }, select: { id: true } });
+    const owned = await db.pricingPlan.findFirst({ where: { id }, select: { id: true } });
     if (!owned) return;
     await db.pricingPlan.update({ where: { id }, data });
   } else {
-    await db.pricingPlan.create({ data: { ...data, studioId } });
+    await db.pricingPlan.create({ data });
   }
   revalidatePath("/admin/plans");
   redirect("/admin/plans");
 }
 
 export async function togglePlanActive(planId: string) {
-  const { studioId } = await requireAdmin();
-  const p = await db.pricingPlan.findFirst({ where: { id: planId, studioId } });
+  await requireAdmin();
+  const p = await db.pricingPlan.findFirst({ where: { id: planId } });
   if (!p) return;
   await db.pricingPlan.update({ where: { id: planId }, data: { active: !p.active } });
   revalidatePath("/admin/plans");
 }
 
 export async function deletePlan(planId: string) {
-  const { studioId } = await requireAdmin();
-  const owned = await db.pricingPlan.findFirst({ where: { id: planId, studioId }, select: { id: true } });
+  await requireAdmin();
+  const owned = await db.pricingPlan.findFirst({ where: { id: planId }, select: { id: true } });
   if (!owned) return;
-  const inUse = await db.contact.count({ where: { pricingPlanId: planId, studioId } });
+  const inUse = await db.contact.count({ where: { pricingPlanId: planId } });
   if (inUse > 0) {
     await db.pricingPlan.update({ where: { id: planId }, data: { active: false } });
   } else {
@@ -316,20 +306,20 @@ export async function deletePlan(planId: string) {
 // ─────────────────────────────────────────────────────────────
 
 export async function createList(formData: FormData) {
-  const { studioId } = await requireAdmin();
+  await requireAdmin();
   const name = (formData.get("name") as string).trim();
   const description = ((formData.get("description") as string) || "").trim();
   if (!name) return;
   if (name.length > 200) throw new Error("Listenname ist zu lang (max. 200 Zeichen).");
   if (description.length > 1000)
     throw new Error("Beschreibung ist zu lang (max. 1000 Zeichen).");
-  await db.list.create({ data: { studioId, name, description: description || null } });
+  await db.list.create({ data: { name, description: description || null } });
   revalidatePath("/admin/lists");
 }
 
 export async function deleteList(listId: string) {
-  const { studioId } = await requireAdmin();
-  await db.list.deleteMany({ where: { id: listId, studioId } });
+  await requireAdmin();
+  await db.list.deleteMany({ where: { id: listId } });
   revalidatePath("/admin/lists");
 }
 
@@ -338,7 +328,7 @@ export async function deleteList(listId: string) {
 // ─────────────────────────────────────────────────────────────
 
 export async function createCampaign(formData: FormData) {
-  const { studioId } = await requireAdmin();
+  await requireAdmin();
 
   const targetMode = (formData.get("targetMode") as string) || "LIST";
   const listIdRaw = formData.get("listId") as string | null;
@@ -354,16 +344,15 @@ export async function createCampaign(formData: FormData) {
     bodyHtml: formData.get("bodyHtml"),
   });
 
-  // Liste & Standort (falls gesetzt) müssen zum Studio gehören.
   const listId = parsed.targetMode === "LIST" ? parsed.listId : null;
   if (listId) {
-    const l = await db.list.findFirst({ where: { id: listId, studioId }, select: { id: true } });
-    if (!l) throw new Error("Liste gehört nicht zu diesem Studio.");
+    const l = await db.list.findFirst({ where: { id: listId }, select: { id: true } });
+    if (!l) throw new Error("Liste nicht gefunden.");
   }
   let targetLocationId = parsed.targetLocationId || null;
   if (targetLocationId) {
     const loc = await db.location.findFirst({
-      where: { id: targetLocationId, studioId },
+      where: { id: targetLocationId },
       select: { id: true },
     });
     if (!loc) targetLocationId = null;
@@ -371,7 +360,6 @@ export async function createCampaign(formData: FormData) {
 
   const c = await db.campaign.create({
     data: {
-      studioId,
       listId,
       targetStatus: parsed.targetMode === "STATUS" ? parsed.targetStatus : null,
       targetLocationId,
@@ -385,8 +373,8 @@ export async function createCampaign(formData: FormData) {
 }
 
 export async function deleteCampaign(campaignId: string) {
-  const { studioId } = await requireAdmin();
-  await db.campaign.deleteMany({ where: { id: campaignId, studioId } });
+  await requireAdmin();
+  await db.campaign.deleteMany({ where: { id: campaignId } });
   revalidatePath("/admin/campaigns");
   redirect("/admin/campaigns");
 }
@@ -396,7 +384,7 @@ export async function deleteCampaign(campaignId: string) {
 // ─────────────────────────────────────────────────────────────
 
 export async function createFunnel(formData: FormData) {
-  const { studioId } = await requireAdmin();
+  await requireAdmin();
   const locationIdRaw = formData.get("locationId") as string | null;
   const scheduleEnabled = formData.get("scheduleEnabled") === "on";
   const weekdayRaw = formData.get("scheduleWeekday");
@@ -413,11 +401,10 @@ export async function createFunnel(formData: FormData) {
     scheduleMinute: formData.get("scheduleMinute") || 0,
   });
 
-  // Standort (falls gesetzt) muss zum Studio gehören.
   let funnelLocationId = parsed.locationId || null;
   if (funnelLocationId) {
     const loc = await db.location.findFirst({
-      where: { id: funnelLocationId, studioId },
+      where: { id: funnelLocationId },
       select: { id: true },
     });
     if (!loc) funnelLocationId = null;
@@ -425,7 +412,6 @@ export async function createFunnel(formData: FormData) {
 
   const f = await db.funnel.create({
     data: {
-      studioId,
       name: parsed.name,
       trigger: parsed.trigger,
       active: parsed.active,
@@ -442,8 +428,8 @@ export async function createFunnel(formData: FormData) {
 }
 
 export async function updateFunnel(funnelId: string, formData: FormData) {
-  const { studioId } = await requireAdmin();
-  const owned = await db.funnel.findFirst({ where: { id: funnelId, studioId }, select: { id: true } });
+  await requireAdmin();
+  const owned = await db.funnel.findFirst({ where: { id: funnelId }, select: { id: true } });
   if (!owned) return;
   const locationIdRaw = formData.get("locationId") as string | null;
   const scheduleEnabled = formData.get("scheduleEnabled") === "on";
@@ -461,11 +447,10 @@ export async function updateFunnel(funnelId: string, formData: FormData) {
     scheduleMinute: formData.get("scheduleMinute") || 0,
   });
 
-  // Standort (falls gesetzt) muss zum Studio gehören.
   let updLocationId = parsed.locationId || null;
   if (updLocationId) {
     const loc = await db.location.findFirst({
-      where: { id: updLocationId, studioId },
+      where: { id: updLocationId },
       select: { id: true },
     });
     if (!loc) updLocationId = null;
@@ -490,8 +475,8 @@ export async function updateFunnel(funnelId: string, formData: FormData) {
 }
 
 export async function toggleFunnelActive(funnelId: string) {
-  const { studioId } = await requireAdmin();
-  const f = await db.funnel.findFirst({ where: { id: funnelId, studioId } });
+  await requireAdmin();
+  const f = await db.funnel.findFirst({ where: { id: funnelId } });
   if (!f) return;
   await db.funnel.update({ where: { id: funnelId }, data: { active: !f.active } });
   revalidatePath("/admin/funnels");
@@ -499,8 +484,8 @@ export async function toggleFunnelActive(funnelId: string) {
 }
 
 export async function deleteFunnel(funnelId: string) {
-  const { studioId } = await requireAdmin();
-  await db.funnel.deleteMany({ where: { id: funnelId, studioId } });
+  await requireAdmin();
+  await db.funnel.deleteMany({ where: { id: funnelId } });
   revalidatePath("/admin/funnels");
   redirect("/admin/funnels");
 }
@@ -515,8 +500,8 @@ export async function deleteFunnel(funnelId: string) {
  * Wenn `scheduleWeekday` leer/null → klassischer Modus (genau nach Wartezeit).
  */
 export async function addFunnelStep(funnelId: string, formData: FormData) {
-  const { studioId } = await requireAdmin();
-  const ownedFunnel = await db.funnel.findFirst({ where: { id: funnelId, studioId }, select: { id: true } });
+  await requireAdmin();
+  const ownedFunnel = await db.funnel.findFirst({ where: { id: funnelId }, select: { id: true } });
   if (!ownedFunnel) return;
   const parsed = funnelStepSchema.parse({
     funnelId,
@@ -566,9 +551,8 @@ export async function addFunnelStep(funnelId: string, formData: FormData) {
 }
 
 export async function deleteFunnelStep(stepId: string, funnelId: string) {
-  const { studioId } = await requireAdmin();
-  // Step nur löschen, wenn sein Funnel zum Studio gehört.
-  await db.funnelStep.deleteMany({ where: { id: stepId, funnel: { studioId } } });
+  await requireAdmin();
+  await db.funnelStep.deleteMany({ where: { id: stepId } });
   revalidatePath(`/admin/funnels/${funnelId}`);
 }
 
@@ -582,9 +566,9 @@ export async function updateFunnelStep(
   funnelId: string,
   formData: FormData,
 ) {
-  const { studioId } = await requireAdmin();
+  await requireAdmin();
   const ownedStep = await db.funnelStep.findFirst({
-    where: { id: stepId, funnel: { studioId } },
+    where: { id: stepId },
     select: { id: true },
   });
   if (!ownedStep) return;
@@ -644,7 +628,7 @@ export type ClubSignupResult =
   | { ok: false; error: string };
 
 export async function createClubContact(formData: FormData): Promise<ClubSignupResult> {
-  const { studioId } = await requireAdmin();
+  await requireAdmin();
 
   try {
     const raw = {
@@ -669,26 +653,24 @@ export async function createClubContact(formData: FormData): Promise<ClubSignupR
     const parsed = clubSignupSchema.parse(raw);
     const source = parsed.signupMode === "OFFLINE" ? "CLUB_OFFLINE" : "CLUB_ONLINE";
 
-    // Tarif & Standort (falls gesetzt) müssen zum Studio gehören.
     let clubPlanId = parsed.pricingPlanId || null;
     if (clubPlanId) {
-      const plan = await db.pricingPlan.findFirst({ where: { id: clubPlanId, studioId }, select: { id: true } });
+      const plan = await db.pricingPlan.findFirst({ where: { id: clubPlanId }, select: { id: true } });
       if (!plan) clubPlanId = null;
     }
     let clubLocationId = parsed.locationId || null;
     if (clubLocationId) {
-      const loc = await db.location.findFirst({ where: { id: clubLocationId, studioId }, select: { id: true } });
+      const loc = await db.location.findFirst({ where: { id: clubLocationId }, select: { id: true } });
       if (!loc) clubLocationId = null;
     }
 
     // Upsert: falls Mail schon existiert → updaten und Status anheben
     const existing = await db.contact.findUnique({
-      where: { studioId_email: { studioId, email: parsed.email } },
+      where: { email: parsed.email },
       select: { id: true, status: true },
     });
 
     const data = {
-      studioId,
       email: parsed.email,
       firstName: parsed.firstName,
       lastName: parsed.lastName,
@@ -756,7 +738,7 @@ export type { FunnelTrigger };
  * werden durch Prisma onDelete=Cascade im Schema mit entfernt.
  */
 export async function bulkDeleteContacts(ids: string[]) {
-  const { studioId } = await requireAdmin();
+  await requireAdmin();
 
   if (!Array.isArray(ids) || ids.length === 0) {
     return { ok: false, message: "Keine Kontakte ausgewählt." };
@@ -765,9 +747,8 @@ export async function bulkDeleteContacts(ids: string[]) {
     return { ok: false, message: "Maximal 1000 Kontakte pro Aktion." };
   }
 
-  // studioId im Filter → es werden nur eigene Kontakte gelöscht.
   const result = await db.contact.deleteMany({
-    where: { id: { in: ids }, studioId },
+    where: { id: { in: ids } },
   });
 
   revalidatePath("/admin/contacts");
@@ -788,7 +769,7 @@ export async function bulkAddContactsToList(
   listId: string,
   contactIds: string[],
 ) {
-  const { studioId } = await requireAdmin();
+  await requireAdmin();
 
   if (!Array.isArray(contactIds) || contactIds.length === 0) {
     return { ok: false, added: 0, message: "Keine Kontakte ausgewählt." };
@@ -797,13 +778,11 @@ export async function bulkAddContactsToList(
     return { ok: false, added: 0, message: "Maximal 5000 Kontakte pro Aktion." };
   }
 
-  // Liste muss zum Studio gehören.
-  const ownedList = await db.list.findFirst({ where: { id: listId, studioId }, select: { id: true } });
+  const ownedList = await db.list.findFirst({ where: { id: listId }, select: { id: true } });
   if (!ownedList) return { ok: false, added: 0, message: "Liste nicht gefunden." };
 
-  // Nur Kontakte des eigenen Studios berücksichtigen.
   const ownedContacts = await db.contact.findMany({
-    where: { id: { in: contactIds }, studioId },
+    where: { id: { in: contactIds } },
     select: { id: true },
   });
   const ownedIds = ownedContacts.map((c) => c.id);
@@ -836,14 +815,13 @@ export async function bulkAddByStatusToList(
   status: ContactStatus,
   locationId?: string | null,
 ) {
-  const { studioId } = await requireAdmin();
+  await requireAdmin();
 
-  const ownedList = await db.list.findFirst({ where: { id: listId, studioId }, select: { id: true } });
+  const ownedList = await db.list.findFirst({ where: { id: listId }, select: { id: true } });
   if (!ownedList) return { ok: false, added: 0 };
 
   const candidates = await db.contact.findMany({
     where: {
-      studioId,
       status,
       ...(locationId ? { locationId } : {}),
       lists: { none: { listId } },
@@ -873,10 +851,9 @@ export async function countContactsForBulkAdd(
   status: ContactStatus,
   locationId?: string | null,
 ) {
-  const { studioId } = await requireAdmin();
+  await requireAdmin();
   return db.contact.count({
     where: {
-      studioId,
       status,
       ...(locationId ? { locationId } : {}),
       lists: { none: { listId } },
@@ -899,10 +876,10 @@ export async function countContactsForBulkAdd(
  * `restartCampaign` aufgerufen werden — das setzt Status zurück auf DRAFT.
  */
 export async function updateCampaign(campaignId: string, formData: FormData) {
-  const { studioId } = await requireAdmin();
+  await requireAdmin();
 
   const existing = await db.campaign.findFirst({
-    where: { id: campaignId, studioId },
+    where: { id: campaignId },
     select: { id: true, status: true },
   });
 
@@ -958,14 +935,13 @@ export async function updateCampaign(campaignId: string, formData: FormData) {
     };
   }
 
-  // Liste & Standort (falls gesetzt) müssen zum Studio gehören.
   if (updateData.listId) {
-    const l = await db.list.findFirst({ where: { id: updateData.listId, studioId }, select: { id: true } });
-    if (!l) throw new Error("Liste gehört nicht zu diesem Studio.");
+    const l = await db.list.findFirst({ where: { id: updateData.listId }, select: { id: true } });
+    if (!l) throw new Error("Liste nicht gefunden.");
   }
   if (updateData.targetLocationId) {
     const loc = await db.location.findFirst({
-      where: { id: updateData.targetLocationId, studioId },
+      where: { id: updateData.targetLocationId },
       select: { id: true },
     });
     if (!loc) updateData.targetLocationId = null;
@@ -1000,10 +976,10 @@ const CAMPAIGN_MAIL_THROTTLE_MS = 250;
  * nicht raus als doppelt raus.
  */
 export async function processCampaignBatch(campaignId: string) {
-  const { studioId } = await requireAdmin();
+  await requireAdmin();
 
   const campaign = await db.campaign.findFirst({
-    where: { id: campaignId, studioId },
+    where: { id: campaignId },
   });
 
   if (!campaign) {
@@ -1016,7 +992,6 @@ export async function processCampaignBatch(campaignId: string) {
   // Hier nur defensiv: wenn SENT + keine neuen Empfänger → done.
 
   const recipients = await getCampaignRecipients({
-    studioId,
     listId: campaign.listId,
     targetStatus: campaign.targetStatus,
     targetLocationId: campaign.targetLocationId,
@@ -1120,10 +1095,10 @@ export async function processCampaignBatch(campaignId: string) {
  *  - Bestehende Empfänger der ursprünglichen Liste bleiben außen vor
  */
 export async function restartCampaign(campaignId: string) {
-  const { studioId } = await requireAdmin();
+  await requireAdmin();
 
   const existing = await db.campaign.findFirst({
-    where: { id: campaignId, studioId },
+    where: { id: campaignId },
     select: { id: true, status: true },
   });
 

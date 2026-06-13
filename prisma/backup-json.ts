@@ -35,9 +35,6 @@ async function main() {
   const dump: Record<string, unknown[]> = {};
 
   // Reihenfolge egal — es ist ein reiner Daten-Snapshot.
-  dump.studio = await safeFindMany("studio", () => prisma.studio.findMany());
-  dump.activationCode = await safeFindMany("activationCode", () => prisma.activationCode.findMany());
-  dump.platformAdmin = await safeFindMany("platformAdmin", () => prisma.platformAdmin.findMany());
   dump.location = await safeFindMany("location", () => prisma.location.findMany());
   dump.contact = await safeFindMany("contact", () => prisma.contact.findMany());
   dump.pricingPlan = await safeFindMany("pricingPlan", () => prisma.pricingPlan.findMany());

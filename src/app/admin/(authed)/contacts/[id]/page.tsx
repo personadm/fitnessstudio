@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireStudioId } from "@/lib/tenant";
 import { ContactDetailActions } from "./ContactDetailActions";
 
 interface PageProps {
@@ -49,11 +48,10 @@ const TIMELINE_ICONS: Record<TimelineKind, string> = {
 
 export default async function ContactDetail({ params }: PageProps) {
   const { id } = await params;
-  const studioId = await requireStudioId();
 
   const [contact, campaignEvents, allLists] = await Promise.all([
     db.contact.findFirst({
-      where: { id, studioId },
+      where: { id },
       include: {
         pricingPlan: true,
         location: true,
@@ -86,7 +84,7 @@ export default async function ContactDetail({ params }: PageProps) {
       include: { campaign: { select: { subject: true } } },
       orderBy: { createdAt: "desc" },
     }),
-    db.list.findMany({ where: { studioId }, orderBy: { name: "asc" } }),
+    db.list.findMany({ orderBy: { name: "asc" } }),
   ]);
 
   if (!contact) notFound();

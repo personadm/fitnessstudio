@@ -1,35 +1,15 @@
 import Link from "next/link";
-import { headers } from "next/headers";
 import { db } from "@/lib/db";
-import { requireStudioId } from "@/lib/tenant";
 import { LiveActivity } from "@/components/admin/LiveActivity";
 import { PushSubscribe } from "@/components/admin/PushSubscribe";
-import { LandingLinkCard } from "@/components/admin/LandingLinkCard";
 
 export default async function AdminDashboard() {
-  const studioId = await requireStudioId();
-
-  // Eigene Studio-Infos (für den Landingpage-Link).
-  const studio = await db.studio.findUnique({
-    where: { id: studioId },
-    select: { slug: true, customDomain: true },
-  });
-  const hdrs = await headers();
-  const host = hdrs.get("host") ?? "";
-  const proto = hdrs.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  // Eigene Domain bevorzugen (falls gesetzt), sonst /s/<slug> auf dem aktuellen Host.
-  const landingUrl = studio?.customDomain
-    ? `https://${studio.customDomain}`
-    : studio
-      ? `${proto}://${host}/s/${studio.slug}`
-      : null;
-
-  // Status-Statistiken (nur dieses Studio)
+  // Status-Statistiken
   const [interessent, neukunde, kunde, ehemaliger] = await Promise.all([
-    db.contact.count({ where: { studioId, status: "INTERESSENT" } }),
-    db.contact.count({ where: { studioId, status: "NEUKUNDE" } }),
-    db.contact.count({ where: { studioId, status: "KUNDE" } }),
-    db.contact.count({ where: { studioId, status: "EHEMALIGER" } }),
+    db.contact.count({ where: { status: "INTERESSENT" } }),
+    db.contact.count({ where: { status: "NEUKUNDE" } }),
+    db.contact.count({ where: { status: "KUNDE" } }),
+    db.contact.count({ where: { status: "EHEMALIGER" } }),
   ]);
 
   // Phase 6: Neuanmeldungen aktueller Monat
@@ -38,7 +18,7 @@ export default async function AdminDashboard() {
   startOfMonth.setHours(0, 0, 0, 0);
 
   const newSignupsThisMonth = await db.contact.findMany({
-    where: { studioId, signupAt: { gte: startOfMonth } },
+    where: { signupAt: { gte: startOfMonth } },
     orderBy: { signupAt: "desc" },
     select: {
       id: true,
@@ -52,7 +32,6 @@ export default async function AdminDashboard() {
 
   // Letzte 8 Kontakte allgemein
   const recent = await db.contact.findMany({
-    where: { studioId },
     orderBy: { createdAt: "desc" },
     take: 8,
     select: {
@@ -66,10 +45,10 @@ export default async function AdminDashboard() {
   });
 
   const [planCount, listCount, campaignCount, funnelCount] = await Promise.all([
-    db.pricingPlan.count({ where: { studioId } }),
-    db.list.count({ where: { studioId } }),
-    db.campaign.count({ where: { studioId } }),
-    db.funnel.count({ where: { studioId } }),
+    db.pricingPlan.count(),
+    db.list.count(),
+    db.campaign.count(),
+    db.funnel.count(),
   ]);
 
   const monthLabel = new Date().toLocaleDateString("de-DE", { month: "long", year: "numeric" });
@@ -87,11 +66,10 @@ export default async function AdminDashboard() {
       distinct: ["sessionId"],
     }),
     db.contact.count({
-      where: { studioId, source: "LANDING", createdAt: { gte: thirtyDaysAgo } },
+      where: { source: "LANDING", createdAt: { gte: thirtyDaysAgo } },
     }),
     db.contact.count({
       where: {
-        studioId,
         signupAt: { gte: thirtyDaysAgo, not: null },
         source: { in: ["LANDING", "DIRECT"] },
       },
@@ -122,13 +100,6 @@ export default async function AdminDashboard() {
           + Club-Anmeldung
         </Link>
       </div>
-
-      {/* Landingpage-Link */}
-      {landingUrl && (
-        <div className="mb-8 md:mb-12">
-          <LandingLinkCard url={landingUrl} />
-        </div>
-      )}
 
       {/* Status-Tiles */}
       <div className="mb-8 grid grid-cols-2 gap-3 md:mb-12 md:gap-4 md:grid-cols-4">

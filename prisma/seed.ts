@@ -3,14 +3,6 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  // Multi-Tenant: Seed bezieht sich auf das Default-Studio (ältestes Studio).
-  const studio = await prisma.studio.findFirst({ orderBy: { createdAt: "asc" } });
-  if (!studio) {
-    console.error("✗ Kein Studio vorhanden. Erst Backfill/Onboarding ausführen.");
-    process.exit(1);
-  }
-  const studioId = studio.id;
-
   // Tarife anlegen
   const plans = [
     {
@@ -40,7 +32,7 @@ async function main() {
     await prisma.pricingPlan.upsert({
       where: { id: plan.name.toLowerCase() },
       update: plan,
-      create: { id: plan.name.toLowerCase(), studioId, ...plan },
+      create: { id: plan.name.toLowerCase(), ...plan },
     });
   }
 
@@ -53,9 +45,9 @@ async function main() {
 
   for (const list of lists) {
     await prisma.list.upsert({
-      where: { studioId_name: { studioId, name: list.name } },
+      where: { name: list.name },
       update: list,
-      create: { studioId, ...list },
+      create: list,
     });
   }
 

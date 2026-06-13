@@ -1,15 +1,12 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { requireStudioId } from "@/lib/tenant";
 import { createList } from "@/app/admin/_actions";
 import { DeleteListButton } from "./DeleteListButton";
 
 export const dynamic = "force-dynamic";
 
 export default async function ListsPage() {
-  const studioId = await requireStudioId();
   const lists = await db.list.findMany({
-    where: { studioId },
     orderBy: { createdAt: "desc" },
     include: {
       _count: { select: { contacts: true } },
