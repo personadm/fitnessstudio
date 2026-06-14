@@ -44,6 +44,7 @@ interface Props {
 export function FunnelAiGenerator({ onAccept }: Props) {
   const [zielgruppe, setZielgruppe] = useState("");
   const [ziel, setZiel] = useState("");
+  const [landingPageUrl, setLandingPageUrl] = useState("");
   const [painPoints, setPainPoints] = useState("");
   const [ton, setTon] = useState<"direkt" | "empathisch" | "story">("empathisch");
   const [anzahlMails, setAnzahlMails] = useState(5);
@@ -88,6 +89,7 @@ export function FunnelAiGenerator({ onAccept }: Props) {
           anzahlMails,
           zeitabstaendeStunden: getZeitplan(zeitplanPreset, anzahlMails),
           zusatzkontext: zusatzkontext || undefined,
+          landingPageUrl: landingPageUrl.trim() || undefined,
         }),
       });
       const data = await res.json();
@@ -153,6 +155,12 @@ export function FunnelAiGenerator({ onAccept }: Props) {
             value={ziel}
             onChange={setZiel}
             multiline
+          />
+          <Field
+            label="Landingpage-Link (optional)"
+            placeholder="z.B. https://deine-gesundheitscoaches.de/6-wochen-programm"
+            value={landingPageUrl}
+            onChange={setLandingPageUrl}
           />
           <Field
             label="Pain Points (optional)"

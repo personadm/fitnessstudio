@@ -92,13 +92,88 @@ async function getInnertube(): Promise<unknown> {
 
 interface YoutubeiVideo {
   id?: string;
+  video_id?: string;
+  type?: string;
   title?: { text?: string } | string;
+  author?: { id?: string; name?: string };
+  short_description?: string;
+  description_snippet?: { text?: string } | string;
 }
 
 function readVideoTitle(v: YoutubeiVideo): string | null {
   if (typeof v.title === "string") return v.title;
   if (v.title && typeof v.title.text === "string") return v.title.text;
   return null;
+}
+
+function readVideoDescription(v: YoutubeiVideo): string | null {
+  if (typeof v.short_description === "string" && v.short_description) return v.short_description;
+  const snippet = v.description_snippet;
+  if (typeof snippet === "string") return snippet || null;
+  if (snippet && typeof snippet.text === "string") return snippet.text || null;
+  return null;
+}
+
+/**
+ * Gehört ein Suchtreffer zum gewünschten Kanal? Primär über die Kanal-ID,
+ * fallback über den Kanal-Namen (Suche liefert nicht immer eine ID mit).
+ */
+function belongsToChannel(v: YoutubeiVideo, channelId: string, channelName: string): boolean {
+  const authorId = v.author?.id;
+  if (authorId) return authorId === channelId;
+  const authorName = v.author?.name?.toLowerCase();
+  return Boolean(authorName && authorName.includes(channelName.toLowerCase()));
+}
+
+// ─── Aktive Suche (gezielt E-Mail-Marketing-Videos) via youtubei.js ─────────
+
+/**
+ * Sucht gezielt nach Videos zu einem Stichwort und behält nur Treffer des
+ * gewünschten Kanals. Damit findet der Sync auch ältere/thematisch passende
+ * Videos, die nicht im RSS-Feed der letzten Uploads auftauchen.
+ *
+ * publishedAt bleibt null (Suche liefert nur relative Datumsangaben). Wirft,
+ * wenn youtubei.js nicht erreichbar ist — der Aufrufer behandelt das als
+ * „diesmal keine Suche möglich".
+ */
+export async function fetchVideosViaSearch(
+  query: string,
+  channelId: string,
+  channelName: string,
+  limit: number,
+): Promise<DiscoveredVideo[]> {
+  const yt = (await getInnertube()) as {
+    search: (
+      q: string,
+      opts?: { type?: string },
+    ) => Promise<{ videos?: YoutubeiVideo[]; results?: YoutubeiVideo[] }>;
+  };
+
+  const search = await yt.search(query, { type: "video" });
+  const items = (search?.videos ?? search?.results ?? []) as YoutubeiVideo[];
+
+  const out: DiscoveredVideo[] = [];
+  const seen = new Set<string>();
+
+  for (const v of items) {
+    // Nur echte Video-Knoten (Suche mischt Kanäle/Playlists ein).
+    if (v.type && v.type !== "Video") continue;
+    const id = v.id ?? v.video_id;
+    const title = readVideoTitle(v);
+    if (!id || !title || seen.has(id)) continue;
+    if (!belongsToChannel(v, channelId, channelName)) continue;
+    seen.add(id);
+    out.push({
+      youtubeId: id,
+      channelId,
+      title,
+      description: readVideoDescription(v),
+      publishedAt: null,
+    });
+    if (out.length >= limit) break;
+  }
+
+  return out;
 }
 
 /**

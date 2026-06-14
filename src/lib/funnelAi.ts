@@ -160,6 +160,8 @@ export interface FunnelGenerationInput {
   anzahlMails?: number;
   zeitabstaendeStunden?: number[];
   zusatzkontext?: string;
+  /** Ziel-URL der Landingpage — wird als href für alle CTA-Links genutzt. */
+  landingPageUrl?: string;
 }
 
 /** Eingabe für Einzel-Mail-Generierung */
@@ -221,6 +223,13 @@ ${input.painPoints ? `**Pain Points der Zielgruppe**: ${input.painPoints}` : ""}
 ${stundenFormatiert}
 
 ${input.zusatzkontext ? `**Zusatzkontext**: ${input.zusatzkontext}` : ""}
+
+${
+  input.landingPageUrl
+    ? `**Landingpage-Link**: ${input.landingPageUrl}
+Nutze GENAU diese URL als href für JEDEN Call-to-Action-Link (<a href="${input.landingPageUrl}">…</a>). Erfinde keine anderen URLs und verwende keine Platzhalter-Links. Beachte trotzdem das Limit von max. 1–2 Links pro Mail.`
+    : ""
+}
 
 Beachte die Hormozi-Frameworks aus dem System-Prompt strikt. Generiere jetzt das JSON.`;
 }

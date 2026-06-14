@@ -60,6 +60,25 @@ export const EMAIL_MARKETING_KEYWORDS: readonly string[] = [
   "promo tab",
 ];
 
+/**
+ * Aktive Suche: Stichwörter, mit denen der Sync gezielt nach E-Mail-Marketing-
+ * Videos der Quell-Kanäle sucht (kombiniert mit dem Kanal-Namen, z.B.
+ * „Alex Hormozi email marketing"). Damit werden auch passende Videos gefunden,
+ * die NICHT im RSS-Feed der letzten Uploads stehen. Aktiv gesuchte Treffer
+ * überspringen den Keyword-Vorfilter — die Suche etabliert bereits den Bezug,
+ * die LLM-Klassifizierung macht weiterhin die finale Trennschärfe.
+ */
+export const SEARCH_QUERIES: readonly string[] = [
+  "email marketing",
+  "email list",
+  "newsletter",
+  "email copywriting",
+  "writing emails",
+  "lead magnet",
+];
+/** Wie viele Suchtreffer pro Such-Stichwort maximal übernommen werden. */
+export const SEARCH_RESULT_LIMIT = 8;
+
 /** Wie viele Videos pro Sync-Lauf maximal ein Transkript bekommen. */
 export const TRANSCRIPT_BATCH = 4;
 /** Wie viele Videos pro Sync-Lauf maximal klassifiziert werden. */

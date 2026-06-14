@@ -22,13 +22,20 @@ import {
   KNOWLEDGE_BASE_ID,
   SOURCE_CHANNELS,
   EMAIL_MARKETING_KEYWORDS,
+  SEARCH_QUERIES,
+  SEARCH_RESULT_LIMIT,
   TRANSCRIPT_BATCH,
   CLASSIFY_BATCH,
   DISTILL_BATCH,
   SYNC_INTERVAL_MS,
   BACKFILL_PAGE_LIMIT,
 } from "./config";
-import { fetchRecentVideosViaRss, fetchChannelBackfill, type DiscoveredVideo } from "@/lib/youtube/channel";
+import {
+  fetchRecentVideosViaRss,
+  fetchChannelBackfill,
+  fetchVideosViaSearch,
+  type DiscoveredVideo,
+} from "@/lib/youtube/channel";
 import { fetchTranscript } from "@/lib/youtube/transcript";
 import { classifyEmailMarketing, distillTranscript, compactKnowledge } from "./ai";
 
@@ -87,12 +94,35 @@ async function discover(opts: { backfill: boolean }): Promise<number> {
 
   for (const channel of SOURCE_CHANNELS) {
     const found: DiscoveredVideo[] = [];
+    // youtubeIds, die über die aktive Suche kamen — sie überspringen später den
+    // Keyword-Vorfilter, weil die Suche den E-Mail-Bezug bereits etabliert.
+    const searchIds = new Set<string>();
 
     // RSS ist die robuste Hauptquelle (neueste ~15 Videos).
     try {
       found.push(...(await fetchRecentVideosViaRss(channel.id)));
     } catch (err) {
       console.warn(`[knowledge] RSS-Discovery fehlgeschlagen (${channel.name}):`, getMessage(err));
+    }
+
+    // Aktive Suche: gezielt nach E-Mail-Marketing-Videos des Kanals suchen.
+    // Findet passende Videos auch außerhalb der letzten ~15 Uploads.
+    for (const query of SEARCH_QUERIES) {
+      try {
+        const hits = await fetchVideosViaSearch(
+          `${channel.name} ${query}`,
+          channel.id,
+          channel.name,
+          SEARCH_RESULT_LIMIT,
+        );
+        for (const hit of hits) searchIds.add(hit.youtubeId);
+        found.push(...hits);
+      } catch (err) {
+        console.warn(
+          `[knowledge] Suche fehlgeschlagen (${channel.name} / "${query}"):`,
+          getMessage(err),
+        );
+      }
     }
 
     // Backfill nur einmalig (oder erzwungen): Alt-Videos best-effort nachladen.
@@ -120,7 +150,9 @@ async function discover(opts: { backfill: boolean }): Promise<number> {
       if (known.has(v.youtubeId) || seen.has(v.youtubeId)) continue;
       seen.add(v.youtubeId);
 
-      const relevantByKeyword = passesKeywordPrefilter(v.title, v.description);
+      // Aktiv gesuchte Videos überspringen den Keyword-Vorfilter — die Suche
+      // hat den E-Mail-Bezug bereits gesetzt. Sonst Titel/Beschreibung prüfen.
+      const relevant = searchIds.has(v.youtubeId) || passesKeywordPrefilter(v.title, v.description);
       await db.knowledgeVideo.create({
         data: {
           youtubeId: v.youtubeId,
@@ -130,8 +162,8 @@ async function discover(opts: { backfill: boolean }): Promise<number> {
           url: `https://www.youtube.com/watch?v=${v.youtubeId}`,
           publishedAt: v.publishedAt,
           // Ohne E-Mail-Bezug im Titel: gar nicht erst Transkript ziehen.
-          status: relevantByKeyword ? "NEW" : "IRRELEVANT",
-          error: relevantByKeyword ? null : "Keyword-Vorfilter: kein E-Mail-Bezug",
+          status: relevant ? "NEW" : "IRRELEVANT",
+          error: relevant ? null : "Keyword-Vorfilter: kein E-Mail-Bezug",
         },
       });
       created++;
