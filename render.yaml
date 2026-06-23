@@ -10,7 +10,7 @@ services:
     name: fitnessstudio
     runtime: node
     region: frankfurt
-    plan: free
+    plan: starter
     # Schema-Änderungen NICHT im Build pushen — das verbraucht knappe
     # DB-Pooler-Verbindungen (EMAXCONNSESSION) und kann mit --accept-data-loss
     # Daten zerstören. Schema-Änderungen stattdessen bewusst lokal anwenden:
@@ -34,4 +34,24 @@ services:
       - key: TOKEN_SECRET
         sync: false
       - key: CRON_SECRET
+        sync: false
+
+  # Cron-Job: stößt alle 5 Minuten den Funnel-Versand an, indem er den
+  # geschützten Endpoint /api/cron/funnels des Web-Service aufruft. Dadurch
+  # gehen fällige Mails auch ohne offenes Admin-Panel raus.
+  - type: cron
+    name: funnel-cron
+    runtime: node
+    region: frankfurt
+    plan: starter
+    schedule: "*/5 * * * *"
+    # Kein App-Build nötig — der Job ruft nur eine URL auf.
+    buildCommand: ""
+    # -f: bei HTTP-Fehler (4xx/5xx) mit Fehlercode abbrechen → im Render-Log sichtbar.
+    startCommand: curl -fsS -H "Authorization: Bearer $CRON_SECRET" "$CRON_TARGET_URL/api/cron/funnels"
+    envVars:
+      - key: CRON_SECRET
+        sync: false
+      # Öffentliche URL des Web-Service, z. B. https://fitnessstudio.onrender.com
+      - key: CRON_TARGET_URL
         sync: false
