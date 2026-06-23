@@ -14,34 +14,111 @@ export const leadSchema = z.object({
 });
 export type LeadInput = z.infer<typeof leadSchema>;
 
+// Normalisiert eine Geburtsdatums-Eingabe auf ISO (YYYY-MM-DD) oder gibt null
+// zurück, wenn die Eingabe kein gültiges Datum ist.
+//
+// Akzeptiert beide Formate:
+//   - ISO „YYYY-MM-DD" (nativer <input type="date">-Picker)
+//   - Deutsch „TT.MM.JJJJ" (tritt auf, wenn ein In-App-/WebView-Browser
+//     type="date" als reines Textfeld rendert und der Nutzer manuell tippt)
+export function normalizeBirthDate(raw: string): string | null {
+  const s = raw.trim();
+  if (!s) return null;
+
+  let year: number;
+  let month: number;
+  let day: number;
+
+  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  const de = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+
+  if (iso) {
+    year = Number(iso[1]);
+    month = Number(iso[2]);
+    day = Number(iso[3]);
+  } else if (de) {
+    day = Number(de[1]);
+    month = Number(de[2]);
+    year = Number(de[3]);
+  } else {
+    return null;
+  }
+
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  // Plausibler Geburtsjahr-Bereich — fängt Tippfehler & In-App-Picker-Defaults ab.
+  if (year < 1900 || year > 2100) return null;
+
+  // Echtheits-Check (fängt z. B. 31.02. ab) — UTC vermeidet Zeitzonen-Verschiebung.
+  const d = new Date(Date.UTC(year, month - 1, day));
+  if (
+    d.getUTCFullYear() !== year ||
+    d.getUTCMonth() !== month - 1 ||
+    d.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  const mm = String(month).padStart(2, "0");
+  const dd = String(day).padStart(2, "0");
+  return `${year}-${mm}-${dd}`;
+}
+
+// Pflicht-Textfeld, das null/undefined tolerant zu "" coercet (statt eine
+// kryptische „Expected string, received null"-Default-Meldung zu werfen) und
+// dann eine verständliche deutsche Meldung liefert.
+const requiredText = (message: string) =>
+  z.preprocess(
+    (v) => (typeof v === "string" ? v.trim() : v == null ? "" : String(v).trim()),
+    z.string().min(1, message),
+  );
+
+// Optionales Textfeld: null/undefined → "" (immer ein String, nie null).
+const optionalText = () =>
+  z.preprocess((v) => (v == null ? "" : v), z.string().trim());
+
 export const signupSchema = z
   .object({
-    email: z.string().trim().toLowerCase().email("Bitte gültige E-Mail-Adresse angeben."),
-    firstName: z.string().trim().min(1, "Vorname fehlt."),
-    lastName: z.string().trim().min(1, "Nachname fehlt."),
+    email: z.preprocess(
+      (v) => (typeof v === "string" ? v.trim().toLowerCase() : v == null ? "" : v),
+      z.string().email("Bitte gib eine gültige E-Mail-Adresse an."),
+    ),
+    firstName: requiredText("Bitte gib deinen Vornamen an."),
+    lastName: requiredText("Bitte gib deinen Nachnamen an."),
     // Im neuen Hero-Form von /anmelden nicht mehr abgefragt — optional.
     gender: z.enum(["MAENNLICH", "WEIBLICH", "DIVERS"]).optional().nullable(),
-    phone: z.string().trim().optional().or(z.literal("")),
-    birthDate: z
-      .string()
-      .trim()
-      .min(1, "Geburtsdatum fehlt.")
-      .refine((v) => !Number.isNaN(Date.parse(v)), "Ungültiges Geburtsdatum."),
-    street: z.string().trim().min(1, "Straße fehlt."),
-    postalCode: z.string().trim().min(4, "PLZ fehlt."),
-    city: z.string().trim().min(1, "Stadt fehlt."),
+    phone: optionalText(),
+    birthDate: optionalText()
+      .refine((v) => v.length > 0, "Bitte gib dein Geburtsdatum an.")
+      .transform((v, ctx) => {
+        const isoDate = normalizeBirthDate(v);
+        if (!isoDate) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Bitte gib ein gültiges Geburtsdatum ein (z. B. 20.11.1989).",
+          });
+          return z.NEVER;
+        }
+        return isoDate;
+      }),
+    street: requiredText("Bitte gib deine Straße & Hausnummer an."),
+    postalCode: z.preprocess(
+      (v) => (typeof v === "string" ? v.trim() : v == null ? "" : String(v).trim()),
+      z.string().min(4, "Bitte gib eine gültige PLZ an."),
+    ),
+    city: requiredText("Bitte gib deine Stadt an."),
     // IBAN und Vertragsstart: im neuen UI nicht mehr abgefragt — optional.
     // /api/signup speichert null wenn leer (Prisma erlaubt das).
-    iban: z.string().trim().optional().or(z.literal("")),
-    contractStartDate: z
-      .string()
-      .trim()
-      .optional()
-      .or(z.literal(""))
-      .refine((v) => !v || !Number.isNaN(Date.parse(v)), "Ungültiges Vertragsstart-Datum."),
-    pricingPlanId: z.string().min(1, "Bitte einen Tarif auswählen."),
+    iban: optionalText(),
+    contractStartDate: optionalText().refine(
+      (v) => !v || !Number.isNaN(Date.parse(v)),
+      "Ungültiges Vertragsstart-Datum.",
+    ),
+    pricingPlanId: z.preprocess(
+      (v) => (v == null ? "" : v),
+      z.string().min(1, "Bitte wähle einen Tarif aus."),
+    ),
     locationId: z.string().trim().optional().nullable(),
-    ref: z.string().optional(),
+    ref: z.string().optional().nullable(),
     // Consent: entweder das alte einzelne `consent: true` ODER beide neuen Felder.
     consent: z.boolean().optional(),
     agbConsent: z.boolean().optional(),

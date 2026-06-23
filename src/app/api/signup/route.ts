@@ -23,7 +23,18 @@ export async function POST(req: NextRequest) {
     const result = signupSchema.safeParse(json);
 
     if (!result.success) {
-      const message = result.error.issues[0]?.message ?? "Ungültige Eingabe.";
+      // Feld-Pfad mitloggen, damit fehlerhafte Eingaben (z. B. null statt
+      // String) künftig eindeutig zuzuordnen sind statt nur einer kryptischen
+      // Default-Meldung wie „Expected string, received null".
+      console.warn(
+        "[/api/signup] validation failed",
+        result.error.issues.map((i) => ({
+          field: i.path.join(".") || "(root)",
+          code: i.code,
+          message: i.message,
+        })),
+      );
+      const message = result.error.issues[0]?.message ?? "Bitte prüf deine Eingaben.";
       return NextResponse.json({ ok: false, message }, { status: 400 });
     }
 

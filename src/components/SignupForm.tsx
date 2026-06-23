@@ -378,6 +378,10 @@ export function SignupForm({
               label="Geburtsdatum"
               required
               type="date"
+              // Kein Zukunftsdatum; Hinweis greift im Text-Fallback mancher
+              // In-App-Browser, die type="date" nicht als Picker rendern.
+              max={new Date().toISOString().slice(0, 10)}
+              placeholder="Geburtsdatum (TT.MM.JJJJ)"
               value={birthDate}
               onChange={setBirthDate}
               disabled={submitting}
@@ -648,6 +652,8 @@ function Input({
   required,
   autoComplete,
   disabled,
+  max,
+  placeholder,
 }: {
   label: string;
   value: string;
@@ -656,6 +662,8 @@ function Input({
   required?: boolean;
   autoComplete?: string;
   disabled?: boolean;
+  max?: string;
+  placeholder?: string;
 }) {
   return (
     <label className="block">
@@ -664,7 +672,8 @@ function Input({
         type={type}
         required={required}
         autoComplete={autoComplete}
-        placeholder={label}
+        placeholder={placeholder ?? label}
+        max={max}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
