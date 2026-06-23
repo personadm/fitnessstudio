@@ -107,6 +107,15 @@ export async function enrollIntoMatchingFunnels(
       if (status !== targetStatus) continue;
       if (funnel.locationId && contact.locationId !== funnel.locationId) continue;
 
+      // Schon eingeschrieben? → überspringen, statt einen INSERT zu provozieren,
+      // den @@unique([funnelId, contactId]) ablehnt. Sonst loggt Prisma jedes Mal
+      // eine prisma:error-Zeile, obwohl der catch den Fehler verschluckt.
+      const existing = await db.funnelEnrollment.findFirst({
+        where: { funnelId: funnel.id, contactId: contact.id },
+        select: { id: true },
+      });
+      if (existing) continue;
+
       try {
         await db.funnelEnrollment.create({
           data: { funnelId: funnel.id, contactId: contact.id },
@@ -137,7 +146,21 @@ export async function enrollIntoMatchingFunnels(
       select: { id: true },
     });
 
+    // Bereits eingeschriebene Kontakte vorab sammeln → wir versuchen gar nicht
+    // erst einen INSERT, den @@unique([funnelId, contactId]) ablehnt. Sonst
+    // loggt Prisma pro schon-eingeschriebenem Kontakt eine prisma:error-Zeile
+    // (Log-Flut bei jedem Cron-Lauf), obwohl der catch sie verschluckt.
+    const existing = await db.funnelEnrollment.findMany({
+      where: {
+        funnelId: funnel.id,
+        contactId: { in: candidates.map((c) => c.id) },
+      },
+      select: { contactId: true },
+    });
+    const alreadyEnrolled = new Set(existing.map((e) => e.contactId));
+
     for (const c of candidates) {
+      if (alreadyEnrolled.has(c.id)) continue;
       try {
         await db.funnelEnrollment.create({
           data: { funnelId: funnel.id, contactId: c.id },
