@@ -66,7 +66,9 @@ export default async function CampaignDetailPage({ params }: PageProps) {
   }
 
   const isSent = campaign.status === "SENT";
-  const isDraftOrSending = campaign.status === "DRAFT" || campaign.status === "SENDING";
+  const isDraft = campaign.status === "DRAFT";
+  const isSending = campaign.status === "SENDING";
+  const remaining = Math.max(recipients.length - sentEvents, 0);
 
   return (
     <div className="p-8 md:p-12">
@@ -110,9 +112,26 @@ export default async function CampaignDetailPage({ params }: PageProps) {
             ✎ Bearbeiten
           </Link>
 
-          {/* DRAFT / SENDING: Senden-Button */}
-          {isDraftOrSending && (
+          {/* DRAFT: Senden-Button */}
+          {isDraft && (
             <CampaignSendButton campaignId={campaign.id} recipientCount={recipients.length} />
+          )}
+
+          {/* SENDING: serverseitiger Versand läuft */}
+          {isSending && (
+            <div className="border border-acid bg-acid/10 p-4 space-y-2">
+              <p className="label !text-acid_dark">● Versand läuft</p>
+              <p className="font-mono text-2xl">
+                {sentEvents} <span className="text-muted">/ {recipients.length}</span>
+              </p>
+              <p className="text-xs text-muted leading-relaxed">
+                Läuft automatisch auf dem Server — du kannst dieses Fenster
+                schließen und den Laptop zuklappen.
+                {remaining > 0
+                  ? ` Noch ${remaining} offen. Seite neu laden für den aktuellen Stand.`
+                  : " Fast fertig. Seite neu laden für den aktuellen Stand."}
+              </p>
+            </div>
           )}
 
           {/* SENT: Versand-Info + Erneut-Versenden */}

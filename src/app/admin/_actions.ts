@@ -14,8 +14,11 @@ import {
   clubSignupSchema,
 } from "@/lib/validation";
 import { enrollIntoMatchingFunnels, processFunnels } from "@/lib/funnels";
-import { getCampaignRecipients } from "@/lib/campaigns";
-import { sendCampaignMail } from "@/lib/mail";
+import {
+  getCampaignRecipients,
+  sendCampaignBatch,
+  kickCampaignWorker,
+} from "@/lib/campaigns";
 import type { ContactStatus, FunnelTrigger } from "@prisma/client";
 
 async function requireAdmin(): Promise<{ userId: string }> {
@@ -1017,125 +1020,59 @@ export async function updateCampaign(campaignId: string, formData: FormData) {
 // CAMPAIGN BATCH-SEND
 // ─────────────────────────────────────────────────────────────
 
-const CAMPAIGN_BATCH_SIZE = 30;
-const CAMPAIGN_MAIL_THROTTLE_MS = 250;
-
 /**
- * Versendet eine Campaign in Batches von max. CAMPAIGN_BATCH_SIZE Mails pro Aufruf.
+ * Stellt eine Kampagne in die serverseitige Versand-Warteschlange.
  *
- * Race-safe via @@unique([campaignId, contactId, event]) auf CampaignEvent:
- * pro Empfänger kann nur EIN SENT-Event geschrieben werden. Bei parallelen
- * Aufrufen gewinnt einer den INSERT, alle anderen bekommen P2002 und skippen.
- *
- * Mail-Versand-Reihenfolge: erst Event-Insert (atomic), dann Mail. Wenn Mail
- * scheitert, ist Event trotzdem da → keine erneute Mail. Lieber eine Mail
- * nicht raus als doppelt raus.
+ * Setzt den Status auf SENDING und stößt den Hintergrund-Worker sofort an.
+ * Der eigentliche Versand läuft danach komplett auf dem Server weiter —
+ * das Admin-Panel muss NICHT offen bleiben, der Laptop kann zugeklappt werden.
+ * Schon versendete Empfänger werden über ihr SENT-Event übersprungen, ein
+ * unterbrochener Versand wird vom Cron-Ping (/api/cron/campaigns) fortgesetzt.
  */
-export async function processCampaignBatch(campaignId: string) {
+export async function enqueueCampaignSend(campaignId: string) {
   await requireAdmin();
 
-  const campaign = await db.campaign.findFirst({
-    where: { id: campaignId },
-  });
-
+  const campaign = await db.campaign.findFirst({ where: { id: campaignId } });
   if (!campaign) {
     return { ok: false, message: "Kampagne nicht gefunden." };
   }
-
-  // Bei SENT-Status erstmal weitermachen, aber nur wenn neue Empfänger da sind
-  // die noch kein SENT-Event haben. Falls Tim einen erneuten Versand via
-  // restartCampaign angestoßen hat, ist der Status sowieso wieder DRAFT.
-  // Hier nur defensiv: wenn SENT + keine neuen Empfänger → done.
 
   const recipients = await getCampaignRecipients({
     listId: campaign.listId,
     targetStatus: campaign.targetStatus,
     targetLocationId: campaign.targetLocationId,
   });
-  const total = recipients.length;
-
-  if (total === 0) {
-    await db.campaign.update({
-      where: { id: campaignId },
-      data: { status: "SENT", sentAt: new Date() },
-    });
-    return { ok: true, done: true, total: 0, sentTotal: 0, batchSent: 0 };
+  if (recipients.length === 0) {
+    return { ok: false, message: "Keine Empfänger gefunden." };
   }
 
-  // Schon-Versendete via SENT-Events erkennen
-  const sentEvents = await db.campaignEvent.findMany({
-    where: { campaignId, event: "SENT" },
-    select: { contactId: true },
+  // Status auf SENDING → der Worker (und als Sicherheitsnetz der Cron) übernimmt.
+  await db.campaign.update({
+    where: { id: campaignId },
+    data: { status: "SENDING", sentAt: null },
   });
-  const sentIds = new Set(sentEvents.map((e) => e.contactId));
 
-  const toSend = recipients
-    .filter((r) => !sentIds.has(r.id))
-    .slice(0, CAMPAIGN_BATCH_SIZE);
-
-  // Status auf SENDING setzen wenn noch DRAFT (Tracking-Marker)
-  if (campaign.status === "DRAFT" && toSend.length > 0) {
-    await db.campaign.update({
-      where: { id: campaignId },
-      data: { status: "SENDING" },
-    });
-  }
-
-  let batchSent = 0;
-  for (const recipient of toSend) {
-    // Atomic INSERT vor Send — verhindert Doppel-Send via Unique-Constraint
-    try {
-      await db.campaignEvent.create({
-        data: { campaignId, contactId: recipient.id, event: "SENT" },
-      });
-    } catch (err) {
-      const e = err as { code?: string };
-      if (e.code === "P2002") {
-        // Schon gesendet (anderer Aufruf war schneller) — skip
-        continue;
-      }
-      throw err;
-    }
-
-    // Mail verschicken
-    try {
-      const firstName = recipient.firstName ?? "";
-      const subject = campaign.subject.split("{{firstName}}").join(firstName);
-      const bodyHtml = campaign.bodyHtml.split("{{firstName}}").join(firstName);
-
-      await sendCampaignMail({
-        to: recipient.email,
-        subject,
-        bodyHtml,
-      });
-
-      batchSent++;
-      await new Promise((r) => setTimeout(r, CAMPAIGN_MAIL_THROTTLE_MS));
-    } catch (err) {
-      // Mail-Versand failed — Event ist bereits geschrieben. Bewusste Entscheidung:
-      // lieber eine Mail nicht raus als doppelt raus.
-      console.error("[campaigns] mail send failed (event already recorded)", err);
-    }
-  }
-
-  const newSentCount = sentIds.size + batchSent;
-  const done = newSentCount >= total;
-
-  if (done) {
-    await db.campaign.update({
-      where: { id: campaignId },
-      data: { status: "SENT", sentAt: new Date() },
-    });
-  }
+  // Worker sofort serverseitig anstoßen, damit der Versand nicht erst auf den
+  // nächsten Cron-Ping wartet. Läuft detached weiter, auch wenn Tim das
+  // Browser-Fenster schließt.
+  kickCampaignWorker();
 
   revalidatePath(`/admin/campaigns/${campaignId}`);
-  return {
-    ok: true,
-    done,
-    total,
-    sentTotal: newSentCount,
-    batchSent,
-  };
+  return { ok: true, queued: true, total: recipients.length };
+}
+
+/**
+ * Verarbeitet einen einzelnen Versand-Batch (max. CAMPAIGN_BATCH_SIZE Mails).
+ *
+ * Dünner Auth-Wrapper um `sendCampaignBatch` aus @/lib/campaigns. Bleibt als
+ * manueller/programmatischer Einstieg erhalten; der reguläre Newsletter-Versand
+ * läuft inzwischen serverseitig über `enqueueCampaignSend` + Worker.
+ */
+export async function processCampaignBatch(campaignId: string) {
+  await requireAdmin();
+  const result = await sendCampaignBatch(campaignId);
+  revalidatePath(`/admin/campaigns/${campaignId}`);
+  return result;
 }
 
 /**

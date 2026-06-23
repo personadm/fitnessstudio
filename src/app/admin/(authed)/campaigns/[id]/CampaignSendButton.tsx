@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { processCampaignBatch } from "@/app/admin/_actions";
+import { enqueueCampaignSend } from "@/app/admin/_actions";
 
 interface Props {
   campaignId: string;
@@ -12,77 +12,53 @@ interface Props {
 type SendState =
   | { phase: "idle" }
   | { phase: "confirming" }
-  | { phase: "sending"; sent: number; total: number }
-  | { phase: "done"; sent: number }
+  | { phase: "queuing" }
+  | { phase: "queued"; total: number }
   | { phase: "error"; message: string };
 
 /**
- * Send-Knopf für Newsletter mit gedrosseltem Batched-Versand.
+ * Send-Knopf für Newsletter — serverseitiger Versand.
  *
- * Workflow:
- *  1. Klick "Versenden" → Confirm-Dialog
- *  2. Klick "Ja" → Loop ruft processCampaignBatch wiederholt auf
- *  3. Pro Batch: max 30 Mails, gedrosselt auf ~4/Sek
- *  4. Live-Progress: "247 / 1777 versendet"
- *  5. Wenn done: Status auf SENT, Erfolgs-Bestätigung
- *
- * Tab muss offen bleiben während Versand läuft. Schließt der Browser-Tab,
- * stoppt der Versand — kann aber gefahrlos wieder gestartet werden, weil
- * die idempotente Logik schon-gesendete Empfänger erkennt und skippt.
+ * Klick "Versenden" → Confirm → enqueueCampaignSend stellt die Kampagne auf
+ * SENDING und stößt den Hintergrund-Worker auf dem Server an. Der eigentliche
+ * Versand läuft danach komplett serverseitig weiter: Das Browser-Fenster darf
+ * geschlossen und der Laptop zugeklappt werden. Die Seite zeigt nach dem
+ * Refresh den laufenden Server-Versand an.
  */
 export function CampaignSendButton({ campaignId, recipientCount }: Props) {
   const router = useRouter();
   const [state, setState] = useState<SendState>({ phase: "idle" });
 
-  async function runBatch() {
-    setState({ phase: "sending", sent: 0, total: recipientCount });
+  async function start() {
+    setState({ phase: "queuing" });
+    try {
+      const result = await enqueueCampaignSend(campaignId);
 
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      try {
-        const result = await processCampaignBatch(campaignId);
-
-        if (!result.ok) {
-          setState({
-            phase: "error",
-            message: result.message ?? "Versand fehlgeschlagen.",
-          });
-          return;
-        }
-
-        const total = result.total ?? recipientCount;
-        const sentTotal = result.sentTotal ?? 0;
-
-        setState({ phase: "sending", sent: sentTotal, total });
-
-        if (result.done) {
-          setState({ phase: "done", sent: sentTotal });
-          router.refresh();
-          return;
-        }
-
-        // Kurze Pause zwischen Batches damit der DB-Pool atmen kann
-        await new Promise((r) => setTimeout(r, 500));
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        // Next.js redirect-Exception durchlassen (sollte hier nicht passieren)
-        if (msg.includes("NEXT_REDIRECT")) return;
-        setState({ phase: "error", message: msg });
+      if (!result.ok) {
+        setState({
+          phase: "error",
+          message: result.message ?? "Versand konnte nicht gestartet werden.",
+        });
         return;
       }
+
+      setState({ phase: "queued", total: result.total ?? recipientCount });
+      // Server-Component neu laden → zeigt jetzt den SENDING-Fortschritt.
+      router.refresh();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("NEXT_REDIRECT")) return;
+      setState({ phase: "error", message: msg });
     }
   }
 
-  // RENDER-Logik je nach Phase
   if (state.phase === "idle") {
     const empty = recipientCount === 0;
     return (
       <div className="border border-ink/15 p-4 space-y-3">
         <p className="label">Versand</p>
         <p className="text-sm">
-          {empty
-            ? "Keine Empfänger gefunden."
-            : `${recipientCount} ${recipientCount === 1 ? "Empfänger" : "Empfänger"}`}
+          {empty ? "Keine Empfänger gefunden." : `${recipientCount} Empfänger`}
         </p>
         <button
           type="button"
@@ -97,25 +73,24 @@ export function CampaignSendButton({ campaignId, recipientCount }: Props) {
   }
 
   if (state.phase === "confirming") {
-    const estimatedMinutes = Math.ceil(recipientCount / 240); // ~4/Sek = 240/Min
     return (
       <div className="border border-acid bg-acid/20 p-4 space-y-3">
         <p className="font-mono text-[11px] uppercase tracking-[0.1em]">
           Versand bestätigen
         </p>
         <p className="text-sm leading-relaxed">
-          {recipientCount} {recipientCount === 1 ? "Empfänger" : "Empfänger"} ·
-          ca. {estimatedMinutes} {estimatedMinutes === 1 ? "Minute" : "Minuten"}
+          {recipientCount} Empfänger
         </p>
         <p className="text-xs text-muted leading-relaxed">
-          Tab bitte offen lassen während der Versand läuft. Bei Browser-Crash
-          oder Tab-Wechsel kann der Versand neu gestartet werden — schon
-          versendete Mails werden nicht doppelt verschickt.
+          Der Versand läuft danach <strong>automatisch auf dem Server</strong>.
+          Du kannst dieses Fenster schließen und den Laptop zuklappen — die Mails
+          gehen trotzdem alle raus. Schon versendete Empfänger bekommen keine
+          zweite Mail.
         </p>
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={runBatch}
+            onClick={start}
             className="flex-1 bg-ink px-3 py-2 font-mono text-[11px] uppercase tracking-[0.1em] text-acid hover:bg-ink-soft"
           >
             Ja, jetzt starten
@@ -132,37 +107,26 @@ export function CampaignSendButton({ campaignId, recipientCount }: Props) {
     );
   }
 
-  if (state.phase === "sending") {
-    const pct = state.total > 0 ? Math.round((state.sent / state.total) * 100) : 0;
+  if (state.phase === "queuing") {
     return (
-      <div className="border border-ink/15 p-4 space-y-3">
-        <p className="label">Versand läuft…</p>
-        <p className="font-mono text-2xl">
-          {state.sent} <span className="text-muted">/ {state.total}</span>
-        </p>
-        <div className="h-2 bg-ink/10">
-          <div
-            className="h-2 bg-acid transition-all"
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-        <p className="text-[10px] text-muted leading-relaxed">
-          {pct}% — Tab bitte offen lassen. Bei Tab-Wechsel pausiert der Browser
-          den Versand. Du kannst danach einfach erneut auf „Versenden" klicken,
-          dann macht der Versand bei {state.sent + 1} weiter.
-        </p>
+      <div className="border border-ink/15 p-4 space-y-2">
+        <p className="label">Versand wird gestartet…</p>
+        <p className="text-xs text-muted">Einen Moment.</p>
       </div>
     );
   }
 
-  if (state.phase === "done") {
+  if (state.phase === "queued") {
     return (
       <div className="border border-acid bg-acid/20 p-4 space-y-2">
         <p className="font-mono text-xs uppercase tracking-[0.1em] text-acid_dark">
-          ✓ Versendet
+          ✓ Versand gestartet
         </p>
-        <p className="text-sm">{state.sent} Mails verschickt</p>
-        <p className="text-xs text-muted">Status: SENT</p>
+        <p className="text-sm">{state.total} Mails gehen jetzt serverseitig raus.</p>
+        <p className="text-xs text-muted leading-relaxed">
+          Du kannst den Laptop zuklappen. Lade die Seite neu, um den Fortschritt
+          zu sehen.
+        </p>
       </div>
     );
   }
@@ -171,7 +135,7 @@ export function CampaignSendButton({ campaignId, recipientCount }: Props) {
   return (
     <div className="border border-red-300 bg-red-50 p-4 space-y-3">
       <p className="font-mono text-xs uppercase tracking-[0.1em] text-red-700">
-        Fehler beim Versand
+        Fehler beim Start
       </p>
       <p className="text-xs text-red-700 leading-relaxed">{state.message}</p>
       <button

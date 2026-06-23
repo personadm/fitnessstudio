@@ -33,8 +33,14 @@ services:
         sync: false
       - key: TOKEN_SECRET
         sync: false
-      # Wird vom externen Scheduler (cron-job.org) als Bearer-Token zum
-      # Aufruf von /api/cron/funnels genutzt. Versand läuft so ohne offenes
-      # Admin-Panel — siehe SETUP/Doku. Kein kostenpflichtiger Render-Cron nötig.
+      # Wird vom externen Scheduler (cron-job.org) als Bearer-Token zum Aufruf
+      # von /api/cron/funnels UND /api/cron/campaigns genutzt. Beide Versände
+      # laufen so ohne offenes Admin-Panel — siehe SETUP/Doku. Kein
+      # kostenpflichtiger Render-Cron nötig.
+      #
+      #   /api/cron/funnels    → automatische Funnel-Schritt-Mails
+      #   /api/cron/campaigns  → Newsletter-/Kampagnen-Versand fortsetzen
+      #                          (Sicherheitsnetz; Start erfolgt schon beim
+      #                          Klick auf "Versenden" im Admin-Panel)
       - key: CRON_SECRET
         sync: false
