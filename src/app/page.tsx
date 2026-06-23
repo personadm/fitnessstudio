@@ -1,4 +1,5 @@
 import { LeadForm } from "@/components/LeadForm";
+import { ScrollToTop } from "@/components/ScrollToTop";
 import { TrackPageView } from "@/components/TrackPageView";
 import { MetaPixel } from "@/components/MetaPixel";
 import { db } from "@/lib/db";
@@ -80,6 +81,9 @@ export default async function LandingPage() {
 
   return (
     <main className="min-h-screen bg-cream">
+      {/* Erzwingt Seitenstart oben — überschreibt #email-Anker (QR-Code/Wix),
+          damit Scanner zuerst Hero + Nutzen sehen, nicht direkt das Formular. */}
+      <ScrollToTop />
       {/* Meta-/Facebook-Pixel (Basis + PageView) */}
       <MetaPixel />
       {/* Zählt den Seitenaufruf (schreibt PageView fürs Admin-Dashboard) */}
