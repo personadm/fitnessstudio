@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
-import { processFunnels } from "@/lib/funnels";
+import { kickFunnelProcessing } from "@/lib/funnels";
 
 // Prisma + Date.now brauchen die Node-Runtime; nie statisch cachen.
 export const runtime = "nodejs";
@@ -30,12 +30,13 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // force: true umgeht das 5-Minuten-Rate-Limit — der Scheduler bestimmt
-    // selbst, wie oft verarbeitet wird.
-    const result = await processFunnels({ force: true });
+    // Sofort antworten: der Versand läuft danach detached auf dem Server weiter.
+    // So sieht cron-job.org nie einen 30s-Timeout (→ keine Auto-Deaktivierung),
+    // egal wie viele Mails fällig sind. triggered:false = es lief schon ein Lauf.
+    const result = kickFunnelProcessing();
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
-    console.error("[cron/funnels] processFunnels failed", err);
+    console.error("[cron/funnels] kick failed", err);
     return NextResponse.json({ ok: false, error: "processing_failed" }, { status: 500 });
   }
 }

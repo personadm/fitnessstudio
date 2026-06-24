@@ -85,6 +85,24 @@ export async function processFunnels(
   }
 }
 
+/**
+ * Stößt den Funnel-Versand im Hintergrund an und kehrt SOFORT zurück.
+ *
+ * Für den Cron-Endpoint gedacht: cron-job.org bekommt umgehend eine Antwort
+ * (kein 30s-Timeout → keine false-positive-Fehlschläge → keine
+ * Auto-Deaktivierung des Jobs), während der eigentliche Versand auf dem
+ * dauerhaften Render-Prozess weiterläuft. Der isProcessing-Guard in
+ * processFunnels verhindert dabei überlappende Läufe.
+ */
+export function kickFunnelProcessing(): { triggered: boolean } {
+  if (isProcessing) return { triggered: false };
+
+  void processFunnels({ force: true }).catch((err) =>
+    console.error("[funnels] background processing crashed", err),
+  );
+  return { triggered: true };
+}
+
 // ─────────────────────────────────────────────────────────────
 // ENROLLMENT: kann global ODER für einen spezifischen Kontakt aufgerufen werden
 // ─────────────────────────────────────────────────────────────
