@@ -31,6 +31,12 @@ function renderTemplate(
 let lastRunAt = 0;
 const MIN_INTERVAL_MS = 5 * 60 * 1000;
 
+// Überlappungs-Schutz: solange ein Lauf aktiv ist, steigt ein zweiter Aufruf
+// sofort aus (auch force:true). Verhindert, dass parallele Cron-Pings — z.B.
+// ein Retry, nachdem cron-job.org den ersten (langsamen) Aufruf als Timeout
+// gewertet hat — dieselben fälligen Mails ein zweites Mal verschicken.
+let isProcessing = false;
+
 export type ProcessResult = {
   skipped: boolean;
   reason?: string;
@@ -61,11 +67,22 @@ export async function processFunnels(
   if (!opts.force && nowMs - lastRunAt < MIN_INTERVAL_MS) {
     return { skipped: true, reason: "rate_limited" };
   }
+
+  // Läuft bereits ein Durchlauf? → nicht parallel starten. Schützt vor
+  // Doppel-Versand durch überlappende (Retry-)Cron-Pings.
+  if (isProcessing) {
+    return { skipped: true, reason: "already_running" };
+  }
+  isProcessing = true;
   lastRunAt = nowMs;
 
-  const enrolled = await enrollIntoMatchingFunnels();
-  const stats = await processFunnelsInner();
-  return { skipped: false, enrolled, ...stats };
+  try {
+    const enrolled = await enrollIntoMatchingFunnels();
+    const stats = await processFunnelsInner();
+    return { skipped: false, enrolled, ...stats };
+  } finally {
+    isProcessing = false;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -343,7 +360,29 @@ async function processFunnelsInner() {
         // Noch nicht fällig? → break (Steps sind sortiert)
         if (nowMs < dueAt) break;
 
-        // → SENDEN
+        // → SENDEN — CLAIM-BEFORE-SEND
+        //
+        // Erst das Step-Event atomar anlegen (race-safe via
+        // @@unique([enrollmentId, stepId])), DANN die Mail verschicken.
+        // Gewinnt ein paralleler Lauf den INSERT, bekommen alle anderen P2002
+        // und überspringen OHNE zu senden — dieselbe Mail kann so nie mehrfach
+        // rausgehen. (Vorher: erst senden, dann Event → überlappende Läufe
+        // sendeten alle, bevor einer den Marker committen konnte → Duplikate.)
+        try {
+          await db.funnelStepEvent.create({
+            data: { enrollmentId: enrollment.id, stepId: step.id },
+          });
+        } catch (err) {
+          const e = err as { code?: string };
+          if (e.code === "P2002") {
+            // Anderer Lauf hat diesen Step schon beansprucht → nicht senden.
+            sentStepIds.add(step.id);
+            continue;
+          }
+          console.error("[funnels] step-claim insert failed", err);
+          break;
+        }
+
         try {
           const subject = renderTemplate(step.subject, enrollment.contact);
           const bodyHtml = renderTemplate(step.bodyHtml, enrollment.contact);
@@ -353,12 +392,20 @@ async function processFunnelsInner() {
             subject,
             bodyHtml,
           });
+        } catch (err) {
+          // Versand fehlgeschlagen → Claim zurückrollen, damit der Step beim
+          // nächsten Lauf erneut versucht wird (kein dauerhafter Verlust). Der
+          // Claim hat in der Zwischenzeit parallele Doppel-Sends verhindert.
+          console.error("[funnels] send failed — rolling back claim", err);
+          await db.funnelStepEvent
+            .deleteMany({ where: { enrollmentId: enrollment.id, stepId: step.id } })
+            .catch((e) => console.error("[funnels] claim rollback failed", e));
+          break;
+        }
 
-          await db.funnelStepEvent.create({
-            data: { enrollmentId: enrollment.id, stepId: step.id },
-          });
-
-          await db.contactEvent.create({
+        // Aktivitäts-Log ist unkritisch fürs Dedup — Fehler hier nie eskalieren.
+        await db.contactEvent
+          .create({
             data: {
               contactId: enrollment.contactId,
               type: "FUNNEL_STEP_SENT",
@@ -370,17 +417,14 @@ async function processFunnelsInner() {
                 subject: step.subject,
               },
             },
-          });
+          })
+          .catch((e) => console.warn("[funnels] sent-log failed (non-critical)", e));
 
-          sentStepIds.add(step.id);
-          sent++;
+        sentStepIds.add(step.id);
+        sent++;
 
-          // Throttle gegen Resend-Rate-Limit
-          await sleep(125);
-        } catch (err) {
-          console.error("[funnels] send failed", err);
-          break;
-        }
+        // Throttle gegen Resend-Rate-Limit
+        await sleep(125);
       }
 
       // Enrollment komplett durch?
