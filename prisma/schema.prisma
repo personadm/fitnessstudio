@@ -222,6 +222,12 @@ model Campaign {
   status      String    @default("DRAFT")
   createdAt   DateTime  @default(now())
 
+  // Zeitpunkt, an dem dieser Versand auf SENDING gesetzt wurde. Dient dem
+  // Cron-Sicherheitsnetz: NUR kürzlich gestartete (unterbrochene) Sends werden
+  // fortgesetzt — eine alt-hängende SENDING-Kampagne wird nie wieder
+  // stillschweigend reaktiviert.
+  sendingStartedAt DateTime?
+
   events CampaignEvent[]
 
   @@index([targetStatus, targetLocationId])

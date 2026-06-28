@@ -119,7 +119,7 @@ export async function sendCampaignBatch(
   if (total === 0) {
     await db.campaign.update({
       where: { id: campaignId },
-      data: { status: "SENT", sentAt: new Date() },
+      data: { status: "SENT", sentAt: new Date(), sendingStartedAt: null },
     });
     return { ok: true, done: true, total: 0, sentTotal: 0, batchSent: 0 };
   }
@@ -137,7 +137,7 @@ export async function sendCampaignBatch(
   if (campaign.status === "DRAFT" && toSend.length > 0) {
     await db.campaign.update({
       where: { id: campaignId },
-      data: { status: "SENDING" },
+      data: { status: "SENDING", sendingStartedAt: new Date() },
     });
   }
 
@@ -176,7 +176,7 @@ export async function sendCampaignBatch(
   if (done) {
     await db.campaign.update({
       where: { id: campaignId },
-      data: { status: "SENT", sentAt: new Date() },
+      data: { status: "SENT", sentAt: new Date(), sendingStartedAt: null },
     });
   }
 
@@ -184,64 +184,79 @@ export async function sendCampaignBatch(
 }
 
 /**
- * Arbeitet alle fälligen Kampagnen (Status SENDING) Batch für Batch komplett
- * ab. Idempotent und fortsetzbar: schon versendete Empfänger werden über ihr
- * SENT-Event übersprungen, ein abgebrochener Lauf wird beim nächsten Aufruf
- * dort fortgesetzt, wo er aufgehört hat.
+ * Versendet GENAU EINE Kampagne Batch für Batch komplett. Idempotent und
+ * fortsetzbar: schon versendete Empfänger werden über ihr SENT-Event
+ * übersprungen, ein abgebrochener Lauf wird beim nächsten Aufruf dort
+ * fortgesetzt, wo er aufgehört hat.
  */
-export async function processAllDueCampaigns(): Promise<{
-  processed: number;
-  sent: number;
-}> {
-  const due = await db.campaign.findMany({
-    where: { status: "SENDING" },
-    select: { id: true },
-  });
-
+async function runCampaignToCompletion(campaignId: string): Promise<number> {
   let sent = 0;
-  for (const campaign of due) {
-    try {
-      // Jeder Empfänger bekommt sein SENT-Event VOR dem Mailversand, deshalb
-      // wächst sentTotal in jedem Fall → die Schleife terminiert garantiert.
-      while (true) {
-        const res = await sendCampaignBatch(campaign.id);
-        if (!res.ok) {
-          console.error(`[campaigns] batch failed for ${campaign.id}: ${res.message}`);
-          break;
-        }
-        sent += res.batchSent ?? 0;
-        if (res.done) break;
-      }
-    } catch (err) {
-      console.error(`[campaigns] worker error for ${campaign.id}`, err);
+  // Jeder Empfänger bekommt sein SENT-Event VOR dem Mailversand, deshalb
+  // wächst sentTotal in jedem Fall → die Schleife terminiert garantiert.
+  while (true) {
+    const res = await sendCampaignBatch(campaignId);
+    if (!res.ok) {
+      console.error(`[campaigns] batch failed for ${campaignId}: ${res.message}`);
+      break;
     }
+    sent += res.batchSent ?? 0;
+    if (res.done) break;
   }
-
-  return { processed: due.length, sent };
+  return sent;
 }
 
-// In-Memory-Lock: verhindert parallele Worker auf derselben Instanz. Render
-// fährt im Starter-Plan genau eine Instanz, deshalb reicht ein Modul-Flag.
-let campaignWorkerActive = false;
+// In-Memory-Lock PRO Kampagne: verhindert, dass dieselbe Kampagne doppelt
+// verarbeitet wird (z.B. Admin-Klick + gleichzeitiger Cron-Ping). Verschiedene
+// Kampagnen dürfen parallel laufen. Render fährt im Starter-Plan genau eine
+// Instanz, deshalb reicht ein Modul-Set.
+const activeCampaigns = new Set<string>();
 
 /**
- * Stößt den Kampagnen-Worker im Hintergrund an (detached) und kehrt SOFORT
- * zurück. Auf dem dauerhaft laufenden Render-Node-Prozess läuft der Versand
- * danach weiter — auch wenn der auslösende Request (Klick im Admin-Panel oder
- * Cron-Ping) längst beantwortet ist und der Laptop zugeklappt wurde.
+ * Stößt den Versand für GENAU DIESE EINE Kampagne im Hintergrund an (detached)
+ * und kehrt SOFORT zurück. Es wird ausschließlich `campaignId` verschickt —
+ * niemals andere Kampagnen, die zufällig ebenfalls auf SENDING stehen.
  *
- * Wird der Prozess mitten im Versand neu gestartet (z.B. Deploy), setzt der
- * nächste Cron-Ping den Versand idempotent fort.
+ * Auf dem dauerhaft laufenden Render-Node-Prozess läuft der Versand danach
+ * weiter — auch wenn der auslösende Request (Klick im Admin-Panel) längst
+ * beantwortet ist und der Laptop zugeklappt wurde. Wird der Prozess mitten im
+ * Versand neu gestartet (z.B. Deploy), setzt der Cron-Ping ihn fort
+ * (siehe `resumeStalledCampaigns`).
  */
-export function kickCampaignWorker(): { started: boolean } {
-  if (campaignWorkerActive) return { started: false };
-  campaignWorkerActive = true;
+export function kickCampaignSend(campaignId: string): { started: boolean } {
+  if (activeCampaigns.has(campaignId)) return { started: false };
+  activeCampaigns.add(campaignId);
 
-  void processAllDueCampaigns()
-    .catch((err) => console.error("[campaigns] worker crashed", err))
+  void runCampaignToCompletion(campaignId)
+    .catch((err) => console.error(`[campaigns] worker crashed for ${campaignId}`, err))
     .finally(() => {
-      campaignWorkerActive = false;
+      activeCampaigns.delete(campaignId);
     });
 
   return { started: true };
+}
+
+// Wie lange nach dem Start gilt ein SENDING-Versand noch als „kürzlich
+// unterbrochen" und darf vom Cron fortgesetzt werden. Älteres wird NICHT mehr
+// reaktiviert — so kann eine alt-hängende Kampagne nie wieder unbemerkt an
+// neu hinzugekommene Empfänger ausgeliefert werden.
+const RESUME_WINDOW_MS = 60 * 60 * 1000; // 1 Stunde
+
+/**
+ * Cron-Sicherheitsnetz: setzt NUR Versände fort, die in der letzten Stunde
+ * gestartet und (z.B. durch einen Deploy/Neustart) unterbrochen wurden. Eine
+ * Kampagne ohne `sendingStartedAt` oder mit zu altem Start wird bewusst
+ * ignoriert. Jede betroffene Kampagne wird einzeln und idempotent abgearbeitet.
+ */
+export async function resumeStalledCampaigns(): Promise<{ resumed: number }> {
+  const cutoff = new Date(Date.now() - RESUME_WINDOW_MS);
+  const due = await db.campaign.findMany({
+    where: { status: "SENDING", sendingStartedAt: { gte: cutoff } },
+    select: { id: true },
+  });
+
+  for (const campaign of due) {
+    kickCampaignSend(campaign.id);
+  }
+
+  return { resumed: due.length };
 }

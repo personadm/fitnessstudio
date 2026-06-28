@@ -17,7 +17,7 @@ import { enrollIntoMatchingFunnels, processFunnels } from "@/lib/funnels";
 import {
   getCampaignRecipients,
   sendCampaignBatch,
-  kickCampaignWorker,
+  kickCampaignSend,
 } from "@/lib/campaigns";
 import type { ContactStatus, FunnelTrigger } from "@prisma/client";
 
@@ -1047,15 +1047,16 @@ export async function enqueueCampaignSend(campaignId: string) {
   }
 
   // Status auf SENDING → der Worker (und als Sicherheitsnetz der Cron) übernimmt.
+  // sendingStartedAt markiert den Startzeitpunkt: nur kürzlich gestartete Sends
+  // werden vom Cron fortgesetzt, alt-hängende nie wieder reaktiviert.
   await db.campaign.update({
     where: { id: campaignId },
-    data: { status: "SENDING", sentAt: null },
+    data: { status: "SENDING", sentAt: null, sendingStartedAt: new Date() },
   });
 
-  // Worker sofort serverseitig anstoßen, damit der Versand nicht erst auf den
-  // nächsten Cron-Ping wartet. Läuft detached weiter, auch wenn Tim das
-  // Browser-Fenster schließt.
-  kickCampaignWorker();
+  // Versand für GENAU DIESE Kampagne serverseitig anstoßen — niemals andere.
+  // Läuft detached weiter, auch wenn das Browser-Fenster geschlossen wird.
+  kickCampaignSend(campaignId);
 
   revalidatePath(`/admin/campaigns/${campaignId}`);
   return { ok: true, queued: true, total: recipients.length };

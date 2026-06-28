@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
-import { kickCampaignWorker } from "@/lib/campaigns";
+import { resumeStalledCampaigns } from "@/lib/campaigns";
 
 // Prisma + Date.now brauchen die Node-Runtime; nie statisch cachen.
 export const runtime = "nodejs";
@@ -35,12 +35,13 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // kickCampaignWorker kehrt sofort zurück — der Versand läuft danach
-    // detached auf dem Server weiter. started:false heißt: Worker läuft bereits.
-    const result = kickCampaignWorker();
+    // Setzt NUR kürzlich gestartete, unterbrochene Versände fort (z.B. nach
+    // einem Deploy). Reaktiviert niemals alt-hängende Kampagnen. Kehrt sofort
+    // zurück — die Versände laufen danach detached weiter.
+    const result = await resumeStalledCampaigns();
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
-    console.error("[cron/campaigns] kick failed", err);
+    console.error("[cron/campaigns] resume failed", err);
     return NextResponse.json({ ok: false, error: "processing_failed" }, { status: 500 });
   }
 }
