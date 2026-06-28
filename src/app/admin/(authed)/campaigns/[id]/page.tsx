@@ -148,6 +148,11 @@ export default async function CampaignDetailPage({ params }: PageProps) {
               <RestartCampaignButton
                 campaignId={campaign.id}
                 newRecipientsCount={newRecipientsCount}
+                subject={campaign.subject}
+                createdAtLabel={campaign.createdAt.toLocaleDateString("de-DE")}
+                ageDays={Math.floor(
+                  (Date.now() - campaign.createdAt.getTime()) / 86_400_000,
+                )}
               />
             </>
           )}
