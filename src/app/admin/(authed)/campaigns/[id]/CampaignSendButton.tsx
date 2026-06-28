@@ -3,10 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { enqueueCampaignSend } from "@/app/admin/_actions";
+import { EmailPreview } from "@/components/admin/EmailPreview";
 
 interface Props {
   campaignId: string;
   recipientCount: number;
+  /** Betreff + Inhalt — werden vor dem finalen Senden zur Kontrolle angezeigt. */
+  subject: string;
+  bodyHtml: string;
 }
 
 type SendState =
@@ -25,7 +29,12 @@ type SendState =
  * geschlossen und der Laptop zugeklappt werden. Die Seite zeigt nach dem
  * Refresh den laufenden Server-Versand an.
  */
-export function CampaignSendButton({ campaignId, recipientCount }: Props) {
+export function CampaignSendButton({
+  campaignId,
+  recipientCount,
+  subject,
+  bodyHtml,
+}: Props) {
   const router = useRouter();
   const [state, setState] = useState<SendState>({ phase: "idle" });
 
@@ -74,18 +83,31 @@ export function CampaignSendButton({ campaignId, recipientCount }: Props) {
 
   if (state.phase === "confirming") {
     return (
-      <div className="border border-acid bg-acid/20 p-4 space-y-3">
-        <p className="font-mono text-[11px] uppercase tracking-[0.1em]">
-          Versand bestätigen
+      <div className="border-2 border-acid_dark bg-acid/10 p-4 space-y-3">
+        <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-acid_dark">
+          Bitte prüfen, was rausgeht
         </p>
+
+        {/* Betreff unmissverständlich anzeigen */}
+        <div className="border border-ink/20 bg-cream/60 p-2">
+          <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
+            Betreff
+          </p>
+          <p className="mt-0.5 text-sm font-semibold leading-snug">
+            {subject || "(kein Betreff)"}
+          </p>
+        </div>
+
+        {/* Pflicht-Vorschau: die echte Mail im Studio-Layout */}
+        <EmailPreview subject={subject} bodyHtml={bodyHtml} />
+
         <p className="text-sm leading-relaxed">
-          {recipientCount} Empfänger
+          Geht an <strong>{recipientCount} Empfänger</strong>.
         </p>
         <p className="text-xs text-muted leading-relaxed">
-          Der Versand läuft danach <strong>automatisch auf dem Server</strong>.
-          Du kannst dieses Fenster schließen und den Laptop zuklappen — die Mails
-          gehen trotzdem alle raus. Schon versendete Empfänger bekommen keine
-          zweite Mail.
+          Der Versand läuft danach <strong>automatisch auf dem Server</strong> —
+          du kannst das Fenster schließen. Schon versendete Empfänger bekommen
+          keine zweite Mail.
         </p>
         <div className="flex gap-2">
           <button
@@ -93,7 +115,7 @@ export function CampaignSendButton({ campaignId, recipientCount }: Props) {
             onClick={start}
             className="flex-1 bg-ink px-3 py-2 font-mono text-[11px] uppercase tracking-[0.1em] text-acid hover:bg-ink-soft"
           >
-            Ja, jetzt starten
+            Ja, genau das senden
           </button>
           <button
             type="button"

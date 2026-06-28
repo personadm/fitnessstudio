@@ -114,7 +114,12 @@ export default async function CampaignDetailPage({ params }: PageProps) {
 
           {/* DRAFT: Senden-Button */}
           {isDraft && (
-            <CampaignSendButton campaignId={campaign.id} recipientCount={recipients.length} />
+            <CampaignSendButton
+              campaignId={campaign.id}
+              recipientCount={recipients.length}
+              subject={campaign.subject}
+              bodyHtml={campaign.bodyHtml}
+            />
           )}
 
           {/* SENDING: serverseitiger Versand läuft */}
