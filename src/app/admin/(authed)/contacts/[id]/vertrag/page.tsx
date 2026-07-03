@@ -189,9 +189,10 @@ export default async function VertragPage({ params }: PageProps) {
                 <strong>{anmeldungLabel}</strong>.
               </li>
               <li>
-                Sollte das Programm nicht spätestens bis zum <strong>{kuendigungBisLabel}</strong>{" "}
-                schriftlich gekündigt werden, geht es in eine 12-monatige Clubmitgliedschaft zu
-                monatlich <strong>{CLUB_MONTHLY_PRICE}</strong> über.
+                <strong style={{ color: PETROL }}>Zufriedenheitsgarantie:</strong> Sollte das
+                Programm nicht spätestens bis zum <strong>{kuendigungBisLabel}</strong> schriftlich
+                gekündigt werden, geht es in eine 12-monatige Clubmitgliedschaft zu monatlich{" "}
+                <strong>{CLUB_MONTHLY_PRICE}</strong> über.
               </li>
               <li>
                 Mit der Unterschrift erlischt auch das Rücktrittsrecht aus der Online-Anmeldung
@@ -229,10 +230,11 @@ export default async function VertragPage({ params }: PageProps) {
         <section className="mb-8">
           <h3 className="mb-2 text-sm font-bold uppercase tracking-wider">Hinweise</h3>
           <ul className="ml-4 list-disc space-y-1 text-xs text-gray-700">
-            <li>Die im Anhang beigefügten AGB sind Bestandteil dieses Vertrags.</li>
+            <li>Es gelten die AGB aus der Online-Anmeldung.</li>
             <li>
               Die gesetzlichen Krankenkassen erstatten je nach Tarif einen Großteil der Kursgebühren.
-              Eine Teilnahmebescheinigung erhältst du nach Programmabschluss.
+              Eine Teilnahmebescheinigung erhältst du nach vollständiger Absolvierung des digitalen
+              Online-Ernährungscoachings.
             </li>
             <li>
               Datenverarbeitung gemäß Datenschutzerklärung. Kontakt jederzeit unter{" "}
@@ -250,17 +252,6 @@ export default async function VertragPage({ params }: PageProps) {
             <SignatureField label="Ort, Datum" />
             <SignatureField label="Unterschrift Kunde" />
           </div>
-        </section>
-
-        {/* ── Seite 2 ff.: AGB-Anhang ── */}
-        <section className="agb-page mt-16">
-          <h2 className="text-base font-bold uppercase tracking-wider" style={{ color: PETROL }}>
-            Anhang: Allgemeine Geschäftsbedingungen
-          </h2>
-          <p className="mt-1 text-xs text-gray-600">
-            Stand 07.05.2026 · Bestandteil des oben geschlossenen Vertrags
-          </p>
-          <AGBText locationName={locationName} />
         </section>
       </main>
     </>
@@ -287,109 +278,6 @@ function SignatureField({ label, value }: { label: string; value?: string }) {
         {value ? <span className="inline-block pt-3 text-sm">{value}</span> : null}
       </div>
       <p className="mt-1 text-[10px] uppercase tracking-widest text-gray-500">{label}</p>
-    </div>
-  );
-}
-
-function AGBText({ locationName }: { locationName: string }) {
-  // Verkürzte, druckfreundliche AGB-Version aus deinen aktuellen AGB-PDFs.
-  // Bei Änderungen in /agb bitte hier ebenfalls anpassen ODER (besser):
-  // die AGB einmal in eine Konstante extrahieren und an beiden Stellen einbinden.
-  const items = [
-    {
-      heading: "1. Geltungsbereich",
-      paragraphs: [
-        `Für die Geschäftsbeziehung zwischen ${locationName} GmbH (nachfolgend „Verkäufer") und dem Kunden (nachfolgend „Kunde") gelten ausschließlich die nachfolgenden Allgemeinen Geschäftsbedingungen in ihrer zum Zeitpunkt der Bestellung gültigen Fassung.`,
-        `Sie können uns persönlich für Fragen, Reklamationen und Beanstandungen per E-Mail unter ${MAIL} kontaktieren.`,
-        "Verbraucher im Sinne dieser AGB ist jede natürliche Person, die ein Rechtsgeschäft zu einem Zwecke abschließt, der überwiegend weder ihrer gewerblichen noch ihrer selbstständigen beruflichen Tätigkeit zugerechnet werden kann (§ 13 BGB).",
-      ],
-    },
-    {
-      heading: "2. Angebote und Leistungsbeschreibungen",
-      paragraphs: [
-        "Die Darstellung der Produkte im Online-Shop stellt kein rechtlich bindendes Angebot, sondern eine Aufforderung zur Abgabe einer Bestellung dar. Leistungsbeschreibungen auf den Websites des Verkäufers haben nicht den Charakter einer Zusicherung oder Garantie.",
-        `Alle Angebote gelten „solange der Vorrat reicht", wenn nicht bei den Produkten etwas anderes vermerkt ist.`,
-      ],
-    },
-    {
-      heading: "3. Bestellvorgang und Vertragsabschluss",
-      paragraphs: [
-        "Der Kunde kann aus dem Sortiment des Verkäufers Produkte unverbindlich auswählen. Nach Eingabe der persönlichen Daten gelangt der Kunde innerhalb des Buchungsprozesses zur Auswahl der Versandarten und der Festlegung der Zahlungsinformationen zum Abschluss des Bestellvorgangs.",
-        `Über die Schaltfläche „Bestellung aufgeben" gibt der Kunde einen verbindlichen Antrag zum Kauf der ausgewählten Waren oder Dienstleistungen ab.`,
-        "Der Verkäufer schickt daraufhin dem Kunden eine automatische Empfangsbestätigung per E-Mail zu. Der Kaufvertrag kommt erst dann zustande, wenn der Verkäufer das bestellte Produkt innerhalb von 2 Tagen versendet, übergibt oder den Versand innerhalb von 2 Tagen mit einer zweiten E-Mail bestätigt hat.",
-      ],
-    },
-    {
-      heading: "4. Preise und Versandkosten",
-      paragraphs: [
-        "Alle Preise verstehen sich einschließlich der jeweils gültigen gesetzlichen Umsatzsteuer.",
-        "Zusätzlich zu den angegebenen Preisen berechnet der Verkäufer für die Lieferung Versandkosten, die im Rahmen des Bestellvorgangs deutlich mitgeteilt werden.",
-      ],
-    },
-    {
-      heading: "5. Lieferung, Warenverfügbarkeit",
-      paragraphs: [
-        "Soweit Vorkasse vereinbart ist, erfolgt die Lieferung nach Eingang des Rechnungsbetrages.",
-        "Sollte die Zustellung der Ware durch Verschulden des Käufers trotz dreimaligem Auslieferversuch scheitern, kann der Verkäufer vom Vertrag zurücktreten.",
-      ],
-    },
-    {
-      heading: "6. Zahlungsmodalitäten",
-      paragraphs: [
-        "Der Kunde kann im Rahmen und vor Abschluss des Bestellvorgangs aus den zur Verfügung stehenden Zahlungsarten wählen.",
-        "Ist die Bezahlung per Rechnung möglich, hat die Zahlung innerhalb von 15 Tagen nach Erhalt der Ware und der Rechnung zu erfolgen. Bei allen anderen Zahlweisen hat die Zahlung im Voraus ohne Abzug zu erfolgen.",
-        "Werden Drittanbieter mit der Zahlungsabwicklung beauftragt (z.B. PayPal), gelten deren Allgemeine Geschäftsbedingungen.",
-      ],
-    },
-    {
-      heading: "7. Eigentumsvorbehalt",
-      paragraphs: [
-        "Bis zur vollständigen Bezahlung verbleiben die gelieferten Waren im Eigentum des Verkäufers.",
-      ],
-    },
-    {
-      heading: "8. Sachmängelgewährleistung und Garantie",
-      paragraphs: [
-        "Die Gewährleistung bestimmt sich nach gesetzlichen Vorschriften.",
-        "Eine Garantie besteht bei den vom Verkäufer gelieferten Waren nur, wenn diese ausdrücklich abgegeben wurde.",
-      ],
-    },
-    {
-      heading: "9. Weitergehende Haftung",
-      paragraphs: [
-        "Schadenersatzansprüche gegen den Verkäufer aus Unmöglichkeit der Leistung, aus positiver Vertragsverletzung, aus Verschulden bei Vertragsabschluss und aus unerlaubter Handlung sind ausgeschlossen, soweit nicht vorsätzliches oder grob fahrlässiges Handeln vorliegt.",
-        "Diese Haftungsbeschränkungen gelten nicht bei Verletzung des Lebens, des Körpers oder der Gesundheit.",
-      ],
-    },
-    {
-      heading: "10. Speicherung des Vertragstextes",
-      paragraphs: [
-        "Der Verkäufer sendet dem Kunden eine Bestellbestätigung mit allen Bestelldaten an die angegebene E-Mail-Adresse zu.",
-        "Mit der Bestellbestätigung, spätestens jedoch bei der Lieferung der Ware, erhält der Kunde eine Kopie der AGB nebst Widerrufsbelehrung und den Hinweisen zu Versandkosten sowie Liefer- und Zahlungsbedingungen.",
-      ],
-    },
-    {
-      heading: "11. Schlussbestimmungen",
-      paragraphs: [
-        "Ist der Besteller Vollkaufmann, ist der Gerichtsstand und Erfüllungsort Ahaus.",
-        "Sollte eine Bestimmung dieser Geschäftsbedingungen unwirksam sein, so wird dadurch die Gültigkeit der übrigen Bestimmungen nicht berührt.",
-        "Auf alle Rechtsbeziehungen und Ansprüche zwischen Bestellern und des Verkäufers ist, soweit gesetzlich zulässig, ausschließlich deutsches Recht anwendbar.",
-      ],
-    },
-  ];
-
-  return (
-    <div className="mt-4 space-y-4 text-xs leading-snug text-gray-800">
-      {items.map((item) => (
-        <div key={item.heading}>
-          <h4 className="font-semibold text-black">{item.heading}</h4>
-          {item.paragraphs.map((p, i) => (
-            <p key={i} className="mt-1">
-              {p}
-            </p>
-          ))}
-        </div>
-      ))}
     </div>
   );
 }
@@ -431,10 +319,6 @@ function PrintStyles() {
 
   body {
     background: #fff !important;
-  }
-
-  .agb-page {
-    page-break-before: always;
   }
 
   /* Tabellen-Zeilen + Überschriften nicht mitten zerreißen */
