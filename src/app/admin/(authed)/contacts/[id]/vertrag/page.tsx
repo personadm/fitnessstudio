@@ -25,6 +25,21 @@ const ANBIETER_DETAILS: Record<string, { ustId: string; hrb: string; geschaeftsf
 
 const MAIL = "mail@gesundheitscoaches.de";
 
+// Nach Ablauf der Kündigungsfrist geht das 6-Wochen-Programm automatisch in eine
+// 12-monatige Clubmitgliedschaft über. Preis & Frist zentral hier pflegen.
+const CLUB_MONTHLY_PRICE = "59,99 €";
+const KUENDIGUNGSFRIST_WOCHEN = 5;
+
+function formatDate(date: Date): string {
+  return new Date(date).toLocaleDateString("de-DE");
+}
+
+function addWeeks(date: Date, weeks: number): Date {
+  const copy = new Date(date);
+  copy.setDate(copy.getDate() + weeks * 7);
+  return copy;
+}
+
 export const dynamic = "force-dynamic";
 
 export default async function VertragPage({ params }: PageProps) {
@@ -63,6 +78,15 @@ export default async function VertragPage({ params }: PageProps) {
   };
 
   const today = new Date().toLocaleDateString("de-DE");
+
+  // Startdatum des 6-Wochen-Programms = Zeitpunkt der Online-Anmeldung.
+  // signupAt wird beim Absenden des Online-Formulars gesetzt; contractStartDate
+  // dient als Fallback für manuell/offline angelegte Verträge.
+  const anmeldungDate = contact.signupAt ?? contact.contractStartDate ?? null;
+  const anmeldungLabel = anmeldungDate ? formatDate(anmeldungDate) : "__________";
+  const kuendigungBisLabel = anmeldungDate
+    ? formatDate(addWeeks(anmeldungDate, KUENDIGUNGSFRIST_WOCHEN))
+    : "__________";
 
   const plan = contact.pricingPlan;
   const price = plan ? (plan.priceCents / 100).toLocaleString("de-DE", { style: "currency", currency: "EUR" }) : "—";
@@ -141,12 +165,8 @@ export default async function VertragPage({ params }: PageProps) {
               <Row label="Tarif" value={plan?.name ?? "—"} />
               <Row label="Preis" value={`${price} ${billingLabel}`} />
               <Row
-                label="Vertragsbeginn"
-                value={
-                  contact.contractStartDate
-                    ? new Date(contact.contractStartDate).toLocaleDateString("de-DE")
-                    : "ab Datum der Unterschrift"
-                }
+                label="Programmstart"
+                value={anmeldungDate ? anmeldungLabel : "mit deiner Online-Anmeldung"}
               />
               <Row label="Studio" value={locationName} />
             </tbody>
@@ -154,6 +174,35 @@ export default async function VertragPage({ params }: PageProps) {
           {plan?.description ? (
             <p className="mt-3 text-xs italic text-gray-700">{plan.description}</p>
           ) : null}
+        </section>
+
+        {/* Rechtlich zentrale Bedingungen — bewusst als klar lesbarer Kasten,
+            ersetzt die frühere Zeile „VERTRAGSBEGINN ab Datum der Unterschrift". */}
+        <section className="mb-8">
+          <div className="rounded-md border-2 border-black/70 p-4">
+            <h3 className="mb-3 text-sm font-bold uppercase tracking-wider" style={{ color: PETROL }}>
+              Programmlaufzeit &amp; Kündigung
+            </h3>
+            <ul className="ml-4 list-disc space-y-2 text-sm leading-relaxed text-black">
+              <li>
+                Das 6-Wochen-Programm startet exakt mit deiner Online-Anmeldung am{" "}
+                <strong>{anmeldungLabel}</strong>.
+              </li>
+              <li>
+                Sollte das Programm nicht spätestens bis zum <strong>{kuendigungBisLabel}</strong>{" "}
+                schriftlich gekündigt werden, geht es in eine 12-monatige Clubmitgliedschaft zu
+                monatlich <strong>{CLUB_MONTHLY_PRICE}</strong> über.
+              </li>
+              <li>
+                Mit der Unterschrift erlischt auch das Rücktrittsrecht aus der Online-Anmeldung
+                aufgrund der Inanspruchnahme der Leistung.
+              </li>
+            </ul>
+            <p className="mt-3 text-xs text-gray-700">
+              Die AGB sowie die Programm-Inhalte aus der Online-Anmeldung sind Bestandteil dieses
+              Programms.
+            </p>
+          </div>
         </section>
 
         <section className="mb-8">
