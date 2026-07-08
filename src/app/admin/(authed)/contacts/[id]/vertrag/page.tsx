@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { anbieterForLocation, widerrufsfolgenText, widerrufsrechtText } from "@/lib/legal";
 import { PrintButton } from "./PrintButton";
 
 interface PageProps {
@@ -79,14 +80,28 @@ export default async function VertragPage({ params }: PageProps) {
 
   const today = new Date().toLocaleDateString("de-DE");
 
-  // Startdatum des 6-Wochen-Programms = Zeitpunkt der Online-Anmeldung.
-  // signupAt wird beim Absenden des Online-Formulars gesetzt; contractStartDate
-  // dient als Fallback für manuell/offline angelegte Verträge.
-  const anmeldungDate = contact.signupAt ?? contact.contractStartDate ?? null;
-  const anmeldungLabel = anmeldungDate ? formatDate(anmeldungDate) : "__________";
-  const kuendigungBisLabel = anmeldungDate
-    ? formatDate(addWeeks(anmeldungDate, KUENDIGUNGSFRIST_WOCHEN))
+  // Vertragsschluss = Online-Anmeldung. Das ist der Fristbeginn (Widerruf +
+  // Kündigung), NICHT der Leistungsbeginn. signupAt wird beim Absenden des
+  // Online-Formulars gesetzt; contractStartDate dient als Fallback für
+  // manuell/offline angelegte Verträge.
+  const vertragsschlussDate = contact.signupAt ?? contact.contractStartDate ?? null;
+  const vertragsschlussLabel = vertragsschlussDate ? formatDate(vertragsschlussDate) : "__________";
+
+  // Programmstart = Leistungsbeginn (separater Termin, getrennt vom
+  // Vertragsschluss). Nur ein Datum anzeigen, wenn es explizit hinterlegt ist;
+  // andernfalls wird der Starttermin persönlich vereinbart.
+  const programmstartLabel = contact.contractStartDate
+    ? formatDate(contact.contractStartDate)
+    : null;
+
+  // Letzter Kündigungstermin: exakt fünf Wochen nach der Online-Anmeldung
+  // (Vertragsschluss) — überall derselbe Bezugspunkt.
+  const kuendigungBisLabel = vertragsschlussDate
+    ? formatDate(addWeeks(vertragsschlussDate, KUENDIGUNGSFRIST_WOCHEN))
     : "__________";
+
+  // Studioabhängiger Anbieter für die Widerrufsbelehrung auf Seite 2.
+  const widerrufAnbieter = anbieterForLocation(locationName);
 
   const plan = contact.pricingPlan;
   const price = plan ? (plan.priceCents / 100).toLocaleString("de-DE", { style: "currency", currency: "EUR" }) : "—";
@@ -164,9 +179,10 @@ export default async function VertragPage({ params }: PageProps) {
             <tbody>
               <Row label="Tarif" value={plan?.name ?? "—"} />
               <Row label="Preis" value={`${price} ${billingLabel}`} />
+              <Row label="Vertragsschluss" value={`${vertragsschlussLabel} (Online-Anmeldung)`} />
               <Row
                 label="Programmstart"
-                value={anmeldungDate ? anmeldungLabel : "mit deiner Online-Anmeldung"}
+                value={programmstartLabel ?? "wird beim Starttermin vereinbart"}
               />
               <Row label="Studio" value={locationName} />
             </tbody>
@@ -185,18 +201,20 @@ export default async function VertragPage({ params }: PageProps) {
             </h3>
             <ul className="ml-4 list-disc space-y-2 text-sm leading-relaxed text-black">
               <li>
-                Das 6-Wochen-Programm startet exakt mit deiner Online-Anmeldung am{" "}
-                <strong>{anmeldungLabel}</strong>.
+                Vertragsschluss ist deine Online-Anmeldung am{" "}
+                <strong>{vertragsschlussLabel}</strong>. Ab diesem Tag läuft die 14-tägige
+                Widerrufsfrist. Der Programmstart (Leistungsbeginn) ist davon getrennt.
               </li>
               <li>
                 <strong style={{ color: PETROL }}>Zufriedenheitsgarantie:</strong> Sollte das
-                Programm nicht spätestens bis zum <strong>{kuendigungBisLabel}</strong> schriftlich
-                gekündigt werden, geht es in eine 12-monatige Clubmitgliedschaft zu monatlich{" "}
-                <strong>{CLUB_MONTHLY_PRICE}</strong> über.
+                Programm nicht spätestens bis zum <strong>{kuendigungBisLabel}</strong> (fünf Wochen
+                nach der Online-Anmeldung) schriftlich gekündigt werden, geht es in eine
+                12-monatige Clubmitgliedschaft zu monatlich <strong>{CLUB_MONTHLY_PRICE}</strong>{" "}
+                über.
               </li>
               <li>
-                Mit der Unterschrift erlischt auch das Rücktrittsrecht aus der Online-Anmeldung
-                aufgrund der Inanspruchnahme der Leistung.
+                Ich verlange ausdrücklich, dass mit dem Programm schon vor Ablauf der 14-tägigen
+                Widerrufsfrist begonnen wird.
               </li>
             </ul>
             <p className="mt-3 text-xs text-gray-700">
@@ -251,6 +269,24 @@ export default async function VertragPage({ params }: PageProps) {
           <div className="mt-10 grid grid-cols-2 gap-12">
             <SignatureField label="Ort, Datum" />
             <SignatureField label="Unterschrift Kunde" />
+          </div>
+        </section>
+
+        {/* Widerrufsbelehrung — amtliche Kurzfassung (Dienstleistung).
+            Bewusst klein & dezent grau, damit sie auf Seite 2 unter die
+            Unterschriften passt und keine dritte Seite entsteht. */}
+        <section className="mt-10 break-inside-avoid border-t border-black/15 pt-4">
+          <h4 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-500">
+            Widerrufsbelehrung
+          </h4>
+          <div className="space-y-1.5 text-[9px] leading-snug text-gray-500">
+            <p>
+              <span className="font-semibold">Widerrufsrecht</span> —{" "}
+              {widerrufsrechtText(widerrufAnbieter)}
+            </p>
+            <p>
+              <span className="font-semibold">Widerrufsfolgen</span> — {widerrufsfolgenText()}
+            </p>
           </div>
         </section>
       </main>

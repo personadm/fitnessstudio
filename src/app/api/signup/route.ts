@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     // Standort-Logik (analog zu /api/leads).
     const activeLocations = await db.location.findMany({
       where: { active: true },
-      select: { id: true },
+      select: { id: true, name: true },
     });
 
     let resolvedLocationId: string | null = null;
@@ -136,12 +136,34 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Studioname für die studioabhängige Widerrufsbelehrung in der Mail.
+    const resolvedLocationName =
+      activeLocations.find((l) => l.id === resolvedLocationId)?.name ?? null;
+
     try {
       await sendSignupConfirmation({
         to: data.email,
         firstName: data.firstName,
         planName: plan.name,
         priceCents: plan.priceCents,
+        billingInterval: plan.billingInterval,
+        locationName: resolvedLocationName,
+      });
+
+      // Protokoll: Die Bestätigungsmail enthält AGB + Widerrufsbelehrung und
+      // gilt damit als Zugang auf einem dauerhaften Datenträger. Empfänger und
+      // Versandzeitpunkt werden festgehalten (rechtlicher Nachweis).
+      await db.contactEvent.create({
+        data: {
+          contactId: contact.id,
+          type: "SIGNUP_CONFIRMATION_SENT",
+          meta: {
+            to: data.email,
+            sentAt: new Date().toISOString(),
+            includes: ["AGB", "Widerrufsbelehrung"],
+            location: resolvedLocationName,
+          },
+        },
       });
     } catch (err) {
       console.error("[/api/signup] sendSignupConfirmation failed", err);
