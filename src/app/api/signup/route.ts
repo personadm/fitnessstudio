@@ -150,9 +150,10 @@ export async function POST(req: NextRequest) {
         locationName: resolvedLocationName,
       });
 
-      // Protokoll: Die Bestätigungsmail enthält AGB + Widerrufsbelehrung und
-      // gilt damit als Zugang auf einem dauerhaften Datenträger. Empfänger und
-      // Versandzeitpunkt werden festgehalten (rechtlicher Nachweis).
+      // Protokoll: Die Bestätigungsmail führt AGB + Widerrufsbelehrung als
+      // PDF-Anhang mit und gilt damit als Zugang auf einem dauerhaften
+      // Datenträger. Empfänger und Versandzeitpunkt werden festgehalten
+      // (rechtlicher Nachweis).
       await db.contactEvent.create({
         data: {
           contactId: contact.id,
@@ -160,6 +161,7 @@ export async function POST(req: NextRequest) {
           meta: {
             to: data.email,
             sentAt: new Date().toISOString(),
+            attachment: "AGB-und-Widerrufsbelehrung.pdf",
             includes: ["AGB", "Widerrufsbelehrung"],
             location: resolvedLocationName,
           },

@@ -1,13 +1,7 @@
 import { Resend } from "resend";
 import { db } from "./db";
-import {
-  AGB_SECTIONS,
-  AGB_STAND,
-  anbieterForLocation,
-  widerrufsfolgenText,
-  widerrufsrechtText,
-  type Anbieter,
-} from "./legal";
+import { anbieterForLocation } from "./legal";
+import { buildLegalPdfBase64 } from "./legalPdf";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -106,34 +100,6 @@ export async function sendPricingMail(opts: {
 // 2) Anmeldebestätigung
 // ─────────────────────────────────────────────────────────────
 
-// Reines Rendering der Anmeldebestätigung (ohne Versand) — so lässt sich der
-// Mail-Inhalt (inkl. AGB + Widerrufsbelehrung) testen/vorschauen, ohne Resend
-// aufzurufen.
-export function buildSignupConfirmationEmail(opts: {
-  firstName: string;
-  planName: string;
-  priceCents: number;
-  billingInterval?: string | null;
-  locationName?: string | null;
-}): { subject: string; html: string; text: string } {
-  // Studioabhängiger Anbieter für die Widerrufsbelehrung (Firma + Anschrift
-  // dürfen nie fehlen → anbieterForLocation liefert immer einen vollständigen
-  // Datensatz).
-  const anbieter = anbieterForLocation(opts.locationName);
-  const templateOpts = {
-    firstName: opts.firstName,
-    planName: opts.planName,
-    priceCents: opts.priceCents,
-    billingInterval: opts.billingInterval ?? null,
-    anbieter,
-  };
-  return {
-    subject: `Willkommen bei ${STUDIO_NAME}`,
-    html: signupConfirmTemplate(templateOpts),
-    text: signupConfirmTextFallback(templateOpts),
-  };
-}
-
 export async function sendSignupConfirmation(opts: {
   to: string;
   firstName: string;
@@ -142,14 +108,31 @@ export async function sendSignupConfirmation(opts: {
   billingInterval?: string | null;
   locationName?: string | null;
 }) {
-  const { subject, html, text } = buildSignupConfirmationEmail(opts);
+  // AGB + Widerrufsbelehrung gehen als PDF-Anhang mit (dauerhafter
+  // Datenträger). Die studioabhängige GmbH wird im PDF eingesetzt — Firma +
+  // Anschrift dürfen nie fehlen, deshalb liefert anbieterForLocation immer
+  // einen vollständigen Datensatz (Fallback = Ochtrup).
+  const anbieter = anbieterForLocation(opts.locationName);
+  const pdfBase64 = await buildLegalPdfBase64(anbieter);
+
   return sendViaResend({
     from: FROM,
     ...REPLY_TO_FIELD,
     to: opts.to,
-    subject,
-    html,
-    text,
+    subject: `Willkommen bei ${STUDIO_NAME}`,
+    html: signupConfirmTemplate({
+      firstName: opts.firstName,
+      planName: opts.planName,
+      priceCents: opts.priceCents,
+      billingInterval: opts.billingInterval ?? null,
+    }),
+    text: `Hallo ${opts.firstName},\n\ndeine Anmeldung für den Tarif ${opts.planName} (${formatPrice(opts.priceCents)} ${billingSuffix(opts.billingInterval)}) ist bei uns eingegangen. Wir melden uns in den nächsten Werktagen mit allen Details.\n\nIm Anhang findest du unsere AGB und die Widerrufsbelehrung.\n\n— ${STUDIO_NAME}`,
+    attachments: [
+      {
+        filename: "AGB-und-Widerrufsbelehrung.pdf",
+        content: pdfBase64,
+      },
+    ],
   });
 }
 
@@ -314,7 +297,6 @@ function signupConfirmTemplate(opts: {
   planName: string;
   priceCents: number;
   billingInterval: string | null;
-  anbieter: Anbieter;
 }) {
   return `<!DOCTYPE html>
 <html lang="de"><head><meta charset="utf-8"><style>${shellStyles()}</style></head><body>
@@ -328,57 +310,12 @@ function signupConfirmTemplate(opts: {
           <p style="font-size:16px;line-height:1.6;margin:0 0 24px;">Deine Anmeldung für das Angebot <strong>${escapeHtml(opts.planName)}</strong> (${formatPrice(opts.priceCents)} ${billingSuffix(opts.billingInterval)}) ist bei uns eingegangen.</p>
           <p style="font-size:16px;line-height:1.6;margin:0 0 24px;">Wir melden uns in den nächsten Werktagen bei dir mit allen weiteren Schritten zu deinem Start.</p>
           <p style="font-size:14px;line-height:1.6;color:#3A3530;margin:0 0 8px;">Bis dahin: schön, dass du dabei bist.</p>
-          ${legalMailBlock(opts.anbieter)}
+          <p style="font-size:13px;line-height:1.6;color:#8A857E;margin:16px 0 0;">Unsere AGB und die Widerrufsbelehrung findest du im PDF-Anhang dieser E-Mail.</p>
         </td></tr>
       </table>
     </td></tr>
   </table>
 </body></html>`;
-}
-
-// Plain-Text-Fallback der Anmeldebestätigung — inkl. Widerrufsbelehrung + AGB,
-// damit die Texte auch ohne HTML auf einem dauerhaften Datenträger zugehen.
-function signupConfirmTextFallback(opts: {
-  firstName: string;
-  planName: string;
-  priceCents: number;
-  billingInterval: string | null;
-  anbieter: Anbieter;
-}) {
-  const agb = AGB_SECTIONS.map((s) => `${s.heading}\n${s.body}`).join("\n\n");
-  return (
-    `Hallo ${opts.firstName},\n\n` +
-    `deine Anmeldung für das Angebot ${opts.planName} (${formatPrice(opts.priceCents)} ${billingSuffix(opts.billingInterval)}) ist bei uns eingegangen. ` +
-    `Wir melden uns in den nächsten Werktagen mit allen weiteren Schritten zu deinem Start.\n\n` +
-    `— ${STUDIO_NAME}\n\n` +
-    `──────────────────────────────\nWIDERRUFSBELEHRUNG\n──────────────────────────────\n\n` +
-    `Widerrufsrecht\n${widerrufsrechtText(opts.anbieter)}\n\n` +
-    `Widerrufsfolgen\n${widerrufsfolgenText()}\n\n` +
-    `──────────────────────────────\nALLGEMEINE GESCHÄFTSBEDINGUNGEN (Stand: ${AGB_STAND})\n──────────────────────────────\n\n` +
-    `${agb}\n`
-  );
-}
-
-// HTML-Block mit Widerrufsbelehrung + AGB für die Bestätigungsmail.
-// Rechtlich zentral: dadurch geht die Widerrufsbelehrung dem Kunden auf einem
-// dauerhaften Datenträger zu (ein bloßer Link würde nicht genügen).
-function legalMailBlock(anbieter: Anbieter): string {
-  const agbHtml = AGB_SECTIONS.map(
-    (s) => `
-      <p style="font-family:'Courier New',monospace;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:#8A857E;margin:14px 0 4px;">${escapeHtml(s.heading)}</p>
-      <p style="font-size:12px;line-height:1.55;color:#5A554F;margin:0;">${escapeHtml(s.body)}</p>`,
-  ).join("");
-
-  return `
-    <hr style="border:none;border-top:1px solid #D8D2C7;margin:28px 0 20px;">
-    <p style="font-family:'Courier New',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8A857E;margin:0 0 12px;">Widerrufsbelehrung</p>
-    <p style="font-size:13px;line-height:1.6;color:#3A3530;margin:0 0 6px;"><strong>Widerrufsrecht</strong></p>
-    <p style="font-size:12px;line-height:1.6;color:#5A554F;margin:0 0 14px;">${escapeHtml(widerrufsrechtText(anbieter))}</p>
-    <p style="font-size:13px;line-height:1.6;color:#3A3530;margin:0 0 6px;"><strong>Widerrufsfolgen</strong></p>
-    <p style="font-size:12px;line-height:1.6;color:#5A554F;margin:0 0 24px;">${escapeHtml(widerrufsfolgenText())}</p>
-    <p style="font-family:'Courier New',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8A857E;margin:0 0 4px;">Allgemeine Geschäftsbedingungen</p>
-    <p style="font-size:11px;line-height:1.5;color:#8A857E;margin:0 0 6px;">Stand: ${AGB_STAND}</p>
-    ${agbHtml}`;
 }
 
 function campaignWrapperTemplate({
