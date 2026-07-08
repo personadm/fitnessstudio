@@ -106,6 +106,34 @@ export async function sendPricingMail(opts: {
 // 2) Anmeldebestätigung
 // ─────────────────────────────────────────────────────────────
 
+// Reines Rendering der Anmeldebestätigung (ohne Versand) — so lässt sich der
+// Mail-Inhalt (inkl. AGB + Widerrufsbelehrung) testen/vorschauen, ohne Resend
+// aufzurufen.
+export function buildSignupConfirmationEmail(opts: {
+  firstName: string;
+  planName: string;
+  priceCents: number;
+  billingInterval?: string | null;
+  locationName?: string | null;
+}): { subject: string; html: string; text: string } {
+  // Studioabhängiger Anbieter für die Widerrufsbelehrung (Firma + Anschrift
+  // dürfen nie fehlen → anbieterForLocation liefert immer einen vollständigen
+  // Datensatz).
+  const anbieter = anbieterForLocation(opts.locationName);
+  const templateOpts = {
+    firstName: opts.firstName,
+    planName: opts.planName,
+    priceCents: opts.priceCents,
+    billingInterval: opts.billingInterval ?? null,
+    anbieter,
+  };
+  return {
+    subject: `Willkommen bei ${STUDIO_NAME}`,
+    html: signupConfirmTemplate(templateOpts),
+    text: signupConfirmTextFallback(templateOpts),
+  };
+}
+
 export async function sendSignupConfirmation(opts: {
   to: string;
   firstName: string;
@@ -114,29 +142,14 @@ export async function sendSignupConfirmation(opts: {
   billingInterval?: string | null;
   locationName?: string | null;
 }) {
-  // Studioabhängiger Anbieter für die Widerrufsbelehrung (Firma + Anschrift
-  // dürfen nie fehlen → anbieterForLocation liefert immer einen vollständigen
-  // Datensatz).
-  const anbieter = anbieterForLocation(opts.locationName);
+  const { subject, html, text } = buildSignupConfirmationEmail(opts);
   return sendViaResend({
     from: FROM,
     ...REPLY_TO_FIELD,
     to: opts.to,
-    subject: `Willkommen bei ${STUDIO_NAME}`,
-    html: signupConfirmTemplate({
-      firstName: opts.firstName,
-      planName: opts.planName,
-      priceCents: opts.priceCents,
-      billingInterval: opts.billingInterval ?? null,
-      anbieter,
-    }),
-    text: signupConfirmTextFallback({
-      firstName: opts.firstName,
-      planName: opts.planName,
-      priceCents: opts.priceCents,
-      billingInterval: opts.billingInterval ?? null,
-      anbieter,
-    }),
+    subject,
+    html,
+    text,
   });
 }
 

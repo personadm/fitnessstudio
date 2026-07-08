@@ -129,9 +129,9 @@ export default async function VertragPage({ params }: PageProps) {
       </div>
 
       {/* Druck-Bereich */}
-      <main className="print-area mx-auto max-w-3xl bg-white px-10 py-12 text-sm leading-relaxed text-black md:px-16">
+      <main className="print-area mx-auto max-w-3xl bg-white px-10 py-8 text-sm leading-relaxed text-black md:px-16">
         {/* ── Seite 1: Vertrag ── */}
-        <header className="mb-8 border-b border-black/10 pb-6">
+        <header className="mb-5 border-b border-black/10 pb-4">
           <p className="text-[10px] uppercase tracking-widest text-gray-500">Anbieter</p>
           <h1 className="mt-1 text-xl font-bold">{locationName} GmbH</h1>
           <p className="mt-1">
@@ -153,14 +153,14 @@ export default async function VertragPage({ params }: PageProps) {
           </p>
         </header>
 
-        <section className="mb-8">
+        <section className="mb-5">
           <h2 className="text-base font-bold uppercase tracking-wider" style={{ color: PETROL }}>
             Mitgliedschaftsvereinbarung
           </h2>
           <p className="mt-2 text-xs text-gray-600">Vertragsnummer: {contact.id.slice(-8).toUpperCase()}</p>
         </section>
 
-        <section className="mb-8">
+        <section className="mb-5">
           <h3 className="mb-2 text-sm font-bold uppercase tracking-wider">Vertragspartner</h3>
           <table className="w-full text-sm">
             <tbody>
@@ -173,7 +173,7 @@ export default async function VertragPage({ params }: PageProps) {
           </table>
         </section>
 
-        <section className="mb-8">
+        <section className="mb-5">
           <h3 className="mb-2 text-sm font-bold uppercase tracking-wider">Tarif & Konditionen</h3>
           <table className="w-full text-sm">
             <tbody>
@@ -194,12 +194,12 @@ export default async function VertragPage({ params }: PageProps) {
 
         {/* Rechtlich zentrale Bedingungen — bewusst als klar lesbarer Kasten,
             ersetzt die frühere Zeile „VERTRAGSBEGINN ab Datum der Unterschrift". */}
-        <section className="mb-8">
-          <div className="rounded-md border-2 border-black/70 p-4">
-            <h3 className="mb-3 text-sm font-bold uppercase tracking-wider" style={{ color: PETROL }}>
+        <section className="mb-5">
+          <div className="rounded-md border-2 border-black/70 p-3">
+            <h3 className="mb-2 text-sm font-bold uppercase tracking-wider" style={{ color: PETROL }}>
               Programmlaufzeit &amp; Kündigung
             </h3>
-            <ul className="ml-4 list-disc space-y-2 text-sm leading-relaxed text-black">
+            <ul className="ml-4 list-disc space-y-1.5 text-sm leading-relaxed text-black">
               <li>
                 Vertragsschluss ist deine Online-Anmeldung am{" "}
                 <strong>{vertragsschlussLabel}</strong>. Ab diesem Tag läuft die 14-tägige
@@ -224,7 +224,7 @@ export default async function VertragPage({ params }: PageProps) {
           </div>
         </section>
 
-        <section className="mb-8">
+        <section className="mb-5">
           <h3 className="mb-2 text-sm font-bold uppercase tracking-wider">Bankverbindung (SEPA-Lastschriftmandat)</h3>
           <p className="mb-3 text-xs text-gray-700">
             Ich ermächtige {locationName} GmbH widerruflich, die Beiträge bei Fälligkeit von meinem Konto
@@ -245,7 +245,7 @@ export default async function VertragPage({ params }: PageProps) {
           </table>
         </section>
 
-        <section className="mb-8">
+        <section className="mb-5">
           <h3 className="mb-2 text-sm font-bold uppercase tracking-wider">Hinweise</h3>
           <ul className="ml-4 list-disc space-y-1 text-xs text-gray-700">
             <li>Es gelten die AGB aus der Online-Anmeldung.</li>
@@ -261,12 +261,12 @@ export default async function VertragPage({ params }: PageProps) {
           </ul>
         </section>
 
-        <section className="mt-12">
+        <section className="mt-8">
           <div className="grid grid-cols-2 gap-12">
             <SignatureField label="Ort, Datum" value={`Ahaus / Ochtrup, ${today}`} />
             <SignatureField label="Unterschrift Anbieter" />
           </div>
-          <div className="mt-10 grid grid-cols-2 gap-12">
+          <div className="mt-8 grid grid-cols-2 gap-12">
             <SignatureField label="Ort, Datum" />
             <SignatureField label="Unterschrift Kunde" />
           </div>
@@ -275,7 +275,7 @@ export default async function VertragPage({ params }: PageProps) {
         {/* Widerrufsbelehrung — amtliche Kurzfassung (Dienstleistung).
             Bewusst klein & dezent grau, damit sie auf Seite 2 unter die
             Unterschriften passt und keine dritte Seite entsteht. */}
-        <section className="mt-10 break-inside-avoid border-t border-black/15 pt-4">
+        <section className="mt-6 break-inside-avoid border-t border-black/15 pt-3">
           <h4 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-500">
             Widerrufsbelehrung
           </h4>
@@ -365,7 +365,7 @@ function PrintStyles() {
 
 @page {
   size: A4;
-  margin: 18mm 16mm;
+  margin: 12mm 14mm;
 }
         `,
       }}
