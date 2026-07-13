@@ -17,6 +17,16 @@ function triggerToStatus(t: FunnelTrigger): ContactStatus {
   return TRIGGER_TO_STATUS[t];
 }
 
+// Grobe Format-Prüfung, die Resends `to`-Validierung vorwegnimmt (email@host.tld).
+// Verhindert, dass ein einzelner Kontakt mit leerer/kaputter Adresse den Step bei
+// jedem Cron-Lauf endlos scheitern lässt (Resend: "Invalid `to` field").
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function isValidEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return EMAIL_RE.test(email.trim());
+}
+
 function renderTemplate(
   template: string,
   contact: { firstName: string | null; lastName: string | null },
@@ -296,6 +306,39 @@ async function processFunnelsInner() {
         continue;
       }
 
+      // Ungültige/leere E-Mail: Resend würde den Send mit "Invalid `to` field"
+      // ablehnen. Ohne diesen Guard rollt der Claim zurück und derselbe Step
+      // scheitert bei JEDEM weiteren Cron-Lauf erneut (Log-Flut, hängt fest).
+      // → Enrollment abbrechen, damit der Rest des Funnels sauber weiterläuft.
+      if (!isValidEmail(enrollment.contact.email)) {
+        await db.funnelEnrollment.update({
+          where: { id: enrollment.id },
+          data: { cancelledAt: new Date(), cancelReason: "INVALID_EMAIL" },
+        });
+        await db.contactEvent
+          .create({
+            data: {
+              contactId: enrollment.contactId,
+              type: "FUNNEL_CANCELLED",
+              meta: {
+                funnelId: funnel.id,
+                funnelName: funnel.name,
+                reason: "INVALID_EMAIL",
+                email: enrollment.contact.email ?? null,
+              },
+            },
+          })
+          .catch((e) =>
+            console.warn("[funnels] invalid-email log failed (non-critical)", e),
+          );
+        console.warn(
+          `[funnels] enrollment ${enrollment.id} cancelled — invalid email:`,
+          enrollment.contact.email,
+        );
+        cancelled++;
+        continue;
+      }
+
       const sentStepIds = new Set(enrollment.events.map((e) => e.stepId));
       const nowMs = Date.now();
 
@@ -406,7 +449,7 @@ async function processFunnelsInner() {
           const bodyHtml = renderTemplate(step.bodyHtml, enrollment.contact);
 
           await sendFunnelMail({
-            to: enrollment.contact.email,
+            to: enrollment.contact.email.trim(),
             subject,
             bodyHtml,
           });
