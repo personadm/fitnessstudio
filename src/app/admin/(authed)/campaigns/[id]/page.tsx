@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { deleteCampaign } from "@/app/admin/_actions";
 import { CampaignSendButton } from "./CampaignSendButton";
 import { RestartCampaignButton } from "./RestartCampaignButton";
+import { ResetStuckCampaignButton } from "./ResetStuckCampaignButton";
 import { getCampaignRecipients } from "@/lib/campaigns";
 
 interface PageProps {
@@ -136,6 +137,18 @@ export default async function CampaignDetailPage({ params }: PageProps) {
                   ? ` Noch ${remaining} offen. Seite neu laden für den aktuellen Stand.`
                   : " Fast fertig. Seite neu laden für den aktuellen Stand."}
               </p>
+
+              {/* Entsperren, falls der Versand hängt (z.B. nach Server-Neustart) */}
+              <ResetStuckCampaignButton
+                campaignId={campaign.id}
+                stalledMinutes={
+                  campaign.sendingStartedAt
+                    ? Math.floor(
+                        (Date.now() - campaign.sendingStartedAt.getTime()) / 60_000,
+                      )
+                    : null
+                }
+              />
             </div>
           )}
 
