@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { sendCampaignMail } from "./mail";
-import type { ContactStatus } from "@prisma/client";
+import { isSendableEmail } from "./validation";
+import type { Campaign, ContactStatus } from "@prisma/client";
 
 // ~4 Mails/Sek — schont das Resend-Rate-Limit. Identisch zum bisherigen
 // Browser-Versand, nur dass die Schleife jetzt serverseitig läuft.
@@ -91,13 +92,67 @@ export type CampaignBatchResult = {
   batchSent?: number;
 };
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+/**
+ * Stellt EINE Mail an EINEN Empfänger zu. Gemeinsame Single-Source für den
+ * Einzel-Batch (Admin-Action) und den vollständigen Versand-Lauf (Cron/Worker).
+ *
+ * Race-safe via @@unique([campaignId, contactId, event]): der SENT-Event wird
+ * ATOMAR VOR dem Mailversand geschrieben. Reihenfolge:
+ *   1. Event-Insert (Claim) → gewinnt ein paralleler Lauf, bekommen alle
+ *      anderen P2002 und überspringen ("skipped").
+ *   2. Mail senden. Scheitert sie, bleibt das Event bestehen → keine erneute
+ *      Mail. Bewusst: lieber eine Mail nicht raus als doppelt.
+ *
+ * Rückgabe: "sent" (Mail raus), "skipped" (schon beansprucht ODER ungültige
+ * Adresse — Claim gesetzt, aber bewusst nicht gesendet), "failed" (Send-Fehler,
+ * Event bereits geschrieben).
+ */
+async function deliverCampaignMail(
+  campaign: Pick<Campaign, "id" | "subject" | "bodyHtml">,
+  recipient: Recipient,
+): Promise<"sent" | "skipped" | "failed"> {
+  // Atomic Claim VOR dem Send.
+  try {
+    await db.campaignEvent.create({
+      data: { campaignId: campaign.id, contactId: recipient.id, event: "SENT" },
+    });
+  } catch (err) {
+    const e = err as { code?: string };
+    if (e.code === "P2002") return "skipped"; // schon gesendet — skip
+    throw err;
+  }
+
+  // Ungültige Adresse würde Resend mit "Invalid `to` field" ablehnen. Claim ist
+  // gesetzt (gilt als erledigt → keine Wiederholung), Send wird übersprungen —
+  // so flutet ein kaputter Kontakt weder das Log noch verbrennt er Resend-Calls.
+  if (!isSendableEmail(recipient.email)) {
+    console.warn(`[campaigns] ungültige Adresse übersprungen: ${recipient.email}`);
+    return "skipped";
+  }
+
+  try {
+    const firstName = recipient.firstName ?? "";
+    const subject = campaign.subject.split("{{firstName}}").join(firstName);
+    const bodyHtml = campaign.bodyHtml.split("{{firstName}}").join(firstName);
+    await sendCampaignMail({ to: recipient.email, subject, bodyHtml });
+    return "sent";
+  } catch (err) {
+    // Mail-Versand failed — Event ist bereits geschrieben. Bewusste
+    // Entscheidung: lieber eine Mail nicht raus als doppelt raus.
+    console.error("[campaigns] mail send failed (event already recorded)", err);
+    return "failed";
+  }
+}
+
 /**
  * Versendet eine Campaign in einem Batch von max. `batchSize` Mails.
  *
- * Race-safe via @@unique([campaignId, contactId, event]) auf CampaignEvent:
- * pro Empfänger kann nur EIN SENT-Event geschrieben werden. Reihenfolge:
- * erst Event-Insert (atomar), dann Mail. Scheitert die Mail, bleibt das
- * Event bestehen → keine erneute Mail. Lieber eine Mail nicht raus als doppelt.
+ * Race-safe via @@unique([campaignId, contactId, event]) auf CampaignEvent —
+ * Details siehe `deliverCampaignMail`.
  *
  * Diese Funktion enthält KEINE Auth — Aufrufer (Server Action / Cron) müssen
  * vorher autorisieren bzw. per CRON_SECRET geschützt sein.
@@ -143,30 +198,10 @@ export async function sendCampaignBatch(
 
   let batchSent = 0;
   for (const recipient of toSend) {
-    // Atomic INSERT vor Send — verhindert Doppel-Send via Unique-Constraint
-    try {
-      await db.campaignEvent.create({
-        data: { campaignId, contactId: recipient.id, event: "SENT" },
-      });
-    } catch (err) {
-      const e = err as { code?: string };
-      if (e.code === "P2002") continue; // schon gesendet — skip
-      throw err;
-    }
-
-    try {
-      const firstName = recipient.firstName ?? "";
-      const subject = campaign.subject.split("{{firstName}}").join(firstName);
-      const bodyHtml = campaign.bodyHtml.split("{{firstName}}").join(firstName);
-
-      await sendCampaignMail({ to: recipient.email, subject, bodyHtml });
-
+    const outcome = await deliverCampaignMail(campaign, recipient);
+    if (outcome === "sent") {
       batchSent++;
-      await new Promise((r) => setTimeout(r, CAMPAIGN_MAIL_THROTTLE_MS));
-    } catch (err) {
-      // Mail-Versand failed — Event ist bereits geschrieben. Bewusste
-      // Entscheidung: lieber eine Mail nicht raus als doppelt raus.
-      console.error("[campaigns] mail send failed (event already recorded)", err);
+      await sleep(CAMPAIGN_MAIL_THROTTLE_MS);
     }
   }
 
@@ -184,24 +219,68 @@ export async function sendCampaignBatch(
 }
 
 /**
- * Versendet GENAU EINE Kampagne Batch für Batch komplett. Idempotent und
- * fortsetzbar: schon versendete Empfänger werden über ihr SENT-Event
- * übersprungen, ein abgebrochener Lauf wird beim nächsten Aufruf dort
+ * Versendet GENAU EINE Kampagne komplett. Idempotent und fortsetzbar: schon
+ * versendete Empfänger werden über ihr SENT-Event übersprungen, ein
+ * abgebrochener Lauf (Deploy/Neustart) wird beim nächsten Aufruf dort
  * fortgesetzt, wo er aufgehört hat.
+ *
+ * SPEICHER: Empfängerliste und bereits-gesendet-Set werden EINMAL pro Lauf
+ * geladen und dann in-memory abgearbeitet. Früher lud jeder Batch die
+ * vollständige Liste + alle SENT-Events neu (O(N²) Allokationen) — das trieb
+ * den Node-Heap auf der 512-MB-Instanz in einen GC-Thrash bis zum
+ * Out-of-Memory-Absturz mitten im Newsletter-Versand.
  */
 async function runCampaignToCompletion(campaignId: string): Promise<number> {
-  let sent = 0;
-  // Jeder Empfänger bekommt sein SENT-Event VOR dem Mailversand, deshalb
-  // wächst sentTotal in jedem Fall → die Schleife terminiert garantiert.
-  while (true) {
-    const res = await sendCampaignBatch(campaignId);
-    if (!res.ok) {
-      console.error(`[campaigns] batch failed for ${campaignId}: ${res.message}`);
-      break;
-    }
-    sent += res.batchSent ?? 0;
-    if (res.done) break;
+  const campaign = await db.campaign.findFirst({ where: { id: campaignId } });
+  if (!campaign) {
+    console.error(`[campaigns] Kampagne nicht gefunden: ${campaignId}`);
+    return 0;
   }
+
+  const recipients = await getCampaignRecipients({
+    listId: campaign.listId,
+    targetStatus: campaign.targetStatus,
+    targetLocationId: campaign.targetLocationId,
+  });
+
+  const markSent = () =>
+    db.campaign.update({
+      where: { id: campaignId },
+      data: { status: "SENT", sentAt: new Date(), sendingStartedAt: null },
+    });
+
+  if (recipients.length === 0) {
+    await markSent();
+    return 0;
+  }
+
+  // Bereits gesendete EINMAL laden — nicht pro Batch.
+  const sentEvents = await db.campaignEvent.findMany({
+    where: { campaignId, event: "SENT" },
+    select: { contactId: true },
+  });
+  const sentIds = new Set(sentEvents.map((e) => e.contactId));
+  const pending = recipients.filter((r) => !sentIds.has(r.id));
+
+  if (pending.length > 0 && campaign.status === "DRAFT") {
+    await db.campaign.update({
+      where: { id: campaignId },
+      data: { status: "SENDING", sendingStartedAt: new Date() },
+    });
+  }
+
+  let sent = 0;
+  for (const recipient of pending) {
+    const outcome = await deliverCampaignMail(campaign, recipient);
+    if (outcome === "sent") {
+      sent++;
+      await sleep(CAMPAIGN_MAIL_THROTTLE_MS);
+    }
+  }
+
+  // Alle Pending haben jetzt ihr SENT-Event (auch fehlgeschlagene Sends) →
+  // Kampagne ist durch.
+  await markSent();
   return sent;
 }
 

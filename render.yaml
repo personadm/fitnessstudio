@@ -21,6 +21,13 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "20"
+      # Node deckelt den Heap auf einer 512-MB-Instanz sonst bei ~256 MB und
+      # stürzt beim Versand großer Newsletter mit "JavaScript heap out of
+      # memory" ab. Etwas mehr Luft nach oben, ohne die Container-Grenze zu
+      # reißen (Rest bleibt für RSS/Buffers). Zusammen mit dem einmaligen
+      # Laden der Empfängerliste (src/lib/campaigns.ts) verhindert das den OOM.
+      - key: NODE_OPTIONS
+        value: "--max-old-space-size=400"
       - key: DATABASE_URL
         sync: false
       - key: RESEND_API_KEY

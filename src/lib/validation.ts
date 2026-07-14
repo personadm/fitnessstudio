@@ -1,5 +1,20 @@
 import { z } from "zod";
 
+// Einheitlicher Versand-Guard für ALLE Mail-Wege (Funnels + Kampagnen).
+//
+// Resend akzeptiert im `to`-Feld nur eine gültige Einzeladresse
+// (email@example.com). Die früher genutzte lose Regex
+// /^[^\s@]+@[^\s@]+\.[^\s@]+$/ ließ u.a. Adressen mit Komma oder Semikolon
+// durch (z.B. "max,muster@web.de") — Resend liest das als Adressliste, findet
+// einen ungültigen Teil und lehnt mit "Invalid `to` field" ab. Zods Parser
+// liegt deutlich näher an Resends Erwartung und fängt diese Fälle vorab ab.
+const sendableEmailSchema = z.string().trim().email();
+
+export function isSendableEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return sendableEmailSchema.safeParse(email).success;
+}
+
 export const leadSchema = z.object({
   email: z.string().trim().toLowerCase().email("Bitte gültige E-Mail-Adresse angeben."),
   firstName: z.string().trim().min(1, "Vorname fehlt.").max(80),

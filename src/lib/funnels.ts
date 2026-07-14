@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { sendFunnelMail } from "./mail";
 import { calculateDueAt } from "./funnel-schedule";
+import { isSendableEmail } from "./validation";
 import type { ContactStatus, FunnelTrigger } from "@prisma/client";
 
 // Explizites Mapping statt Cast: FunnelTrigger und ContactStatus sind getrennte
@@ -17,14 +18,19 @@ function triggerToStatus(t: FunnelTrigger): ContactStatus {
   return TRIGGER_TO_STATUS[t];
 }
 
-// Grobe Format-Prüfung, die Resends `to`-Validierung vorwegnimmt (email@host.tld).
-// Verhindert, dass ein einzelner Kontakt mit leerer/kaputter Adresse den Step bei
-// jedem Cron-Lauf endlos scheitern lässt (Resend: "Invalid `to` field").
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// E-Mail-Guard, der Resends `to`-Validierung vorwegnimmt — gemeinsame
+// Single-Source in validation.ts (isSendableEmail). Verhindert, dass ein
+// einzelner Kontakt mit leerer/kaputter Adresse den Step bei jedem Cron-Lauf
+// endlos scheitern lässt (Resend: "Invalid `to` field").
+const isValidEmail = isSendableEmail;
 
-function isValidEmail(email: string | null | undefined): boolean {
-  if (!email) return false;
-  return EMAIL_RE.test(email.trim());
+// Erkennt einen dauerhaften Resend-Validierungsfehler (kaputte Adresse o.ä.),
+// der bei JEDEM erneuten Versuch wieder scheitern würde. Solche Fehler dürfen
+// nicht als transient behandelt werden — sonst rollt der Claim endlos zurück
+// und derselbe Send scheitert bei jedem Cron-Lauf aufs Neue (Log-Flut).
+function isPermanentSendError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /validation_error|Invalid `to`|invalid.*email/i.test(msg);
 }
 
 function renderTemplate(
@@ -454,9 +460,29 @@ async function processFunnelsInner() {
             bodyHtml,
           });
         } catch (err) {
-          // Versand fehlgeschlagen → Claim zurückrollen, damit der Step beim
-          // nächsten Lauf erneut versucht wird (kein dauerhafter Verlust). Der
-          // Claim hat in der Zwischenzeit parallele Doppel-Sends verhindert.
+          // DAUERHAFTER Fehler (z.B. Resend "Invalid `to` field")? → würde bei
+          // jedem Cron-Lauf erneut scheitern. Claim BEHALTEN (Step gilt als
+          // erledigt, keine Wiederholung) und die Enrollment abbrechen, damit
+          // der Kontakt nicht endlos den Log flutet und Resend-Calls verbrennt.
+          if (isPermanentSendError(err)) {
+            console.error(
+              `[funnels] permanenter Send-Fehler — Enrollment ${enrollment.id} abgebrochen:`,
+              err,
+            );
+            await db.funnelEnrollment
+              .update({
+                where: { id: enrollment.id },
+                data: { cancelledAt: new Date(), cancelReason: "INVALID_EMAIL" },
+              })
+              .catch((e) => console.error("[funnels] cancel after permanent error failed", e));
+            cancelled++;
+            break;
+          }
+
+          // TRANSIENTER Fehler (Rate-Limit, Netzwerk …) → Claim zurückrollen,
+          // damit der Step beim nächsten Lauf erneut versucht wird (kein
+          // dauerhafter Verlust). Der Claim hat in der Zwischenzeit parallele
+          // Doppel-Sends verhindert.
           console.error("[funnels] send failed — rolling back claim", err);
           await db.funnelStepEvent
             .deleteMany({ where: { enrollmentId: enrollment.id, stepId: step.id } })
