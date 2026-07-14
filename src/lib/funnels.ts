@@ -2,7 +2,31 @@ import { db } from "./db";
 import { sendFunnelMail } from "./mail";
 import { calculateDueAt } from "./funnel-schedule";
 import { isSendableEmail } from "./validation";
+import { Prisma } from "@prisma/client";
 import type { ContactStatus, FunnelTrigger } from "@prisma/client";
+
+// Genau die Felder, die die Versand-Schleife braucht — bewusst schlank, damit
+// pro Seite nur wenig im Speicher liegt (siehe Paginierung unten). Als
+// expliziter Typ, sonst dreht Prismas Rückgabe-Inferenz mit dem `cursor`, der
+// aus dem Ergebnis gelesen und wieder in die Query gesteckt wird, im Kreis
+// (TS7022).
+const ENROLLMENT_INCLUDE = {
+  contact: {
+    select: {
+      email: true,
+      firstName: true,
+      lastName: true,
+      status: true,
+      locationId: true,
+      optedOutAt: true,
+    },
+  },
+  events: { select: { stepId: true } },
+} satisfies Prisma.FunnelEnrollmentInclude;
+
+type PagedEnrollment = Prisma.FunnelEnrollmentGetPayload<{
+  include: typeof ENROLLMENT_INCLUDE;
+}>;
 
 // Explizites Mapping statt Cast: FunnelTrigger und ContactStatus sind getrennte
 // Prisma-Enums. Ein Cast würde stillschweigend brechen, falls sich die Enums je
@@ -46,6 +70,11 @@ function renderTemplate(
 
 let lastRunAt = 0;
 const MIN_INTERVAL_MS = 5 * 60 * 1000;
+
+// Wie viele offene Enrollments pro DB-Abfrage geladen werden. Deckelt den
+// Speicher pro Funnel unabhängig von der Gesamt-Kontaktzahl (siehe
+// Paginierung in processFunnelsInner).
+const ENROLLMENT_PAGE_SIZE = 200;
 
 // Überlappungs-Schutz: solange ein Lauf aktiv ist, steigt ein zweiter Aufruf
 // sofort aus (auch force:true). Verhindert, dass parallele Cron-Pings — z.B.
@@ -252,19 +281,35 @@ async function processFunnelsInner() {
 
     const targetStatus = triggerToStatus(funnel.trigger);
 
-    const enrollments = await db.funnelEnrollment.findMany({
-      where: {
-        funnelId: funnel.id,
-        completedAt: null,
-        cancelledAt: null,
-      },
-      include: {
-        contact: true,
-        events: true,
-      },
-    });
+    // SPEICHER: Enrollments werden NICHT mehr alle auf einmal geladen. Bei
+    // mehreren tausend Kontakten war das include:{contact:true,events:true} über
+    // alle offenen Enrollments ein einzelner großer Allocation-Block, der auf der
+    // 512-MB-Instanz zusammen mit dem Next.js-Grundverbrauch den Heap sprengte
+    // ("heap out of memory"). Stattdessen: Cursor-Pagination über die id in
+    // Blöcken von ENROLLMENT_PAGE_SIZE + nur die tatsächlich genutzten Felder.
+    // Vorwärts-Paginierung per `id > cursor` (NICHT Prismas cursor/skip): wir
+    // setzen Zeilen im Lauf auf cancelled/completed, wodurch sie aus dem
+    // WHERE-Filter fallen — ein Prisma-Cursor, der genau auf so eine Zeile
+    // zeigt, könnte sich dann nicht mehr positionieren. `id > cursor` ist
+    // dagegen rein wertbasiert und immer eindeutig vorwärts.
+    let cursor: string | undefined = undefined;
+    while (true) {
+      const enrollments: PagedEnrollment[] = await db.funnelEnrollment.findMany({
+        where: {
+          funnelId: funnel.id,
+          completedAt: null,
+          cancelledAt: null,
+          ...(cursor ? { id: { gt: cursor } } : {}),
+        },
+        include: ENROLLMENT_INCLUDE,
+        orderBy: { id: "asc" },
+        take: ENROLLMENT_PAGE_SIZE,
+      });
 
-    for (const enrollment of enrollments) {
+      if (enrollments.length === 0) break;
+      cursor = enrollments[enrollments.length - 1].id;
+
+      for (const enrollment of enrollments) {
       // Opt-out: Abgemeldete Kontakte (optedOutAt gesetzt) erhalten NIE wieder
       // Funnel-Mails — rechtlich zwingend, unabhängig von autoStop. Enrollment
       // wird beendet, damit sie nicht erneut verarbeitet werden.
@@ -521,6 +566,11 @@ async function processFunnelsInner() {
           data: { completedAt: new Date() },
         });
       }
+      }
+
+      // Weniger als eine volle Seite → alle offenen Enrollments dieses Funnels
+      // sind abgearbeitet.
+      if (enrollments.length < ENROLLMENT_PAGE_SIZE) break;
     }
   }
 
