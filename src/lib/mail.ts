@@ -140,16 +140,32 @@ export async function sendSignupConfirmation(opts: {
 // 3) Kampagnen / Newsletter (vom Admin manuell ausgelöst)
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * Umschließt den Body EINMAL mit dem Kampagnen-Layout (Logo, Footer,
+ * Abmeldelink). Beim Massenversand vorab EINMAL berechnen und über
+ * `sendCampaignMail({ html })` an alle Empfänger wiederverwenden — sonst baut
+ * jeder einzelne Send die komplette (u.U. mehrere 100 KB große) HTML-Zeichen-
+ * kette neu auf, was den GC auf der kleinen Instanz überrollt (heap OOM).
+ */
+export function renderCampaignHtml(
+  bodyHtml: string,
+  unsubscribeUrl?: string | null,
+): string {
+  return campaignWrapperTemplate({ bodyHtml, unsubscribeUrl: unsubscribeUrl ?? null });
+}
+
 export async function sendCampaignMail(opts: {
   to: string;
   subject: string;
-  bodyHtml: string;
+  // Entweder rohen Body (wird hier umschlossen) ODER bereits fertig
+  // umschlossenes `html` (spart beim Massenversand die Neuberechnung pro Mail).
+  bodyHtml?: string;
+  html?: string;
   unsubscribeUrl?: string | null;
 }) {
-  const wrappedHtml = campaignWrapperTemplate({
-    bodyHtml: opts.bodyHtml,
-    unsubscribeUrl: opts.unsubscribeUrl ?? null,
-  });
+  const wrappedHtml =
+    opts.html ??
+    renderCampaignHtml(opts.bodyHtml ?? "", opts.unsubscribeUrl ?? null);
   return sendViaResend({
     from: FROM,
     ...REPLY_TO_FIELD,

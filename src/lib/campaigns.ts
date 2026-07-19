@@ -1,7 +1,9 @@
 import { db } from "./db";
-import { sendCampaignMail } from "./mail";
+import { renderCampaignHtml, sendCampaignMail } from "./mail";
 import { isSendableEmail } from "./validation";
 import type { Campaign, ContactStatus } from "@prisma/client";
+
+const NAME_PLACEHOLDER = "{{firstName}}";
 
 // ~4 Mails/Sek — schont das Resend-Rate-Limit. Identisch zum bisherigen
 // Browser-Versand, nur dass die Schleife jetzt serverseitig läuft.
@@ -114,6 +116,10 @@ function sleep(ms: number): Promise<void> {
 async function deliverCampaignMail(
   campaign: Pick<Campaign, "id" | "subject" | "bodyHtml">,
   recipient: Recipient,
+  // Vorab EINMAL umschlossenes HTML — nur gesetzt, wenn der Body KEIN
+  // {{firstName}} enthält (dann ist er für alle identisch). Spart pro Send den
+  // Neuaufbau der kompletten HTML-Zeichenkette (GC-Entlastung → kein OOM).
+  sharedHtml: string | null,
 ): Promise<"sent" | "skipped" | "failed"> {
   // Atomic Claim VOR dem Send.
   try {
@@ -136,9 +142,18 @@ async function deliverCampaignMail(
 
   try {
     const firstName = recipient.firstName ?? "";
-    const subject = campaign.subject.split("{{firstName}}").join(firstName);
-    const bodyHtml = campaign.bodyHtml.split("{{firstName}}").join(firstName);
-    await sendCampaignMail({ to: recipient.email, subject, bodyHtml });
+    const subject = campaign.subject.includes(NAME_PLACEHOLDER)
+      ? campaign.subject.split(NAME_PLACEHOLDER).join(firstName)
+      : campaign.subject;
+
+    if (sharedHtml) {
+      // Body ist für alle gleich → vorgerendertes HTML wiederverwenden.
+      await sendCampaignMail({ to: recipient.email, subject, html: sharedHtml });
+    } else {
+      // Body enthält {{firstName}} → pro Empfänger personalisieren.
+      const bodyHtml = campaign.bodyHtml.split(NAME_PLACEHOLDER).join(firstName);
+      await sendCampaignMail({ to: recipient.email, subject, bodyHtml });
+    }
     return "sent";
   } catch (err) {
     // Mail-Versand failed — Event ist bereits geschrieben. Bewusste
@@ -146,6 +161,14 @@ async function deliverCampaignMail(
     console.error("[campaigns] mail send failed (event already recorded)", err);
     return "failed";
   }
+}
+
+// Baut das für ALLE Empfänger identische HTML genau einmal — oder gibt null
+// zurück, wenn der Body {{firstName}} enthält und deshalb pro Empfänger
+// personalisiert werden muss.
+function sharedCampaignHtml(bodyHtml: string): string | null {
+  if (bodyHtml.includes(NAME_PLACEHOLDER)) return null;
+  return renderCampaignHtml(bodyHtml);
 }
 
 /**
@@ -196,9 +219,11 @@ export async function sendCampaignBatch(
     });
   }
 
+  const sharedHtml = sharedCampaignHtml(campaign.bodyHtml);
+
   let batchSent = 0;
   for (const recipient of toSend) {
-    const outcome = await deliverCampaignMail(campaign, recipient);
+    const outcome = await deliverCampaignMail(campaign, recipient, sharedHtml);
     if (outcome === "sent") {
       batchSent++;
       await sleep(CAMPAIGN_MAIL_THROTTLE_MS);
@@ -269,9 +294,13 @@ async function runCampaignToCompletion(campaignId: string): Promise<number> {
     });
   }
 
+  // HTML EINMAL für alle bauen (sofern nicht personalisiert) — der teuerste
+  // Speicher-Posten pro Send, siehe sharedCampaignHtml/deliverCampaignMail.
+  const sharedHtml = sharedCampaignHtml(campaign.bodyHtml);
+
   let sent = 0;
   for (const recipient of pending) {
-    const outcome = await deliverCampaignMail(campaign, recipient);
+    const outcome = await deliverCampaignMail(campaign, recipient, sharedHtml);
     if (outcome === "sent") {
       sent++;
       await sleep(CAMPAIGN_MAIL_THROTTLE_MS);
