@@ -10,6 +10,19 @@ const NAME_PLACEHOLDER = "{{firstName}}";
 export const CAMPAIGN_BATCH_SIZE = 30;
 export const CAMPAIGN_MAIL_THROTTLE_MS = 250;
 
+// Höchstzahl echter Sends pro Prozess-Durchlauf. Danach pausiert der Versand
+// kurz (RESUME_PAUSE_MS) und setzt sich selbst fort. So bleibt der native
+// (Off-Heap-)Speicher der HTTP-Verbindungen deutlich unter dem 512-MB-Limit der
+// Render-Instanz — ein ununterbrochener Lauf über tausende Mails riss das Limit
+// und ließ Render den Container neu starten. 150 × ~0,75 MB ≈ 110 MB
+// Spitzen-Zuwachs, plus Grundverbrauch = sichere Reserve.
+const MAX_SENDS_PER_RUN = 150;
+
+// Idle-Pause zwischen zwei Häppchen. Muss über dem Keep-alive-Timeout von
+// undici (~4 s) liegen, damit die Verbindungen wirklich schließen und ihren
+// nativen Speicher freigeben, bevor der nächste Schwung startet.
+const RESUME_PAUSE_MS = 12_000;
+
 export type CampaignTargeting = {
   listId: string | null;
   targetStatus: ContactStatus | null;
@@ -255,11 +268,13 @@ export async function sendCampaignBatch(
  * den Node-Heap auf der 512-MB-Instanz in einen GC-Thrash bis zum
  * Out-of-Memory-Absturz mitten im Newsletter-Versand.
  */
-async function runCampaignToCompletion(campaignId: string): Promise<number> {
+async function runCampaignToCompletion(
+  campaignId: string,
+): Promise<{ sent: number; done: boolean }> {
   const campaign = await db.campaign.findFirst({ where: { id: campaignId } });
   if (!campaign) {
     console.error(`[campaigns] Kampagne nicht gefunden: ${campaignId}`);
-    return 0;
+    return { sent: 0, done: true };
   }
 
   const recipients = await getCampaignRecipients({
@@ -276,7 +291,7 @@ async function runCampaignToCompletion(campaignId: string): Promise<number> {
 
   if (recipients.length === 0) {
     await markSent();
-    return 0;
+    return { sent: 0, done: true };
   }
 
   // Bereits gesendete EINMAL laden — nicht pro Batch.
@@ -287,19 +302,37 @@ async function runCampaignToCompletion(campaignId: string): Promise<number> {
   const sentIds = new Set(sentEvents.map((e) => e.contactId));
   const pending = recipients.filter((r) => !sentIds.has(r.id));
 
-  if (pending.length > 0 && campaign.status === "DRAFT") {
-    await db.campaign.update({
-      where: { id: campaignId },
-      data: { status: "SENDING", sendingStartedAt: new Date() },
-    });
+  if (pending.length === 0) {
+    await markSent();
+    return { sent: 0, done: true };
   }
 
+  // Status auf SENDING setzen UND das Resume-Fenster mitrollen: sendingStartedAt
+  // = jetzt bei jedem Teil-Lauf. So gilt ein Versand, der über viele Läufe geht,
+  // durchgehend als „kürzlich aktiv" und wird notfalls vom Cron fortgesetzt —
+  // erst wenn WIRKLICH eine Stunde lang kein Fortschritt passiert, stoppt der
+  // Resume (siehe resumeStalledCampaigns).
+  await db.campaign.update({
+    where: { id: campaignId },
+    data: { status: "SENDING", sendingStartedAt: new Date() },
+  });
+
   // HTML EINMAL für alle bauen (sofern nicht personalisiert) — der teuerste
-  // Speicher-Posten pro Send, siehe sharedCampaignHtml/deliverCampaignMail.
+  // Heap-Posten pro Send, siehe sharedCampaignHtml/deliverCampaignMail.
   const sharedHtml = sharedCampaignHtml(campaign.bodyHtml);
 
   let sent = 0;
   for (const recipient of pending) {
+    // MEMORY-GUARD: Nach MAX_SENDS_PER_RUN echten Sends diesen Prozess-Durchlauf
+    // beenden. Grund: jeder Resend-/HTTPS-Aufruf belegt native (Off-Heap-)
+    // Puffer, die erst freigegeben werden, wenn die Keep-alive-Verbindungen im
+    // Leerlauf schließen. Ein ununterbrochener Lauf über tausende Mails treibt
+    // so den RSS über das 512-MB-Instanz-Limit → Render killt und startet den
+    // Container neu ("exceeded its memory limit"). Wir senden daher in
+    // begrenzten Häppchen und lassen den Prozess dazwischen kurz idlen.
+    if (sent >= MAX_SENDS_PER_RUN) {
+      return { sent, done: false };
+    }
     const outcome = await deliverCampaignMail(campaign, recipient, sharedHtml);
     if (outcome === "sent") {
       sent++;
@@ -310,7 +343,7 @@ async function runCampaignToCompletion(campaignId: string): Promise<number> {
   // Alle Pending haben jetzt ihr SENT-Event (auch fehlgeschlagene Sends) →
   // Kampagne ist durch.
   await markSent();
-  return sent;
+  return { sent, done: true };
 }
 
 // In-Memory-Lock PRO Kampagne: verhindert, dass dieselbe Kampagne doppelt
@@ -335,9 +368,22 @@ export function kickCampaignSend(campaignId: string): { started: boolean } {
   activeCampaigns.add(campaignId);
 
   void runCampaignToCompletion(campaignId)
-    .catch((err) => console.error(`[campaigns] worker crashed for ${campaignId}`, err))
-    .finally(() => {
+    .then((res) => {
       activeCampaigns.delete(campaignId);
+      if (!res.done) {
+        // Memory-Guard hat den Lauf nach MAX_SENDS_PER_RUN beendet. Nach einer
+        // kurzen Idle-Pause weitermachen: in dieser Pause schließen die
+        // Keep-alive-HTTP-Verbindungen zu Resend, wodurch ihr nativer
+        // (Off-Heap-)Speicher freigegeben wird — genau das hält den RSS unter
+        // dem 512-MB-Instanz-Limit. `unref()` sorgt dafür, dass der Timer den
+        // Prozess nicht am Leben hält, falls sonst nichts mehr läuft.
+        const timer = setTimeout(() => kickCampaignSend(campaignId), RESUME_PAUSE_MS);
+        if (typeof timer.unref === "function") timer.unref();
+      }
+    })
+    .catch((err) => {
+      activeCampaigns.delete(campaignId);
+      console.error(`[campaigns] worker crashed for ${campaignId}`, err);
     });
 
   return { started: true };
