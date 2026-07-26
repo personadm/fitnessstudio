@@ -10,7 +10,12 @@ services:
     name: fitnessstudio
     runtime: node
     region: frankfurt
-    plan: starter
+    # standard = 2 GB RAM. Der starter-Plan (512 MB) riss beim Newsletter-
+    # Versand wiederholt das Speicherlimit: base64-Bilder blähen das
+    # Kampagnen-HTML auf mehrere MB auf, die beim (personalisierten) Versand
+    # pro Empfänger im Heap kopiert werden → Render killte den Container
+    # ("exceeded its memory limit") und laufende Requests bekamen 502.
+    plan: standard
     # Schema-Änderungen NICHT im Build pushen — das verbraucht knappe
     # DB-Pooler-Verbindungen (EMAXCONNSESSION) und kann mit --accept-data-loss
     # Daten zerstören. Schema-Änderungen stattdessen bewusst lokal anwenden:
@@ -26,7 +31,9 @@ services:
       # in render.yaml ergänzte envVars nicht zuverlässig in einen bereits
       # angelegten Service; das inline im start-Command gesetzte NODE_OPTIONS
       # greift dagegen immer. (Node deckelt den Heap sonst bei ~256 MB und
-      # stürzt beim Newsletter-Versand mit "heap out of memory" ab.)
+      # stürzt beim Newsletter-Versand mit "heap out of memory" ab.) Auf dem
+      # 2-GB-standard-Plan steht das Limit auf 1536 MB — genug Luft für den
+      # Versand, mit ~500 MB Reserve für Grundverbrauch + native Puffer.
       - key: DATABASE_URL
         sync: false
       - key: RESEND_API_KEY

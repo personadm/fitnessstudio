@@ -4,8 +4,8 @@
  * Loggt das effektive V8-Heap-Limit — so lässt sich in den Render-Logs
  * zweifelsfrei ablesen, ob `--max-old-space-size` (gesetzt im start-Script,
  * package.json) tatsächlich greift. Der Default liegt bei ~256 MB; bei
- * aktivem Flag muss hier ~384 MB stehen. War der Wert bei einem OOM weiterhin
- * ~256, wurde das Flag nicht übernommen.
+ * aktivem Flag muss hier ~1536 MB stehen (2-GB-standard-Plan). War der Wert
+ * bei einem OOM weiterhin ~256, wurde das Flag nicht übernommen.
  */
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
