@@ -72,8 +72,8 @@ export async function sendPricingMail(opts: {
   const signupUrl = `${STUDIO_URL}/anmelden?ref=${opts.refToken}`;
   const greeting = opts.firstName ? `Hallo ${opts.firstName},` : "Hallo,";
   const subject = opts.firstName
-    ? `Geschafft – hier ist dein Gratis-Start-Angebot, ${opts.firstName}`
-    : `Geschafft – hier ist dein Gratis-Start-Angebot`;
+    ? `Nur noch ein Schritt – hier ist dein Gratis-Start-Angebot, ${opts.firstName}`
+    : `Nur noch ein Schritt – hier ist dein Gratis-Start-Angebot`;
   return sendViaResend({
     from: FROM,
     ...REPLY_TO_FIELD,
@@ -82,7 +82,7 @@ export async function sendPricingMail(opts: {
     html: offerTemplate({ signupUrl, greeting }),
     text:
       `${greeting}\n\n` +
-      `du bist drin – herzlich willkommen bei den Gesundheitscoaches!\n\n` +
+      `nur noch ein Schritt bis zu deinem Start.\n\n` +
       `Wie versprochen kommt hier dein persönliches Start-Angebot. ` +
       `In 6 Wochen bringen wir dich spürbar leichter, schmerzfreier und mit mehr Energie ` +
       `durch den Alltag – ganzheitlich, ohne Diätstress und ohne Leistungsdruck.\n\n` +
@@ -410,7 +410,7 @@ function offerTemplate({ signupUrl, greeting }: { signupUrl: string; greeting: s
         <tr><td style="padding:8px 40px 40px;">
           <p style="font-family:'Courier New',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8A857E;margin:0 0 24px;">${STUDIO_NAME}</p>
           <p style="font-size:16px;line-height:1.6;margin:0 0 12px;">${greeting}</p>
-          <h1 style="font-size:30px;line-height:1.2;margin:0 0 16px;font-weight:600;color:#2C2C2A;">Du bist drin – willkommen!</h1>
+          <h1 style="font-size:30px;line-height:1.2;margin:0 0 16px;font-weight:600;color:#2C2C2A;">Nur noch ein Schritt bis zu deinem Start</h1>
           <p style="font-size:16px;line-height:1.6;margin:0 0 16px;color:#5F5E5A;">Wie versprochen kommt hier dein persönliches Start-Angebot. In 6 Wochen bringen wir dich spürbar leichter, schmerzfreier und mit mehr Energie durch den Alltag – ganzheitlich, ohne Diätstress und ohne Leistungsdruck.</p>
 
           <div style="background:#FBF7F0;border-left:4px solid #0F6E56;padding:20px 24px;margin:24px 0;border-radius:4px;">
