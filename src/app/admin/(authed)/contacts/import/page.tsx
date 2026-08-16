@@ -5,10 +5,16 @@ import { ImportForm } from "./ImportForm";
 export const dynamic = "force-dynamic";
 
 export default async function ContactImportPage() {
-  const locations = await db.location.findMany({
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    select: { id: true, name: true },
-  });
+  const [locations, lists] = await Promise.all([
+    db.location.findMany({
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true },
+    }),
+    db.list.findMany({
+      orderBy: { createdAt: "desc" },
+      select: { id: true, name: true },
+    }),
+  ]);
 
   return (
     <div className="p-8 md:p-12">
@@ -29,7 +35,7 @@ export default async function ContactImportPage() {
         </p>
       </div>
 
-      <ImportForm locations={locations} />
+      <ImportForm locations={locations} lists={lists} />
 
       <div className="mt-16 max-w-2xl border-t border-ink/15 pt-8">
         <p className="label mb-3">Tipps</p>

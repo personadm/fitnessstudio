@@ -41,8 +41,9 @@ export type Recipient = {
 
 /**
  * Liefert Empfänger einer Campaign basierend auf Targeting:
- * - Wenn listId: Mitglieder dieser Liste
- * - Wenn targetStatus: alle Kontakte mit diesem Status
+ * - Wenn listId: Mitglieder dieser Liste (auch Nur-Newsletter-Kontakte)
+ * - Wenn targetStatus: alle Kontakte mit diesem Status, außer Nur-Newsletter-
+ *   Kontakten (newsletterOnly) — die bekommen nur Listen-Kampagnen
  * - targetLocationId schränkt zusätzlich nach Standort ein
  *
  * Kein DOI-Filter mehr — alle Kontakte im jeweiligen Pool sind versandfähig.
@@ -82,6 +83,9 @@ export async function getCampaignRecipients(
     const contacts = await db.contact.findMany({
       where: {
         status: targeting.targetStatus,
+        // Nur-Newsletter-Kontakte erhalten ausschließlich Listen-Kampagnen,
+        // nie einen status-basierten Rundversand.
+        newsletterOnly: false,
         ...(targeting.targetLocationId
           ? { locationId: targeting.targetLocationId }
           : {}),

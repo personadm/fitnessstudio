@@ -178,9 +178,11 @@ export async function enrollIntoMatchingFunnels(
   if (contactId && status) {
     const contact = await db.contact.findUnique({
       where: { id: contactId },
-      select: { id: true, locationId: true },
+      select: { id: true, locationId: true, newsletterOnly: true },
     });
     if (!contact) return 0;
+    // Nur-Newsletter-Kontakte werden nie in Funnels eingeschrieben.
+    if (contact.newsletterOnly) return 0;
 
     for (const funnel of funnels) {
       const targetStatus = triggerToStatus(funnel.trigger);
@@ -221,6 +223,8 @@ export async function enrollIntoMatchingFunnels(
     const candidates = await db.contact.findMany({
       where: {
         status: targetStatus,
+        // Nur-Newsletter-Kontakte werden nie in Funnels eingeschrieben.
+        newsletterOnly: false,
         ...(funnel.locationId ? { locationId: funnel.locationId } : {}),
       },
       select: { id: true },

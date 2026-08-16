@@ -88,8 +88,14 @@ interface LocationOption {
   name: string;
 }
 
+interface ListOption {
+  id: string;
+  name: string;
+}
+
 interface ImportFormProps {
   locations: LocationOption[];
+  lists: ListOption[];
 }
 
 function autoDetectColumn(headers: string[], keywords: string[]): string | null {
@@ -100,7 +106,7 @@ function autoDetectColumn(headers: string[], keywords: string[]): string | null 
   return null;
 }
 
-export function ImportForm({ locations }: ImportFormProps) {
+export function ImportForm({ locations, lists }: ImportFormProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
@@ -117,6 +123,10 @@ export function ImportForm({ locations }: ImportFormProps) {
   const [targetStatus, setTargetStatus] = useState<Status>("KUNDE");
   const [locationId, setLocationId] = useState<string>("");
   const [strategy, setStrategy] = useState<Strategy>("skip");
+  // "Nur Sonntags-Newsletter": Kontakte kommen in eine Liste und werden von
+  // Funnels + Status-Kampagnen ausgenommen.
+  const [newsletterOnly, setNewsletterOnly] = useState(false);
+  const [addToListId, setAddToListId] = useState<string>("");
   const [parseError, setParseError] = useState("");
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<null | {
@@ -124,6 +134,7 @@ export function ImportForm({ locations }: ImportFormProps) {
     created: number;
     updated: number;
     skipped: number;
+    addedToList: number;
     errors: number;
     errorDetails: { row: number; email: string; reason: string }[];
   }>(null);
@@ -208,6 +219,10 @@ export function ImportForm({ locations }: ImportFormProps) {
 
   async function startImport() {
     if (!parsed || !mapping.email) return;
+    if (newsletterOnly && !addToListId) {
+      setParseError("Bitte eine Liste für den Sonntags-Newsletter wählen.");
+      return;
+    }
     setImporting(true);
     setResult(null);
 
@@ -227,9 +242,12 @@ export function ImportForm({ locations }: ImportFormProps) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           rows,
-          targetStatus,
+          // Nur-Newsletter-Kontakte werden immer als Interessent angelegt.
+          targetStatus: newsletterOnly ? "INTERESSENT" : targetStatus,
           locationId: locationId || null,
           duplicateStrategy: strategy,
+          newsletterOnly,
+          addToListId: newsletterOnly ? addToListId : null,
         }),
       });
       const data = await res.json();
@@ -245,6 +263,7 @@ export function ImportForm({ locations }: ImportFormProps) {
         created: data.summary.created,
         updated: data.summary.updated,
         skipped: data.summary.skipped,
+        addedToList: data.summary.addedToList ?? 0,
         errors: data.summary.errors,
         errorDetails: data.errors ?? [],
       });
@@ -413,35 +432,97 @@ export function ImportForm({ locations }: ImportFormProps) {
               )}
             </section>
 
-            {/* Ziel-Status + Strategie */}
+            {/* Nur-Newsletter-Schalter */}
             <section>
-              <p className="label mb-3">Schritt 4 — Status für alle Zeilen</p>
-              <div className="grid grid-cols-2 gap-2">
-                {STATUS_OPTIONS.map((opt) => {
-                  const sel = targetStatus === opt.value;
-                  return (
-                    <label
-                      key={opt.value}
-                      className={`cursor-pointer border p-3 transition-colors ${
-                        sel ? "border-ink bg-ink text-cream" : "border-ink/20 hover:border-ink/40"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="targetStatus"
-                        value={opt.value}
-                        checked={sel}
-                        onChange={() => setTargetStatus(opt.value)}
-                        className="sr-only"
-                      />
-                      <p className="font-mono text-xs uppercase tracking-[0.1em]">
-                        {sel ? "✓ " : ""}
-                        {opt.label}
+              <p className="label mb-3">Schritt 4 — Was sollen diese Kontakte bekommen?</p>
+              <label
+                className={`block cursor-pointer border p-4 transition-colors ${
+                  newsletterOnly ? "border-ink bg-ink/5" : "border-ink/20 hover:border-ink/40"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={newsletterOnly}
+                    onChange={(e) => setNewsletterOnly(e.target.checked)}
+                    className="mt-1"
+                  />
+                  <div>
+                    <p className="font-mono text-xs uppercase tracking-[0.1em]">
+                      Nur Sonntags-Newsletter
+                    </p>
+                    <p className="mt-1 text-xs text-muted leading-relaxed">
+                      Diese Kontakte kommen in eine Liste und bekommen{" "}
+                      <strong>ausschließlich</strong> den Newsletter dieser Liste. Sie werden{" "}
+                      <strong>nicht</strong> in Funnels eingeschrieben und von Status-Kampagnen
+                      (z.B. „an alle Interessenten") ausgenommen. Status wird auf „Interessent"
+                      gesetzt.
+                    </p>
+                  </div>
+                </div>
+              </label>
+
+              {newsletterOnly ? (
+                <div className="mt-4">
+                  <label className="block">
+                    <span className="label mb-2 block">Liste (Pflicht)</span>
+                    {lists.length === 0 ? (
+                      <p className="text-sm text-red-700">
+                        Noch keine Liste angelegt. Lege zuerst unter{" "}
+                        <a href="/admin/lists" className="underline">
+                          Marketing → Listen
+                        </a>{" "}
+                        eine Liste an (z.B. „Sonntags-Newsletter").
                       </p>
-                    </label>
-                  );
-                })}
-              </div>
+                    ) : (
+                      <select
+                        value={addToListId}
+                        onChange={(e) => setAddToListId(e.target.value)}
+                        className={`w-full border bg-transparent p-2 text-sm outline-none ${
+                          !addToListId ? "border-red-400" : "border-ink/20 focus:border-ink"
+                        }`}
+                      >
+                        <option value="">— Liste wählen —</option>
+                        {lists.map((l) => (
+                          <option key={l.id} value={l.id}>
+                            {l.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </label>
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <p className="label mb-3">Status für alle Zeilen</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {STATUS_OPTIONS.map((opt) => {
+                      const sel = targetStatus === opt.value;
+                      return (
+                        <label
+                          key={opt.value}
+                          className={`cursor-pointer border p-3 transition-colors ${
+                            sel ? "border-ink bg-ink text-cream" : "border-ink/20 hover:border-ink/40"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="targetStatus"
+                            value={opt.value}
+                            checked={sel}
+                            onChange={() => setTargetStatus(opt.value)}
+                            className="sr-only"
+                          />
+                          <p className="font-mono text-xs uppercase tracking-[0.1em]">
+                            {sel ? "✓ " : ""}
+                            {opt.label}
+                          </p>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </section>
 
             {/* Standort (nur wenn Standorte angelegt sind) */}
@@ -536,7 +617,7 @@ export function ImportForm({ locations }: ImportFormProps) {
               <button
                 type="button"
                 onClick={startImport}
-                disabled={!mapping.email || importing}
+                disabled={!mapping.email || importing || (newsletterOnly && !addToListId)}
                 className="bg-ink px-6 py-3 font-mono text-xs uppercase tracking-[0.12em] text-acid disabled:opacity-50 hover:bg-ink-soft"
               >
                 {importing
@@ -563,6 +644,15 @@ export function ImportForm({ locations }: ImportFormProps) {
                 <ResultStat label="Aktualisiert" value={result.updated} />
                 <ResultStat label="Übersprungen" value={result.skipped} />
               </div>
+
+              {result.addedToList > 0 && (
+                <div className="mt-4 border-t border-ink/10 pt-4">
+                  <p className="font-mono text-xs uppercase tracking-[0.1em] text-muted">
+                    Zur Newsletter-Liste hinzugefügt:{" "}
+                    <span className="text-ink">{result.addedToList}</span>
+                  </p>
+                </div>
+              )}
 
               {result.errors > 0 && (
                 <div className="mt-6 border-t border-ink/10 pt-4">

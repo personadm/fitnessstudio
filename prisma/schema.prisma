@@ -136,6 +136,12 @@ model Contact {
   unsubscribeToken String?   @unique @default(cuid())
   optedOutAt       DateTime?
 
+  // Nur-Newsletter-Kontakte: bekommen ausschließlich Listen-Kampagnen (z.B. den
+  // Sonntags-Newsletter), werden aber NICHT in Funnels eingeschrieben und NICHT
+  // von status-basierten Kampagnen erfasst. Gesetzt z.B. beim Excel-Import mit
+  // aktivierter "Nur Sonntags-Newsletter"-Option.
+  newsletterOnly Boolean @default(false)
+
   @@index([status])
   @@index([source])
   @@index([createdAt])

@@ -24,6 +24,10 @@ interface RequestBody {
   targetStatus: string;
   locationId?: string | null;
   duplicateStrategy: string; // "skip" | "update_status" | "update_all"
+  // "Nur Sonntags-Newsletter": Kontakte werden als newsletterOnly markiert
+  // (keine Funnels, keine Status-Kampagnen) und der gewählten Liste hinzugefügt.
+  newsletterOnly?: boolean;
+  addToListId?: string | null;
 }
 
 function normalizeGender(raw?: string): Gender | undefined {
@@ -139,6 +143,31 @@ export async function POST(req: NextRequest) {
 
   const targetStatus = body.targetStatus as ContactStatus;
   const strategy = body.duplicateStrategy;
+  const newsletterOnly = body.newsletterOnly === true;
+
+  // Bei "Nur Sonntags-Newsletter" muss eine Ziel-Liste gewählt sein — sonst
+  // würden die Kontakte gar keine Mails bekommen (Funnels/Status-Kampagnen
+  // sind für sie ausgeschlossen).
+  let addToListId: string | null = null;
+  if (newsletterOnly) {
+    if (!body.addToListId) {
+      return NextResponse.json(
+        { ok: false, message: "Für 'Nur Sonntags-Newsletter' muss eine Liste gewählt sein." },
+        { status: 400 },
+      );
+    }
+    const list = await db.list.findFirst({
+      where: { id: body.addToListId },
+      select: { id: true },
+    });
+    if (!list) {
+      return NextResponse.json(
+        { ok: false, message: "Liste existiert nicht." },
+        { status: 400 },
+      );
+    }
+    addToListId = list.id;
+  }
 
   // locationId validieren — wenn gesetzt, muss sie existieren.
   // null oder leerer String bedeuten "kein Standort".
@@ -161,6 +190,9 @@ export async function POST(req: NextRequest) {
   let updated = 0;
   let skipped = 0;
   const errors: { row: number; email: string; reason: string }[] = [];
+  // Kontakt-IDs, die (bei aktivem "Nur Sonntags-Newsletter") der Liste
+  // hinzugefügt werden — angelegte plus tatsächlich aktualisierte.
+  const listContactIds: string[] = [];
 
   // ── Phase 1: Zeilen validieren & parsen (kein DB-Zugriff) ──
   // Inner-Batch-Duplikate: Wenn dieselbe Mail mehrmals in der Datei steht,
@@ -240,6 +272,7 @@ export async function POST(req: NextRequest) {
         ...(locationId ? { locationId } : {}),
         status: targetStatus,
         source: "IMPORT",
+        newsletterOnly,
         // Bei KUNDE/EHEMALIGER pragmatische Defaults für Membership-Dates.
         // signupAt nicht setzen — das ist Anmeldeformular-Sache.
         ...(targetStatus === "KUNDE" ? { memberSince: new Date() } : {}),
@@ -258,6 +291,7 @@ export async function POST(req: NextRequest) {
       for (const p of toCreate) {
         const id = createdMap.get(p.email);
         if (id) {
+          listContactIds.push(id);
           createEvents.push({
             contactId: id,
             type: "IMPORTED_CREATED",
@@ -279,12 +313,17 @@ export async function POST(req: NextRequest) {
       // Einheitliche Daten → ein einziges updateMany.
       const data: Prisma.ContactUncheckedUpdateManyInput = { status: targetStatus };
       if (locationId !== null) data.locationId = locationId;
+      if (newsletterOnly) data.newsletterOnly = true;
       try {
         const res = await db.contact.updateMany({
           where: { email: { in: existingRows.map((p) => p.email) } },
           data,
         });
         updated += res.count;
+        for (const p of existingRows) {
+          const id = existingMap.get(p.email);
+          if (id) listContactIds.push(id);
+        }
         await db.contactEvent.createMany({
           data: existingRows.map((p) => ({
             contactId: existingMap.get(p.email) as string,
@@ -314,12 +353,17 @@ export async function POST(req: NextRequest) {
               if (p.city) updateData.city = p.city;
               if (p.phone) updateData.phone = p.phone;
               if (locationId !== null) updateData.locationId = locationId;
+              if (newsletterOnly) updateData.newsletterOnly = true;
               return db.contact.update({
                 where: { email: p.email },
                 data: updateData,
               });
             }),
           );
+          for (const p of chunk) {
+            const id = existingMap.get(p.email);
+            if (id) listContactIds.push(id);
+          }
           await db.contactEvent.createMany({
             data: chunk.map((p) => ({
               contactId: existingMap.get(p.email) as string,
@@ -337,6 +381,23 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // ── Phase 6: Nur-Newsletter-Kontakte der gewählten Liste hinzufügen ──
+  let addedToList = 0;
+  if (newsletterOnly && addToListId && listContactIds.length > 0) {
+    // Duplikate innerhalb dieses Imports entfernen; skipDuplicates fängt zusätzlich
+    // bereits bestehende Listen-Mitgliedschaften ab (@@id([contactId, listId])).
+    const uniqueIds = Array.from(new Set(listContactIds));
+    try {
+      const res = await db.contactList.createMany({
+        data: uniqueIds.map((contactId) => ({ contactId, listId: addToListId! })),
+        skipDuplicates: true,
+      });
+      addedToList = res.count;
+    } catch (err) {
+      console.error("[import] add-to-list failed", err);
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     summary: {
@@ -344,6 +405,7 @@ export async function POST(req: NextRequest) {
       created,
       updated,
       skipped,
+      addedToList,
       errors: errors.length,
     },
     errors: errors.slice(0, 50), // max. 50 Fehlerdetails zurückgeben
