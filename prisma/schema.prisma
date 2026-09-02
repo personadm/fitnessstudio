@@ -31,6 +31,7 @@ enum ContactSource {
   IMPORT
   CLUB_OFFLINE
   CLUB_ONLINE
+  NEWSLETTER
 }
 
 enum BillingInterval {

@@ -27,6 +27,7 @@ const SOURCE_LABELS: Record<string, string> = {
   IMPORT: "Import",
   CLUB_OFFLINE: "Club-Anmeldung (vor Ort)",
   CLUB_ONLINE: "Club-Anmeldung (online)",
+  NEWSLETTER: "Newsletter-Anmeldung",
 };
 
 type TimelineKind =

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { NewsletterForm } from "@/components/NewsletterForm";
 import { ScrollToTop } from "@/components/ScrollToTop";
-import { TrackPageView } from "@/components/TrackPageView";
 
 // Statisch — keine DB-Abfrage nötig, die Seite ist rein redaktionell.
 export const metadata: Metadata = {
@@ -37,7 +36,6 @@ export default function NewsletterPage() {
   return (
     <main className="min-h-screen bg-cream">
       <ScrollToTop />
-      <TrackPageView path="/newsletter" />
 
       {/* ─── Top Bar ─── */}
       <header className="border-b border-ink/10">

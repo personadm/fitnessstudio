@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
           email,
           firstName,
           status: "INTERESSENT",
-          source: "LANDING",
+          source: "NEWSLETTER",
           newsletterOnly: true,
           doiConfirmedAt: new Date(),
           consentText,

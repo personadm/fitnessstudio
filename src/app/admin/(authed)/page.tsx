@@ -5,11 +5,14 @@ import { PushSubscribe } from "@/components/admin/PushSubscribe";
 
 export default async function AdminDashboard() {
   // Status-Statistiken
+  // Nur-Newsletter-Kontakte (newsletterOnly) sind keine Sales-Kontakte und
+  // fließen bewusst NICHT in die CRM-Zahlen ein — sonst würde z.B. die
+  // Interessenten-Kachel um die tausenden Newsletter-Abonnenten aufgebläht.
   const [interessent, neukunde, kunde, ehemaliger] = await Promise.all([
-    db.contact.count({ where: { status: "INTERESSENT" } }),
-    db.contact.count({ where: { status: "NEUKUNDE" } }),
-    db.contact.count({ where: { status: "KUNDE" } }),
-    db.contact.count({ where: { status: "EHEMALIGER" } }),
+    db.contact.count({ where: { status: "INTERESSENT", newsletterOnly: false } }),
+    db.contact.count({ where: { status: "NEUKUNDE", newsletterOnly: false } }),
+    db.contact.count({ where: { status: "KUNDE", newsletterOnly: false } }),
+    db.contact.count({ where: { status: "EHEMALIGER", newsletterOnly: false } }),
   ]);
 
   // Phase 6: Neuanmeldungen aktueller Monat
@@ -30,8 +33,9 @@ export default async function AdminDashboard() {
     },
   });
 
-  // Letzte 8 Kontakte allgemein
+  // Letzte 8 Kontakte allgemein (ohne Nur-Newsletter-Abonnenten)
   const recent = await db.contact.findMany({
+    where: { newsletterOnly: false },
     orderBy: { createdAt: "desc" },
     take: 8,
     select: {
@@ -66,7 +70,11 @@ export default async function AdminDashboard() {
       distinct: ["sessionId"],
     }),
     db.contact.count({
-      where: { source: "LANDING", createdAt: { gte: thirtyDaysAgo } },
+      where: {
+        source: "LANDING",
+        newsletterOnly: false,
+        createdAt: { gte: thirtyDaysAgo },
+      },
     }),
     db.contact.count({
       where: {

@@ -44,6 +44,9 @@ export async function GET() {
   const [contacts, funnelEvents, campaignEvents] = await Promise.all([
     db.contact.findMany({
       where: {
+        // Nur-Newsletter-Abonnenten gehören nicht in den Sales-Activity-Feed
+        // (sonst erschiene jede Newsletter-Anmeldung als "Angebotszusendung").
+        newsletterOnly: false,
         OR: [
           { createdAt: { gte: since } },
           { doiConfirmedAt: { gte: since } },
