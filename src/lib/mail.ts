@@ -176,6 +176,37 @@ export async function sendCampaignMail(opts: {
 }
 
 // ─────────────────────────────────────────────────────────────
+// 3b) Newsletter-Willkommensmail (Sonntags-Newsletter Landingpage)
+// ─────────────────────────────────────────────────────────────
+
+export async function sendNewsletterWelcome(opts: {
+  to: string;
+  firstName?: string | null;
+  unsubscribeUrl?: string | null;
+}) {
+  const greeting = opts.firstName ? `Hallo ${opts.firstName},` : "Hallo,";
+  const subject = "Willkommen beim Sonntags-Newsletter 🌿";
+  const bodyHtml = `
+    <h1 style="font-size:28px;line-height:1.2;margin:0 0 16px;font-weight:400;">Schön, dass du dabei bist.</h1>
+    <p style="margin:0 0 12px;">${greeting}</p>
+    <p style="margin:0 0 12px;">ab jetzt bekommst du jeden <strong>Sonntag</strong> unseren Impuls für ein gesünderes, leichteres Leben — direkt in dein Postfach.</p>
+    <p style="margin:0 0 12px;">Freu dich auf:</p>
+    <ul style="margin:0 0 16px;padding-left:18px;line-height:1.7;">
+      <li>alltagstaugliche Ernährungs- & Bewegungstipps</li>
+      <li>echte Erfolgsgeschichten aus unseren Studios</li>
+      <li>kleine Impulse, die Großes bewegen</li>
+    </ul>
+    <p style="margin:0 0 4px;">Bis Sonntag!</p>
+    <p style="margin:0;"><strong>Tina &amp; Erik</strong> – Deine Gesundheitscoaches</p>`;
+  return sendCampaignMail({
+    to: opts.to,
+    subject,
+    bodyHtml,
+    unsubscribeUrl: opts.unsubscribeUrl ?? null,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
 // 4) Funnel-Mail (automatische Schritt-Mails aus Funnels)
 // ─────────────────────────────────────────────────────────────
 

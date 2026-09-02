@@ -15,6 +15,24 @@ export function isSendableEmail(email: string | null | undefined): boolean {
   return sendableEmailSchema.safeParse(email).success;
 }
 
+// Newsletter-Anmeldung (Sonntags-Newsletter Landingpage) — schlank: nur
+// Vorname, E-Mail und Einwilligung. Legt newsletterOnly-Kontakte an, die
+// ausschließlich Listen-Kampagnen bekommen (keine Funnels).
+export const newsletterSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .email("Bitte gültige E-Mail-Adresse angeben."),
+  firstName: z.string().trim().min(1, "Vorname fehlt.").max(80),
+  consent: z.literal(true, {
+    errorMap: () => ({
+      message: "Bitte setz noch das Häkchen, dann geht's los.",
+    }),
+  }),
+});
+export type NewsletterInput = z.infer<typeof newsletterSchema>;
+
 export const leadSchema = z.object({
   email: z.string().trim().toLowerCase().email("Bitte gültige E-Mail-Adresse angeben."),
   firstName: z.string().trim().min(1, "Vorname fehlt.").max(80),
