@@ -5,6 +5,7 @@ import Link from "next/link";
 
 type ActivityKind =
   | "LEAD"
+  | "NEWSLETTER"
   | "DOI_CONFIRMED"
   | "SIGNUP_ONLINE"
   | "SIGNUP_CLUB"
@@ -23,6 +24,7 @@ type Item = {
 
 const ICONS: Record<ActivityKind, string> = {
   LEAD: "📥",
+  NEWSLETTER: "📰",
   DOI_CONFIRMED: "✓",
   SIGNUP_ONLINE: "🎉",
   SIGNUP_CLUB: "🏠",
@@ -32,6 +34,7 @@ const ICONS: Record<ActivityKind, string> = {
 
 const COLORS: Record<ActivityKind, string> = {
   LEAD: "text-ink-soft",
+  NEWSLETTER: "text-ink-soft",
   DOI_CONFIRMED: "text-ink-soft",
   SIGNUP_ONLINE: "text-green-700 font-medium",
   SIGNUP_CLUB: "text-green-700 font-medium",

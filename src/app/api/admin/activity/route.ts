@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 
 export type ActivityKind =
   | "LEAD"
+  | "NEWSLETTER"
   | "DOI_CONFIRMED"
   | "SIGNUP_ONLINE"
   | "SIGNUP_CLUB"
@@ -44,9 +45,6 @@ export async function GET() {
   const [contacts, funnelEvents, campaignEvents] = await Promise.all([
     db.contact.findMany({
       where: {
-        // Nur-Newsletter-Abonnenten gehören nicht in den Sales-Activity-Feed
-        // (sonst erschiene jede Newsletter-Anmeldung als "Angebotszusendung").
-        newsletterOnly: false,
         OR: [
           { createdAt: { gte: since } },
           { doiConfirmedAt: { gte: since } },
@@ -59,6 +57,7 @@ export async function GET() {
         lastName: true,
         email: true,
         source: true,
+        newsletterOnly: true,
         signupStaff: true,
         createdAt: true,
         doiConfirmedAt: true,
@@ -124,6 +123,22 @@ export async function GET() {
   for (const c of contacts) {
     const name = displayName(c);
     const href = `/admin/contacts/${c.id}`;
+
+    // Nur-Newsletter-Abonnenten erscheinen mit eigenem Eintrag ("hat sich für
+    // den Newsletter eingetragen") — NICHT als Lead/Angebot. Sie zählen bewusst
+    // nicht in die Sales-Statistik, sollen aber im Live-Feed sichtbar sein.
+    if (c.newsletterOnly) {
+      items.push({
+        id: `newsletter-${c.id}`,
+        kind: "NEWSLETTER",
+        at: c.createdAt.toISOString(),
+        title: `${name} hat sich für den Newsletter eingetragen`,
+        subtitle: c.email,
+        contactId: c.id,
+        href,
+      });
+      continue;
+    }
 
     items.push({
       id: `lead-${c.id}`,
