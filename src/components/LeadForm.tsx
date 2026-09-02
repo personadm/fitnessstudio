@@ -61,6 +61,10 @@ export function LeadForm({ locations }: Props) {
         setMessage(data.message ?? "Bitte bestätige deine E-Mail-Adresse.");
         // Meta-Pixel: Lead-Conversion erst nach erfolgreichem Absenden feuern.
         window.fbq?.("track", "Lead");
+        // Google-Ads: Lead-Conversion erst nach erfolgreichem Absenden feuern.
+        window.gtag?.("event", "conversion", {
+          send_to: "AW-994674202/BZ8jCOD-9uYcEJqMptoD",
+        });
       } else {
         setState("error");
         setMessage(data.message ?? "Etwas ist schiefgelaufen.");

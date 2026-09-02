@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { SignupForm } from "@/components/SignupForm";
 import { MetaPixel } from "@/components/MetaPixel";
+import { GoogleAds } from "@/components/GoogleAds";
 import { computeScarcity } from "@/lib/scarcity";
 
 interface PageProps {
@@ -60,6 +61,7 @@ export default async function AnmeldenPage({ searchParams }: PageProps) {
     <main className="min-h-screen bg-[#FBF7F0]">
       {/* Meta-/Facebook-Pixel (Basis + PageView) */}
       <MetaPixel />
+      <GoogleAds />
       {/* Header: Logo + Studio */}
       <header className="border-b border-ink/10">
         <div className="mx-auto flex max-w-5xl items-center gap-4 px-6 py-4">

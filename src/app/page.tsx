@@ -2,6 +2,7 @@ import { LeadForm } from "@/components/LeadForm";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { TrackPageView } from "@/components/TrackPageView";
 import { MetaPixel } from "@/components/MetaPixel";
+import { GoogleAds } from "@/components/GoogleAds";
 import { db } from "@/lib/db";
 import { getTestimonials, TESTIMONIALS } from "@/lib/testimonials";
 
@@ -86,6 +87,7 @@ export default async function LandingPage() {
       <ScrollToTop />
       {/* Meta-/Facebook-Pixel (Basis + PageView) */}
       <MetaPixel />
+      <GoogleAds />
       {/* Zählt den Seitenaufruf (schreibt PageView fürs Admin-Dashboard) */}
       <TrackPageView path="/" />
 
