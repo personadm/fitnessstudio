@@ -147,6 +147,17 @@ export default async function LandingPage() {
                 Auch wenn bisher nichts davon funktioniert hat.
               </p>
 
+              {/* Mockup NUR mobil im ersten Viewport — auf Desktop steckt es
+                  stattdessen oben in der Formular-Card (kein Doppel). */}
+              <img
+                src="/images/plan-mockup.jpg"
+                alt="Vorschau des Gratis-Start-Plans"
+                width={140}
+                height={198}
+                loading="eager"
+                className="mx-auto mt-6 block w-[140px] rounded-md shadow-md ring-1 ring-black/5 lg:hidden"
+              />
+
               {/* Fließtext */}
               <p className="mt-5 max-w-2xl text-base leading-relaxed text-[#5F5E5A] md:text-lg">
                 Ganzheitlich und ohne Leistungsdruck — für mehr Energie, weniger
@@ -373,7 +384,7 @@ export default async function LandingPage() {
           <p className="text-display text-4xl leading-[1.1] md:text-5xl">
             Mail rein,
             <br />
-            Angebot raus,
+            Gratis-Start-Plan raus,
             <br />
             <span className="text-display-italic">los geht's.</span>
           </p>

@@ -63,7 +63,7 @@ function billingSuffix(interval: string | null | undefined): string {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 1) Willkommens-/Angebots-Mail (Single-Opt-In: direkt nach Eintragung)
+// 1) Willkommens-Mail „Gratis-Start-Plan" (Single-Opt-In: direkt nach Eintragung)
 // ─────────────────────────────────────────────────────────────
 
 // Der Gratis-Start-Plan (PDF) liegt in /public. Die Landingpage verspricht ihn
@@ -454,7 +454,7 @@ function escapeHtml(s: string): string {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Angebots-Mail-Template (Single-Opt-In: direkt nach Eintragung)
+// Willkommens-Mail-Template „Gratis-Start-Plan" (Single-Opt-In: direkt nach Eintragung)
 // ─────────────────────────────────────────────────────────────
 
 function offerTemplate({
@@ -506,7 +506,7 @@ function offerTemplate({
           <p style="font-size:16px;line-height:1.6;margin:0 0 20px;color:#2C2C2A;font-weight:500;">Sichere dir jetzt deinen Platz:</p>
 
           <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;"><tr><td style="background:#0F6E56;border-radius:8px;">
-            <a href="${signupUrl}" style="display:inline-block;padding:16px 32px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">Zu meinem Start-Angebot →</a>
+            <a href="${signupUrl}" style="display:inline-block;padding:16px 32px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">Jetzt meinen Platz sichern →</a>
           </td></tr></table>
 
           <hr style="border:none;border-top:1px solid #D8D2C7;margin:16px 0 24px;">

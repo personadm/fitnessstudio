@@ -155,11 +155,11 @@ export default async function AnmeldenPage({ searchParams }: PageProps) {
 }
 
 /**
- * Fortschrittsanzeige: ① Angebot → ② Bestätigt → ③ Anmelden (③ aktiv)
+ * Fortschrittsanzeige: ① Start-Plan → ② Bestätigt → ③ Anmelden (③ aktiv)
  */
 function ProgressBar() {
   const steps = [
-    { num: "①", label: "Angebot", active: false, done: true },
+    { num: "①", label: "Start-Plan", active: false, done: true },
     { num: "②", label: "Bestätigt", active: false, done: true },
     { num: "③", label: "Anmelden", active: true, done: false },
   ];

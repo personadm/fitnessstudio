@@ -145,7 +145,7 @@ export async function GET() {
       id: `lead-${c.id}`,
       kind: "LEAD",
       at: c.createdAt.toISOString(),
-      title: `${name} hat sich für die Angebotszusendung eingetragen`,
+      title: `${name} hat sich für den Gratis-Start-Plan eingetragen`,
       // Herkunftskanal (Klartext) zusätzlich zur E-Mail anzeigen, sofern bekannt.
       subtitle: [c.sourceChannel, c.email].filter(Boolean).join(" · "),
       contactId: c.id,
@@ -157,8 +157,8 @@ export async function GET() {
         id: `doi-${c.id}`,
         kind: "DOI_CONFIRMED",
         at: c.doiConfirmedAt.toISOString(),
-        title: `${name} – Start-Angebot verschickt`,
-        subtitle: "Angebots-Mail ging raus",
+        title: `${name} – Gratis-Start-Plan verschickt`,
+        subtitle: "Plan-Mail ging raus",
         contactId: c.id,
         href,
       });
