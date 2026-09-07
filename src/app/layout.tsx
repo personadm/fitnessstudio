@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     default: STUDIO,
     template: `%s — ${STUDIO}`,
   },
-  description: "Hier bekommst du dein Gratis-Start-Angebot!",
+  description: "Hier bekommst du deinen Gratis-Start-Plan!",
   icons: {
     icon: "/favicon.ico",
   },

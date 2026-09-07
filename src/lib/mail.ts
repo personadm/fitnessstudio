@@ -72,8 +72,8 @@ export async function sendPricingMail(opts: {
   const signupUrl = `${STUDIO_URL}/anmelden?ref=${opts.refToken}`;
   const greeting = opts.firstName ? `Hallo ${opts.firstName},` : "Hallo,";
   const subject = opts.firstName
-    ? `Nur noch ein Schritt – hier ist dein Gratis-Start-Angebot, ${opts.firstName}`
-    : `Nur noch ein Schritt – hier ist dein Gratis-Start-Angebot`;
+    ? `Nur noch ein Schritt – hier ist dein Gratis-Start-Plan, ${opts.firstName}`
+    : `Nur noch ein Schritt – hier ist dein Gratis-Start-Plan`;
   return sendViaResend({
     from: FROM,
     ...REPLY_TO_FIELD,
