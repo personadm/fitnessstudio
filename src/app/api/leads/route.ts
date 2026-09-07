@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { leadSchema } from "@/lib/validation";
+import { resolveChannel } from "@/lib/attribution";
 import { generateToken } from "@/lib/tokens";
 import { sendPricingMail } from "@/lib/mail";
 import { enrollIntoMatchingFunnels } from "@/lib/funnels";
@@ -27,7 +29,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, message }, { status: 400 });
     }
 
-    const { email, firstName, lastName, gender, locationId } = result.data;
+    const { email, firstName, lastName, gender, locationId, attribution } = result.data;
+
+    // Echten Herkunftskanal (Klartext) aus der first-party-Erfassung ableiten.
+    // Wird nur für NEUE Leads gesetzt (Bestandsleads behalten ihren Wert bzw.
+    // fallen im Dashboard auf das ContactSource-Label "Landing-Page" zurück).
+    const sourceChannel = resolveChannel(attribution ?? null);
+    const hasRaw = Boolean(attribution && Object.keys(attribution).length > 0);
 
     // IP fürs Consent-Logging (DSGVO-Beleg)
     const ip =
@@ -91,6 +99,8 @@ export async function POST(req: NextRequest) {
         locationId: resolvedLocationId,
         status: "INTERESSENT",
         source: "LANDING",
+        sourceChannel,
+        sourceRaw: hasRaw ? (attribution as Prisma.InputJsonValue) : undefined,
         refToken,
         consentText,
         consentIp: ip,

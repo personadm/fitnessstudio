@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getAttribution } from "@/lib/attribution";
 
 type State = "idle" | "loading" | "success" | "error";
 
@@ -52,6 +53,9 @@ export function LeadForm({ locations }: Props) {
           email,
           locationId: locationId || null,
           consent,
+          // Herkunft (gclid/fbclid/utm/referrer) — first-party, beim ersten
+          // Aufruf erfasst; der Server ermittelt daraus den Klartext-Kanal.
+          attribution: getAttribution(),
         }),
       });
       const data = await res.json();

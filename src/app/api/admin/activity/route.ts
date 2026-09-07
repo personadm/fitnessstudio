@@ -57,6 +57,7 @@ export async function GET() {
         lastName: true,
         email: true,
         source: true,
+        sourceChannel: true,
         newsletterOnly: true,
         signupStaff: true,
         createdAt: true,
@@ -145,7 +146,8 @@ export async function GET() {
       kind: "LEAD",
       at: c.createdAt.toISOString(),
       title: `${name} hat sich für die Angebotszusendung eingetragen`,
-      subtitle: c.email,
+      // Herkunftskanal (Klartext) zusätzlich zur E-Mail anzeigen, sofern bekannt.
+      subtitle: [c.sourceChannel, c.email].filter(Boolean).join(" · "),
       contactId: c.id,
       href,
     });

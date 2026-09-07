@@ -13,6 +13,7 @@ interface ContactRow {
   lastName: string | null;
   status: ContactStatus;
   source: string;
+  sourceChannel: string | null;
   createdAt: string; // serialisiert als ISO
   pricingPlan: { name: string } | null;
   location: { name: string } | null;
@@ -199,8 +200,10 @@ export function ContactsTable({ contacts, showLocationColumn }: Props) {
                       </Td>
                     )}
                     <Td>{c.pricingPlan?.name ?? "—"}</Td>
-                    <Td className="font-mono text-[10px] uppercase text-muted">
-                      {c.source}
+                    <Td className="text-[11px] text-muted">
+                      {c.sourceChannel ?? (
+                        <span className="font-mono uppercase">{c.source}</span>
+                      )}
                     </Td>
                     <Td className="font-mono text-[11px] text-muted">
                       {new Date(c.createdAt).toLocaleDateString("de-DE")}

@@ -217,6 +217,16 @@ export default function DatenschutzPage() {
             ist, sind bis zur endgültigen Klärung des jeweiligen Vorfalls von
             der Löschung ausgenommen.
           </p>
+          <p>
+            <strong>5.3</strong> Trägt sich ein Nutzer über unser Formular ein, speichern wir
+            zusätzlich den Herkunftskanal der Anfrage (z. B. Kampagnen-Parameter
+            wie gclid/fbclid/utm sowie die zuvor besuchte Seite/Referrer). Diese
+            Angaben dienen ausschließlich dazu, die Anfrage der richtigen
+            Kontaktquelle zuzuordnen und die Wirksamkeit unserer Maßnahmen zu
+            bewerten. Rechtsgrundlage ist unser berechtigtes Interesse an einer
+            ordnungsgemäßen Bearbeitung und Auswertung der Anfrage (Art. 6 Abs. 1
+            lit. f. DSGVO).
+          </p>
         </Section>
 
         <Section title="6. Cookies & Reichweitenmessung">

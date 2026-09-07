@@ -13,6 +13,8 @@ const GTAG_ID = "G-CXPTS7YP5N";
  * erst nach erfolgreichem Absenden — siehe LeadForm.tsx.
  */
 export function GoogleAds() {
+  // Der Consent-Mode-v2-Default (denied) wird bereits im Root-Layout-<head>
+  // gesetzt, bevor dieses Skript lädt — siehe src/app/layout.tsx.
   return (
     <>
       <Script

@@ -96,6 +96,14 @@ model Contact {
   status ContactStatus @default(INTERESSENT)
   source ContactSource @default(LANDING)
 
+  // Herkunftskanal in Klartext (z. B. "Google Ads", "Instagram Bio",
+  // "Direkt (z. B. QR-Code/Lesezeichen)") — ermittelt beim ersten Lead-Eintrag
+  // aus gclid/fbclid/utm_*/referrer. Bestandsleads bleiben null; das Dashboard
+  // fällt dann auf das ContactSource-Label ("Landing-Page") zurück.
+  sourceChannel String?
+  // Rohwerte der Herkunftserfassung (gclid, fbclid, utm_*, referrer) als Beleg.
+  sourceRaw     Json?
+
   street     String?
   postalCode String?
   city       String?

@@ -1,7 +1,9 @@
 import { db } from "@/lib/db";
 import { SignupForm } from "@/components/SignupForm";
-import { MetaPixel } from "@/components/MetaPixel";
 import { GoogleAds } from "@/components/GoogleAds";
+import { CookieConsent } from "@/components/CookieConsent";
+import { CookieSettingsButton } from "@/components/CookieSettingsButton";
+import { AttributionCapture } from "@/components/AttributionCapture";
 import { computeScarcity } from "@/lib/scarcity";
 
 interface PageProps {
@@ -59,9 +61,12 @@ export default async function AnmeldenPage({ searchParams }: PageProps) {
 
   return (
     <main className="min-h-screen bg-[#FBF7F0]">
-      {/* Meta-/Facebook-Pixel (Basis + PageView) */}
-      <MetaPixel />
+      {/* Google-Tag inkl. Consent-Mode-v2-Default (denied vor gtag-Load) */}
       <GoogleAds />
+      {/* Consent-Banner: Meta-Pixel & granted erst nach "Okay" */}
+      <CookieConsent />
+      {/* Lead-Herkunft first-party erfassen (consent-unabhängig) */}
+      <AttributionCapture />
       {/* Header: Logo + Studio */}
       <header className="border-b border-ink/10">
         <div className="mx-auto flex max-w-5xl items-center gap-4 px-6 py-4">
@@ -141,6 +146,7 @@ export default async function AnmeldenPage({ searchParams }: PageProps) {
             <a href="/teilnahmebedingungen" className="hover:text-[#2C2C2A]">
               Teilnahmebedingungen
             </a>
+            <CookieSettingsButton className="hover:text-[#2C2C2A]" />
           </nav>
         </div>
       </footer>

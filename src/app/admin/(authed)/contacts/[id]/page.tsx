@@ -315,7 +315,10 @@ export default async function ContactDetail({ params }: PageProps) {
                     : "—"
                 }
               />
-              <DataRow k="Quelle" v={SOURCE_LABELS[contact.source] ?? contact.source} />
+              <DataRow
+                k="Quelle"
+                v={contact.sourceChannel ?? SOURCE_LABELS[contact.source] ?? contact.source}
+              />
               {contact.signupStaff && <DataRow k="Angelegt von" v={contact.signupStaff} />}
               <DataRow k="DOI bestätigt" v={contact.doiConfirmedAt ? "Ja" : "Nein"} />
             </div>

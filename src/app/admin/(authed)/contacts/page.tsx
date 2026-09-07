@@ -175,6 +175,7 @@ export default async function ContactsPage({ searchParams }: PageProps) {
           lastName: c.lastName,
           status: c.status,
           source: c.source,
+          sourceChannel: c.sourceChannel,
           createdAt: c.createdAt.toISOString(),
           pricingPlan: c.pricingPlan,
           location: c.location,

@@ -1,6 +1,7 @@
 // Globaler Typ für den Meta-/Facebook-Pixel (`window.fbq`), den der
-// Basis-Pixel-Snippet in MetaPixel.tsx auf `window` setzt. So können
-// Client-Komponenten Events wie `window.fbq?.("track", "Lead")` typsicher feuern.
+// Basis-Pixel-Loader in src/lib/pixel.ts nach erteilter Einwilligung auf
+// `window` setzt. So können Client-Komponenten Events wie
+// `window.fbq?.("track", "Lead")` typsicher feuern (no-op ohne Einwilligung).
 export {};
 
 declare global {

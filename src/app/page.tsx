@@ -1,8 +1,10 @@
 import { LeadForm } from "@/components/LeadForm";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { TrackPageView } from "@/components/TrackPageView";
-import { MetaPixel } from "@/components/MetaPixel";
 import { GoogleAds } from "@/components/GoogleAds";
+import { CookieConsent } from "@/components/CookieConsent";
+import { CookieSettingsButton } from "@/components/CookieSettingsButton";
+import { AttributionCapture } from "@/components/AttributionCapture";
 import { db } from "@/lib/db";
 import { getTestimonials, TESTIMONIALS } from "@/lib/testimonials";
 
@@ -85,9 +87,12 @@ export default async function LandingPage() {
       {/* Erzwingt Seitenstart oben — überschreibt #email-Anker (QR-Code/Wix),
           damit Scanner zuerst Hero + Nutzen sehen, nicht direkt das Formular. */}
       <ScrollToTop />
-      {/* Meta-/Facebook-Pixel (Basis + PageView) */}
-      <MetaPixel />
+      {/* Google-Tag inkl. Consent-Mode-v2-Default (denied vor gtag-Load) */}
       <GoogleAds />
+      {/* Consent-Banner: Meta-Pixel & granted erst nach "Okay" */}
+      <CookieConsent />
+      {/* Lead-Herkunft first-party erfassen (consent-unabhängig) */}
+      <AttributionCapture />
       {/* Zählt den Seitenaufruf (schreibt PageView fürs Admin-Dashboard) */}
       <TrackPageView path="/" />
 
@@ -395,6 +400,7 @@ export default async function LandingPage() {
             <a href="/teilnahmebedingungen" className="hover:text-ink">
               Teilnahmebedingungen
             </a>
+            <CookieSettingsButton className="uppercase tracking-[0.14em] hover:text-ink" />
           </nav>
         </div>
       </footer>

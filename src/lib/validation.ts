@@ -33,6 +33,23 @@ export const newsletterSchema = z.object({
 });
 export type NewsletterInput = z.infer<typeof newsletterSchema>;
 
+// Herkunftserfassung (Lead-Quelle): first-party Rohwerte, die der Client aus
+// URL-Parametern + Referrer mitsendet. Alle Felder optional; Längen gedeckelt,
+// damit manipulierte Requests die DB nicht aufblähen.
+export const attributionSchema = z
+  .object({
+    gclid: z.string().trim().max(400).optional().nullable(),
+    fbclid: z.string().trim().max(400).optional().nullable(),
+    utmSource: z.string().trim().max(200).optional().nullable(),
+    utmMedium: z.string().trim().max(200).optional().nullable(),
+    utmCampaign: z.string().trim().max(200).optional().nullable(),
+    utmTerm: z.string().trim().max(200).optional().nullable(),
+    utmContent: z.string().trim().max(200).optional().nullable(),
+    referrer: z.string().trim().max(500).optional().nullable(),
+  })
+  .optional()
+  .nullable();
+
 export const leadSchema = z.object({
   email: z.string().trim().toLowerCase().email("Bitte gültige E-Mail-Adresse angeben."),
   firstName: z.string().trim().min(1, "Vorname fehlt.").max(80),
@@ -44,6 +61,7 @@ export const leadSchema = z.object({
   consent: z.literal(true, {
     errorMap: () => ({ message: "Bitte setz noch das Häkchen, dann schicken wir dir dein Angebot." }),
   }),
+  attribution: attributionSchema,
 });
 export type LeadInput = z.infer<typeof leadSchema>;
 
