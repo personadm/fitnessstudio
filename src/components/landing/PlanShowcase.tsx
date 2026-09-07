@@ -6,8 +6,8 @@
 const PETROL = "#0F6E56";
 const GREEN = "#7CAE2D";
 
-// Cover-/Mockup-Bild des Gratis-Start-Plans (in public/images/).
-const MOCKUP_SRC = "/images/plan-mockup.jpg";
+// Cover-/Mockup-Bild des Gratis-Start-Plans (transparentes 3D-Booklet-Render).
+const MOCKUP_SRC = "/images/plan-mockup.png";
 
 type Inclusion = {
   title: string;
@@ -55,10 +55,10 @@ export function PlanShowcase() {
               <img
                 src={MOCKUP_SRC}
                 alt="Cover des Gratis-Start-Plans der Gesundheitscoaches"
-                width={820}
-                height={1160}
+                width={640}
+                height={640}
                 loading="lazy"
-                className="mx-auto w-full max-w-sm rounded-xl ring-1 ring-black/5 drop-shadow-2xl"
+                className="mx-auto w-full max-w-sm"
               />
             </div>
           </div>

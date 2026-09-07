@@ -150,12 +150,12 @@ export default async function LandingPage() {
               {/* Mockup NUR mobil im ersten Viewport — auf Desktop steckt es
                   stattdessen oben in der Formular-Card (kein Doppel). */}
               <img
-                src="/images/plan-mockup.jpg"
+                src="/images/plan-mockup.png"
                 alt="Vorschau des Gratis-Start-Plans"
-                width={140}
-                height={198}
+                width={150}
+                height={150}
                 loading="eager"
-                className="mx-auto mt-6 block w-[140px] rounded-md shadow-md ring-1 ring-black/5 lg:hidden"
+                className="mx-auto mt-6 block w-[150px] lg:hidden"
               />
 
               {/* Fließtext */}
