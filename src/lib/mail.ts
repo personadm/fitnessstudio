@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { Resend } from "resend";
 import { db } from "./db";
 import { anbieterForLocation } from "./legal";
@@ -64,26 +66,49 @@ function billingSuffix(interval: string | null | undefined): string {
 // 1) Willkommens-/Angebots-Mail (Single-Opt-In: direkt nach Eintragung)
 // ─────────────────────────────────────────────────────────────
 
+// Der Gratis-Start-Plan (PDF) liegt in /public. Die Landingpage verspricht ihn
+// „per Mail" — deshalb hängen wir ihn an die Willkommens-Mail an UND verlinken
+// ihn als Button. Der CTA im PDF selbst führt auf /anmelden (Funnel läuft weiter).
+const PLAN_PDF_FILE = "gratis-start-plan.pdf";
+
+// Liest die Plan-PDF als Base64 für den Mail-Anhang. Best-effort: schlägt das
+// Lesen fehl, wird ohne Anhang versendet (der Button/Link bleibt bestehen),
+// statt den kompletten Mailversand scheitern zu lassen.
+async function readPlanPdfBase64(): Promise<string | null> {
+  try {
+    const file = path.join(process.cwd(), "public", PLAN_PDF_FILE);
+    const buf = await readFile(file);
+    return buf.toString("base64");
+  } catch (err) {
+    console.error("[mail] Gratis-Start-Plan-PDF konnte nicht gelesen werden:", err);
+    return null;
+  }
+}
+
 export async function sendPricingMail(opts: {
   to: string;
   firstName?: string | null;
   refToken: string;
 }) {
   const signupUrl = `${STUDIO_URL}/anmelden?ref=${opts.refToken}`;
+  const planPdfUrl = `${STUDIO_URL}/${PLAN_PDF_FILE}`;
   const greeting = opts.firstName ? `Hallo ${opts.firstName},` : "Hallo,";
   const subject = opts.firstName
     ? `Nur noch ein Schritt – hier ist dein Gratis-Start-Plan, ${opts.firstName}`
     : `Nur noch ein Schritt – hier ist dein Gratis-Start-Plan`;
+
+  const pdfBase64 = await readPlanPdfBase64();
+
   return sendViaResend({
     from: FROM,
     ...REPLY_TO_FIELD,
     to: opts.to,
     subject,
-    html: offerTemplate({ signupUrl, greeting }),
+    html: offerTemplate({ signupUrl, greeting, planPdfUrl }),
     text:
       `${greeting}\n\n` +
       `nur noch ein Schritt bis zu deinem Start.\n\n` +
-      `Wie versprochen kommt hier dein persönliches Start-Angebot. ` +
+      `Wie versprochen: Hier ist dein Gratis-Start-Plan als PDF – er liegt dieser Mail bei und du kannst ihn hier öffnen:\n${planPdfUrl}\n\n` +
       `In 6 Wochen bringen wir dich spürbar leichter, schmerzfreier und mit mehr Energie ` +
       `durch den Alltag – ganzheitlich, ohne Diätstress und ohne Leistungsdruck.\n\n` +
       `Das Wichtigste auf einen Blick:\n` +
@@ -93,6 +118,9 @@ export async function sendPricingMail(opts: {
       `Sichere dir jetzt deinen Platz:\n${signupUrl}\n\n` +
       `Über 6.000 Menschen sind diesen Weg schon mit uns gegangen.\n\n` +
       `Wir freuen uns auf dich!\nTina & Erik – Deine Gesundheitscoaches`,
+    ...(pdfBase64
+      ? { attachments: [{ filename: "Gratis-Start-Plan.pdf", content: pdfBase64 }] }
+      : {}),
   });
 }
 
@@ -429,7 +457,15 @@ function escapeHtml(s: string): string {
 // Angebots-Mail-Template (Single-Opt-In: direkt nach Eintragung)
 // ─────────────────────────────────────────────────────────────
 
-function offerTemplate({ signupUrl, greeting }: { signupUrl: string; greeting: string }) {
+function offerTemplate({
+  signupUrl,
+  greeting,
+  planPdfUrl,
+}: {
+  signupUrl: string;
+  greeting: string;
+  planPdfUrl: string;
+}) {
   return `<!DOCTYPE html>
 <html lang="de">
 <head><meta charset="utf-8"><style>${shellStyles()}</style></head>
@@ -442,7 +478,12 @@ function offerTemplate({ signupUrl, greeting }: { signupUrl: string; greeting: s
           <p style="font-family:'Courier New',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8A857E;margin:0 0 24px;">${STUDIO_NAME}</p>
           <p style="font-size:16px;line-height:1.6;margin:0 0 12px;">${greeting}</p>
           <h1 style="font-size:30px;line-height:1.2;margin:0 0 16px;font-weight:600;color:#2C2C2A;">Nur noch ein Schritt bis zu deinem Start</h1>
-          <p style="font-size:16px;line-height:1.6;margin:0 0 16px;color:#5F5E5A;">Wie versprochen kommt hier dein persönliches Start-Angebot. In 6 Wochen bringen wir dich spürbar leichter, schmerzfreier und mit mehr Energie durch den Alltag – ganzheitlich, ohne Diätstress und ohne Leistungsdruck.</p>
+          <p style="font-size:16px;line-height:1.6;margin:0 0 16px;color:#5F5E5A;">Wie versprochen: Hier ist dein <strong>Gratis-Start-Plan</strong>. In 6 Wochen bringen wir dich spürbar leichter, schmerzfreier und mit mehr Energie durch den Alltag – ganzheitlich, ohne Diätstress und ohne Leistungsdruck.</p>
+
+          <table role="presentation" cellpadding="0" cellspacing="0" style="margin:4px 0 6px;"><tr><td style="background:#0F6E56;border-radius:8px;">
+            <a href="${planPdfUrl}" style="display:inline-block;padding:15px 30px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">📄 Deinen Gratis-Start-Plan öffnen</a>
+          </td></tr></table>
+          <p style="font-size:13px;line-height:1.5;color:#8A857E;margin:6px 0 8px;">Der Plan liegt dieser Mail auch als PDF-Anhang bei.</p>
 
           <div style="background:#FBF7F0;border-left:4px solid #0F6E56;padding:20px 24px;margin:24px 0;border-radius:4px;">
             <p style="font-family:'Courier New',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#0F6E56;margin:0 0 12px;font-weight:600;">Das Wichtigste auf einen Blick</p>

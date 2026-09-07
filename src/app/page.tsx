@@ -1,4 +1,5 @@
 import { LeadForm } from "@/components/LeadForm";
+import { PlanShowcase } from "@/components/landing/PlanShowcase";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { TrackPageView } from "@/components/TrackPageView";
 import { GoogleAds } from "@/components/GoogleAds";
@@ -130,12 +131,12 @@ export default async function LandingPage() {
                   color: PETROL,
                 }}
               >
-                Seit über 25 Jahren · über 6.000 Menschen begleitet
+                Seit über 25 Jahren · Tausende Menschen erfolgreich begleitet
               </div>
 
               {/* H1 */}
               <h1 className="mt-7 text-4xl font-bold leading-[1.1] tracking-tight text-[#2C2C2A] md:text-5xl lg:text-[3.5rem]">
-                Abnehmen, das endlich bleibt — ohne Hungern und ohne Diätstress.
+                In 6 Wochen zu deinem Ziel: leichter, schmerzfrei, voller Energie.
               </h1>
 
               {/* Grüne Betonungszeile */}
@@ -143,14 +144,15 @@ export default async function LandingPage() {
                 className="mt-5 text-xl font-semibold leading-snug md:text-2xl"
                 style={{ color: PETROL }}
               >
-                Auch wenn bisher jede Diät gescheitert ist.
+                Auch wenn bisher nichts davon funktioniert hat.
               </p>
 
               {/* Fließtext */}
               <p className="mt-5 max-w-2xl text-base leading-relaxed text-[#5F5E5A] md:text-lg">
                 Ganzheitlich und ohne Leistungsdruck — für mehr Energie, weniger
                 Schmerzen und ein gutes Gefühl im eigenen Körper. Deinen
-                Gratis-Start-Plan bekommst du sofort per Mail — kein Anruf, kein Druck.
+                Gratis-Start-Plan bekommst du sofort per Mail – kein Druck, keine
+                Verpflichtung.
               </p>
 
               {/* 3 Beweis-Punkte mit Häkchen */}
@@ -219,6 +221,9 @@ export default async function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ─── Das steckt drin: Gratis-Start-Plan (Lead-Magnet-Showcase) ─── */}
+      <PlanShowcase />
 
       {/* ─── Testimonials (schwarz) ─── */}
       <section className="bg-ink text-cream">
