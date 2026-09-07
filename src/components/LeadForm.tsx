@@ -96,7 +96,7 @@ export function LeadForm({ locations }: Props) {
         </h3>
         <p className="text-sm leading-relaxed text-[#5F5E5A]">{message}</p>
         <p className="mt-3 text-xs text-[#8A857E]">
-          Nach der Bestätigung schalten wir dein Gratis-Start-Angebot frei.
+          Nach der Bestätigung schalten wir deinen Gratis-Start-Plan frei.
         </p>
       </div>
     );
@@ -179,7 +179,7 @@ export function LeadForm({ locations }: Props) {
           className="mt-0.5 h-4 w-4 accent-[#0F6E56]"
         />
         <span>
-          Ich willige ein, dass meine Daten zur Zusendung des Gratis-Start-Angebots
+          Ich willige ein, dass meine Daten zur Zusendung des Gratis-Start-Plans
           verarbeitet werden. Widerruf jederzeit per Klick auf den Abmelde-Link in jeder
           Mail. Mehr in der{" "}
           <a

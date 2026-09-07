@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
     // Soft formulierte E-Mail-Einwilligung von der Landingpage (Single-Opt-In,
     // gespeichert als DSGVO-Beleg zusammen mit IP + Zeitstempel).
-    const consentText = "Ja, schickt mir mein Gratis-Start-Angebot per E-Mail.";
+    const consentText = "Ja, schickt mir meinen Gratis-Start-Plan per E-Mail.";
 
     // Standort validieren — nur falls übergeben
     let resolvedLocationId: string | null = null;
@@ -146,7 +146,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       message:
-        "Geschafft! Dein Gratis-Start-Angebot ist unterwegs – schau in dein Postfach.",
+        "Geschafft! Dein Gratis-Start-Plan ist unterwegs – schau in dein Postfach.",
     });
   } catch (err) {
     console.error("[/api/leads]", err);
