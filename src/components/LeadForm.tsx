@@ -114,8 +114,22 @@ export function LeadForm({ locations }: Props) {
       id="email"
       className="rounded-xl border border-[#E8E2D5] bg-white p-6 md:p-7"
     >
-      <h3 className="text-2xl font-semibold text-[#2C2C2A]">Dein Gratis-Start-Plan</h3>
-      <p className="mt-1 text-sm text-[#5F5E5A]">Sofort per Mail. In Ruhe durchlesen.</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-2xl font-semibold text-[#2C2C2A]">Dein Gratis-Start-Plan</h3>
+          <p className="mt-1 text-sm text-[#5F5E5A]">Sofort per Mail. In Ruhe durchlesen.</p>
+        </div>
+        {/* Kompaktes Cover — zeigt sofort im ersten Viewport, was man bekommt.
+            Gleiche Bilddatei wie der Showcase-Block (ein Swap aktualisiert beide). */}
+        <img
+          src="/images/plan-mockup.jpg"
+          alt="Vorschau des Gratis-Start-Plans"
+          width={112}
+          height={158}
+          loading="eager"
+          className="w-20 flex-shrink-0 rounded-md shadow-md ring-1 ring-black/5 sm:w-[6.5rem]"
+        />
+      </div>
 
       <div className="mt-5 space-y-4">
         <label className="block">
