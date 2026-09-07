@@ -14,23 +14,24 @@ type Inclusion = {
   body: string;
 };
 
-// Inhalt abgeleitet aus dem Gratis-Start-Plan (PDF, 5 Seiten).
+// Bullets = die vier Seiten des Gratis-Start-Plan-PDFs (Überschriften identisch),
+// aus Leser-Sicht formuliert (was er danach weiß/hat).
 const INCLUSIONS: Inclusion[] = [
   {
-    title: "Die Methode der Gesundheitscoaches",
-    body: "Fünf Bausteine, ein System: Stoffwechselanalyse, Training, Ernährung, Regeneration, Entspannung.",
+    title: "Warum es diesmal funktioniert",
+    body: "Du erkennst, woran es bisher gelegen hat – und warum Hungern, Diätstress und Leistungsdruck bei dir nicht funktioniert haben.",
   },
   {
     title: "Dein 6-Wochen-Startplan",
-    body: "Schritt für Schritt von der großen Analyse bis zur Erfolgsmessung — in deinem Tempo.",
+    body: "Du siehst Woche für Woche, was auf dich zukommt: von der Analyse bis zur Erfolgsmessung, in deinem Tempo.",
   },
   {
-    title: "Alles, was drinsteckt",
-    body: "Vom Personal-Coaching übers Kursprogramm bis zur Zufriedenheitsgarantie — auf einen Blick.",
+    title: "Was für dich drin ist",
+    body: "Alles auf einen Blick, bis hin zur Zufriedenheitsgarantie.",
   },
   {
-    title: "Bis zu 100 % von der Krankenkasse",
-    body: "Wie du deinen Beitrag automatisch zurückbekommst — ohne Anträge, ohne Papierkram.",
+    title: "Die Krankenkasse zahlt",
+    body: "Wie du deinen Beitrag zurückbekommst.",
   },
 ];
 
