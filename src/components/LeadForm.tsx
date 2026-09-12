@@ -114,8 +114,7 @@ export function LeadForm({ locations }: Props) {
       id="email"
       className="rounded-xl border border-[#E8E2D5] bg-white p-6 md:p-7"
     >
-      {/* Cover zentriert über der Überschrift — NUR Desktop. Auf Mobil zeigt
-          der Hero das Mockup unter der Subline (kein Doppel).
+      {/* Cover zentriert über der Überschrift — NUR Desktop (unverändert).
           Gleiche Bilddatei wie der Showcase-Block (ein Swap aktualisiert alle). */}
       <img
         src="/images/plan-mockup.png"
@@ -125,8 +124,25 @@ export function LeadForm({ locations }: Props) {
         loading="eager"
         className="mx-auto mb-4 hidden w-[220px] lg:block"
       />
-      <h3 className="text-2xl font-semibold text-[#2C2C2A]">Dein Gratis-Start-Plan</h3>
-      <p className="mt-1 text-sm text-[#5F5E5A]">Sofort per Mail. In Ruhe durchlesen.</p>
+
+      {/* Kopf der Karte: mobil Überschrift + Subline links (~60 %) und das
+          kleine Cover rechts daneben (~38 %). Auf Desktop einspaltig, da das
+          Cover dort bereits zentriert darüber steht (kein Doppel). */}
+      <div className="flex items-start gap-4 lg:block">
+        <div className="w-3/5 lg:w-full">
+          <h3 className="text-2xl font-semibold text-[#2C2C2A]">Dein Gratis-Start-Plan</h3>
+          <p className="mt-1 text-sm text-[#5F5E5A]">Sofort per Mail. In Ruhe durchlesen.</p>
+        </div>
+        {/* Kleines Cover NUR mobil — oben rechts neben der Überschrift. */}
+        <img
+          src="/images/plan-mockup.png"
+          alt="Vorschau des Gratis-Start-Plans"
+          width={150}
+          height={150}
+          loading="eager"
+          className="w-2/5 max-w-[128px] flex-shrink-0 self-start lg:hidden"
+        />
+      </div>
 
       <div className="mt-5 space-y-4">
         <label className="block">

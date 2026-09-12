@@ -163,19 +163,9 @@ export default async function LandingPage() {
               <LeadForm locations={locations} />
             </div>
 
-            {/* Restlicher Hero-Text — mobil unterhalb des Formulars. */}
+            {/* Restlicher Hero-Text — mobil unterhalb des Formulars.
+                (Das kleine Mockup steckt jetzt oben rechts in der Formular-Card.) */}
             <div className="lg:col-span-7 lg:col-start-1 lg:row-start-3">
-              {/* Mockup: mobil unter dem Formular, auf Desktop steckt es
-                  stattdessen oben in der Formular-Card (kein Doppel). */}
-              <img
-                src="/images/plan-mockup.png"
-                alt="Vorschau des Gratis-Start-Plans"
-                width={150}
-                height={150}
-                loading="eager"
-                className="mx-auto mt-6 block w-[150px] lg:hidden"
-              />
-
               {/* Fließtext */}
               <p className="mt-5 max-w-2xl text-base leading-relaxed text-[#5F5E5A] md:text-lg">
                 Ganzheitlich und ohne Leistungsdruck — für mehr Energie, weniger
