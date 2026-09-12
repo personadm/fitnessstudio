@@ -1,4 +1,5 @@
 import { LeadForm } from "@/components/LeadForm";
+import { HeroVideo } from "@/components/landing/HeroVideo";
 import { PlanShowcase } from "@/components/landing/PlanShowcase";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { TrackPageView } from "@/components/TrackPageView";
@@ -120,9 +121,9 @@ export default async function LandingPage() {
       {/* ─── HERO (Bild-1 Vorlage) ─── */}
       <section>
         <div className="mx-auto max-w-7xl px-6 py-12 md:py-16 lg:py-20">
-          <div className="grid grid-cols-1 gap-x-12 gap-y-10 lg:grid-cols-12">
-            {/* Linke Spalte: Text-Inhalt */}
-            <div className="lg:col-span-7">
+          <div className="grid grid-cols-1 gap-x-12 gap-y-8 lg:grid-cols-12 lg:gap-y-10">
+            {/* Kopf: Pille + Headline + Subline (Desktop links oben) */}
+            <div className="lg:col-span-7 lg:col-start-1 lg:row-start-1">
               {/* Pille */}
               <div
                 className="inline-block rounded-full px-4 py-2 text-sm font-medium"
@@ -146,8 +147,25 @@ export default async function LandingPage() {
               >
                 Auch wenn bisher nichts davon funktioniert hat.
               </p>
+            </div>
 
-              {/* Mockup NUR mobil im ersten Viewport — auf Desktop steckt es
+            {/* Vertrauens-Video (Erik) — mobil direkt zwischen Subline und
+                Formular (kompakt, max. ~46vh); Desktop links unter der Subline,
+                neben der Formular-Karte. Kein Autoplay, Poster mit Play-Button. */}
+            <div className="lg:col-span-7 lg:col-start-1 lg:row-start-2">
+              <HeroVideo />
+            </div>
+
+            {/* Formular-Karte — mobil direkt unter dem Video; Desktop rechts
+                oben und bleibt im ersten Viewport sichtbar (row-span hält sie
+                oben, ohne vom Video nach unten gedrückt zu werden). */}
+            <div className="lg:col-span-5 lg:col-start-8 lg:row-start-1 lg:row-span-3 lg:self-start">
+              <LeadForm locations={locations} />
+            </div>
+
+            {/* Restlicher Hero-Text — mobil unterhalb des Formulars. */}
+            <div className="lg:col-span-7 lg:col-start-1 lg:row-start-3">
+              {/* Mockup: mobil unter dem Formular, auf Desktop steckt es
                   stattdessen oben in der Formular-Card (kein Doppel). */}
               <img
                 src="/images/plan-mockup.png"
@@ -223,11 +241,6 @@ export default async function LandingPage() {
                   Von gesetzlichen Krankenkassen bezuschusst
                 </span>
               </div>
-            </div>
-
-            {/* Rechte Spalte: Formular-Karte */}
-            <div className="lg:col-span-5">
-              <LeadForm locations={locations} />
             </div>
           </div>
         </div>
