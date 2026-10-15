@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, RedirectType } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import {
@@ -14,6 +14,18 @@ import {
   clubSignupSchema,
 } from "@/lib/validation";
 import { enrollIntoMatchingFunnels, processFunnels } from "@/lib/funnels";
+import {
+  CONTACT_EDIT_SELECT,
+  ORIGINAL_VALUES_FIELD,
+  buildContactUpdate,
+  findDirtyFields,
+  parseOriginalValues,
+  readContactFormValues,
+  toContactFormValues,
+  validateDirtyFields,
+  type ContactEditField,
+} from "@/lib/contact-edit";
+import { generateToken } from "@/lib/tokens";
 import {
   getCampaignRecipients,
   sendCampaignBatch,
@@ -104,6 +116,112 @@ export async function updateContactLocation(contactId: string, locationId: strin
   });
   revalidatePath(`/admin/contacts/${contactId}`);
   revalidatePath("/admin/contacts");
+}
+
+export type ContactEditState = {
+  error: string;
+  fieldErrors: Partial<Record<ContactEditField, string>>;
+} | null;
+
+const CHECK_FIELDS_MESSAGE = "Bitte die markierten Felder prüfen.";
+const EMAIL_TAKEN_MESSAGE = "Diese E-Mail-Adresse gehört bereits zu einem anderen Kontakt.";
+
+/**
+ * Stamm- und Vertragsdaten eines Kontakts bearbeiten (Admin).
+ *
+ * Geprüft und geschrieben werden NUR Felder, die im Formular gegenüber den
+ * Ausgangswerten verändert wurden (Hidden-Feld ORIGINAL_VALUES_FIELD). So
+ * gehen parallele Änderungen (Status-Button, Online-Anmeldung) nicht verloren
+ * und ungültige Altdaten in unberührten Feldern blockieren das Speichern nicht.
+ *
+ * Bei E-Mail-Änderung werden die persönlichen Link-Tokens erneuert: Links aus
+ * Mails an die alte (ggf. vertippte, fremde) Adresse funktionieren danach nicht
+ * mehr. Protokolliert werden nur Feldnamen, keine Werte (IBAN & Co.).
+ * Löst KEINE Mails und KEINE Funnel-Einschreibung aus (Status bleibt unberührt).
+ */
+export async function updateContactData(
+  contactId: string,
+  _prev: ContactEditState,
+  formData: FormData,
+): Promise<ContactEditState> {
+  await requireAdmin();
+
+  const current = await db.contact.findFirst({
+    where: { id: contactId },
+    select: CONTACT_EDIT_SELECT,
+  });
+  if (!current) return { error: "Kontakt nicht gefunden.", fieldErrors: {} };
+
+  const submitted = readContactFormValues(formData);
+  // Fehlen die Ausgangswerte (z. B. manipuliertes Formular), gilt der
+  // aktuelle DB-Stand als Ausgangspunkt.
+  const original =
+    parseOriginalValues(formData.get(ORIGINAL_VALUES_FIELD)) ?? toContactFormValues(current);
+  const dirty = findDirtyFields(submitted, original);
+
+  const validation = validateDirtyFields(submitted, dirty);
+  if (!validation.ok) return { error: CHECK_FIELDS_MESSAGE, fieldErrors: validation.fieldErrors };
+  const values = validation.values;
+
+  const [location, plan, emailOwner] = await Promise.all([
+    values.locationId
+      ? db.location.findFirst({ where: { id: values.locationId }, select: { id: true } })
+      : null,
+    values.pricingPlanId
+      ? db.pricingPlan.findFirst({ where: { id: values.pricingPlanId }, select: { id: true } })
+      : null,
+    values.email
+      ? db.contact.findFirst({
+          where: { email: { equals: values.email, mode: "insensitive" }, NOT: { id: contactId } },
+          select: { id: true },
+        })
+      : null,
+  ]);
+
+  const fieldErrors: Partial<Record<ContactEditField, string>> = {};
+  if (values.locationId && !location) fieldErrors.locationId = "Standort existiert nicht mehr.";
+  if (values.pricingPlanId && !plan) fieldErrors.pricingPlanId = "Tarif existiert nicht mehr.";
+  if (emailOwner) fieldErrors.email = EMAIL_TAKEN_MESSAGE;
+  if (Object.keys(fieldErrors).length > 0) {
+    return { error: CHECK_FIELDS_MESSAGE, fieldErrors };
+  }
+
+  const { data, changedFields } = buildContactUpdate(current, values, dirty);
+  const emailChanged = changedFields.includes("email");
+  const updateData = emailChanged
+    ? { ...data, refToken: generateToken(), unsubscribeToken: generateToken(), doiToken: null }
+    : data;
+
+  if (changedFields.length > 0) {
+    try {
+      await db.$transaction([
+        db.contact.update({ where: { id: contactId }, data: updateData }),
+        db.contactEvent.create({
+          data: {
+            contactId,
+            type: "DATA_UPDATED",
+            meta: { fields: changedFields, ...(emailChanged ? { tokensRotated: true } : {}) },
+          },
+        }),
+      ]);
+    } catch (e: unknown) {
+      if (e instanceof Error && e.message.includes("Unique constraint")) {
+        return { error: CHECK_FIELDS_MESSAGE, fieldErrors: { email: EMAIL_TAKEN_MESSAGE } };
+      }
+      console.error("[updateContactData]", e);
+      return { error: "Speichern fehlgeschlagen. Bitte erneut versuchen.", fieldErrors: {} };
+    }
+
+    revalidatePath("/admin");
+    revalidatePath("/admin/contacts");
+    revalidatePath(`/admin/contacts/${contactId}`);
+  }
+
+  // replace: Die Zurück-Geste führt danach nicht erneut ins Formular.
+  redirect(
+    `/admin/contacts/${contactId}?gespeichert=${changedFields.length}`,
+    RedirectType.replace,
+  );
 }
 
 export async function deleteContact(contactId: string) {

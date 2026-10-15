@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
+import { describeChangedFields } from "@/lib/contact-edit";
 import { ContactDetailActions } from "./ContactDetailActions";
+import { ClearSavedParam } from "./ClearSavedParam";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ gespeichert?: string }>;
 }
 
 const GENDER_LABELS: Record<string, string> = {
@@ -36,7 +39,8 @@ type TimelineKind =
   | "SIGNUP_ONLINE"
   | "SIGNUP_CLUB"
   | "FUNNEL_MAIL"
-  | "NEWSLETTER";
+  | "NEWSLETTER"
+  | "EDIT";
 
 const TIMELINE_ICONS: Record<TimelineKind, string> = {
   LEAD: "📥",
@@ -45,10 +49,14 @@ const TIMELINE_ICONS: Record<TimelineKind, string> = {
   SIGNUP_CLUB: "🏠",
   FUNNEL_MAIL: "📧",
   NEWSLETTER: "📨",
+  EDIT: "✎",
 };
 
-export default async function ContactDetail({ params }: PageProps) {
+export default async function ContactDetail({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { gespeichert } = await searchParams;
+  // Rückmeldung nach dem Bearbeiten: Anzahl geänderter Felder (0 = nichts geändert)
+  const savedCount = gespeichert !== undefined ? Number.parseInt(gespeichert, 10) : null;
 
   const [contact, campaignEvents, allLists] = await Promise.all([
     db.contact.findFirst({
@@ -57,7 +65,8 @@ export default async function ContactDetail({ params }: PageProps) {
         pricingPlan: true,
         location: true,
         lists: { include: { list: true } },
-        events: { orderBy: { createdAt: "desc" }, take: 30 },
+        // Nur das Änderungsprotokoll — sonst verdrängen Funnel-Events es aus dem Limit.
+        events: { where: { type: "DATA_UPDATED" }, orderBy: { createdAt: "desc" }, take: 100 },
         funnelEnrollments: {
           include: {
             funnel: {
@@ -164,6 +173,18 @@ export default async function ContactDetail({ params }: PageProps) {
     });
   }
 
+  // 6. Manuelle Datenänderungen im Admin
+  for (const ev of contact.events) {
+    const fields = describeChangedFields(ev.meta);
+    timeline.push({
+      id: `edit-${ev.id}`,
+      at: ev.createdAt,
+      kind: "EDIT",
+      title: "Daten im Admin bearbeitet",
+      subtitle: fields ? `Geändert: ${fields}` : undefined,
+    });
+  }
+
   timeline.sort((a, b) => b.at.getTime() - a.at.getTime());
 
   // ─── Was steht als nächstes an? ───────────────────────────
@@ -210,14 +231,35 @@ export default async function ContactDetail({ params }: PageProps) {
           ← Zurück zu Kontakten
         </Link>
 
-        <Link
-          href={`/admin/contacts/${contact.id}/vertrag`}
-          className="inline-flex items-center gap-2 rounded-md border border-ink/20 bg-white px-4 py-2 font-mono text-xs uppercase tracking-[0.12em] text-ink hover:border-ink/40 hover:bg-ink/5"
-        >
-          <span aria-hidden>🖨</span>
-          <span>Drucken</span>
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={`/admin/contacts/${contact.id}/edit`}
+            className="inline-flex items-center gap-2 rounded-md border border-ink bg-ink px-4 py-2 font-mono text-xs uppercase tracking-[0.12em] text-cream hover:bg-ink/85"
+          >
+            <span aria-hidden>✎</span>
+            <span>Bearbeiten</span>
+          </Link>
+          <Link
+            href={`/admin/contacts/${contact.id}/vertrag`}
+            className="inline-flex items-center gap-2 rounded-md border border-ink/20 bg-white px-4 py-2 font-mono text-xs uppercase tracking-[0.12em] text-ink hover:border-ink/40 hover:bg-ink/5"
+          >
+            <span aria-hidden>🖨</span>
+            <span>Drucken</span>
+          </Link>
+        </div>
       </div>
+
+      {savedCount !== null && Number.isFinite(savedCount) && (
+        <p
+          role="status"
+          className="mt-6 border-l-4 border-acid_dark bg-acid/15 px-4 py-3 font-mono text-xs uppercase tracking-[0.12em] text-ink"
+        >
+          <ClearSavedParam />
+          {savedCount > 0
+            ? `✓ Gespeichert — ${savedCount} ${savedCount === 1 ? "Feld" : "Felder"} geändert`
+            : "Keine Änderungen — es war schon alles aktuell"}
+        </p>
+      )}
 
       <div className="mt-6 mb-8 md:mb-12">
         <div className="flex flex-wrap items-baseline gap-3">
@@ -292,7 +334,15 @@ export default async function ContactDetail({ params }: PageProps) {
 
           {/* ─── STAMMDATEN ─── */}
           <section>
-            <p className="label mb-4">Stammdaten</p>
+            <div className="mb-4 flex items-baseline justify-between gap-3">
+              <p className="label">Stammdaten</p>
+              <Link
+                href={`/admin/contacts/${contact.id}/edit`}
+                className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted underline-offset-4 hover:text-ink hover:underline"
+              >
+                ✎ Bearbeiten
+              </Link>
+            </div>
             <div className="border border-ink/15">
               <DataRow k="E-Mail" v={contact.email} />
               <DataRow k="Vorname" v={contact.firstName ?? "—"} />
