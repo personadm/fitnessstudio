@@ -36,9 +36,11 @@ function monthEndLabel(month: string): string {
 export function KontenView({ accounts, month, people }: Props) {
   const rows = accounts.rows.filter((r) => r.month === month);
   const withAccount = rows.filter((r) => r.targetHours !== null);
-  const reserve = rows.filter((r) => r.targetHours === null);
+  const external = rows.filter((r) => r.note !== null);
+  const reserve = rows.filter((r) => r.targetHours === null && r.note === null);
   const cost = accounts.costs.find((c) => c.month === month);
-  const previous = accounts.previousPlans.find((p) => p.month === month);
+  // Vergleich immer mit dem zuletzt ersetzten Stand des Monats
+  const previous = accounts.previousPlans.filter((p) => p.month === month).at(-1);
   const colorOf = (name: string) => personColor(name, people.findIndex((p) => p.name === name));
 
   return (
@@ -50,6 +52,20 @@ export function KontenView({ accounts, month, people }: Props) {
         <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {withAccount.map((r) => (
             <BalanceCard key={r.person} row={r} color={colorOf(r.person)} />
+          ))}
+          {external.map((r) => (
+            <div key={r.person} className="relative overflow-hidden rounded-2xl border border-dashed border-ink/25 p-4 pl-5">
+              <span aria-hidden className="absolute inset-y-0 left-0 w-1.5 opacity-40" style={{ background: colorOf(r.person) }} />
+              <p className="flex items-baseline justify-between">
+                <span className="font-semibold">{r.person}</span>
+                <span className="label">{r.role}</span>
+              </p>
+              <p className="mt-2 font-mono text-3xl font-semibold tabular-nums text-ink-soft">
+                {r.openingHours === null ? "–" : formatSignedHours(r.openingHours)}
+              </p>
+              <p className="mt-1 text-xs text-ink-soft">Stand Vormonat · {r.note}</p>
+              <p className="mt-2 text-[11px] text-muted">Stunden dieses Monats werden nicht in diesem Plan erfasst.</p>
+            </div>
           ))}
           {reserve.map((r) => (
             <div key={r.person} className="relative overflow-hidden rounded-2xl border border-ink/15 bg-[#FBF8F2] p-4 pl-5">
@@ -193,6 +209,7 @@ function MonthTable({ rows, colorOf }: { rows: MonthAccount[]; colorOf: (name: s
                   <span aria-hidden className="h-2.5 w-2.5 rounded-full" style={{ background: colorOf(r.person) }} />
                   {r.person}
                 </span>
+                {r.note && <span className="block pl-[18px] text-[11px] text-muted">{r.note}</span>}
               </td>
               <td className={num}>{r.openingHours === null ? "–" : formatSignedHours(r.openingHours)}</td>
               <td className={`${num} font-semibold`}>{formatHours(r.creditedHours)}</td>
@@ -343,7 +360,13 @@ function BalanceHistory({ accounts, colorOf }: { accounts: AccountsOverview; col
                       className="whitespace-nowrap px-3 py-2 text-right font-mono tabular-nums"
                       style={{ color: balanceColor(row?.closingHours ?? null) }}
                     >
-                      {row?.closingHours == null ? <span className="text-muted">archiviert</span> : formatSignedHours(row.closingHours)}
+                      {row?.note ? (
+                        <span className="text-muted">nicht in Ochtrup</span>
+                      ) : row?.closingHours == null ? (
+                        <span className="text-muted">archiviert</span>
+                      ) : (
+                        formatSignedHours(row.closingHours)
+                      )}
                     </td>
                   );
                 })}
@@ -418,13 +441,16 @@ function LouHistoryTable({ history }: { history: AccountsOverview["louHistory"] 
 function Anomalies({ rows, month, accounts }: { rows: MonthAccount[]; month: string; accounts: AccountsOverview }) {
   const label = monthEndLabel(month);
   const items = [
+    ...rows.filter((r) => r.note).map((r) => `${r.person}: ${r.note} – Stunden nicht in diesem Plan.`),
     ...rows
       .filter((r) => r.closingHours !== null && r.closingHours < 0)
       .map((r) => `${r.person}: ${formatSignedHours(r.closingHours ?? 0)} am ${label} (Minusstunden).`),
     ...rows
       .filter((r) => r.targetHours === null && r.creditedHours > 0)
       .map((r) => `${r.person} (${r.role}): ${formatHours(r.creditedHours)} im Einsatz${r.costCents !== null ? `, ${formatEuroCents(r.costCents)}` : ""}.`),
-    ...rows.filter((r) => r.wageEUR === null).map((r) => `${r.person}: Stundenlohn unbekannt – Kosten unvollständig.`),
+    ...rows
+      .filter((r) => r.wageEUR === null && r.creditedHours > 0)
+      .map((r) => `${r.person}: Stundenlohn unbekannt – Kosten unvollständig.`),
     ...rows
       .filter((r) => r.controlMismatches && r.controlMismatches.length > 0)
       .map((r) => `${r.person}: weicht von der Übergabe ab (${r.controlMismatches?.join("; ")}).`),

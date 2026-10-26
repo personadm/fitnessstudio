@@ -69,6 +69,11 @@ export function ScheduleView({ plan, today, initialView, initialDate, leitung }:
   );
   const lanes = scheduled.filter((p) => !hidden.includes(p.name));
   const warnings = days.flatMap((d) => (index.eventsByDate.get(d) ?? []).filter((e) => e.warning));
+  const away = plan.people.flatMap((p) =>
+    p.unavailable
+      .filter((u) => days.some((d) => d >= u.from && d <= u.to))
+      .map((u) => ({ key: `${p.name}-${u.from}`, text: `${p.name}: ${u.reason} (${formatDayMonth(u.from)}–${formatDate(u.to)})` })),
+  );
   const hasMonthEvents = [...index.eventsByDate.keys()].some((d) => d.startsWith(activeMonth));
 
   const step = view === "tag" ? 1 : 7;
@@ -136,6 +141,14 @@ export function ScheduleView({ plan, today, initialView, initialDate, leitung }:
             }
           />
         </div>
+
+        {isPlan && away.length > 0 && (
+          <ul className="mt-4 space-y-0.5 rounded-xl border border-dashed border-ink/25 px-4 py-2 text-sm text-ink-soft">
+            {away.map((a) => (
+              <li key={a.key}>{a.text}</li>
+            ))}
+          </ul>
+        )}
 
         {isPlan && warnings.length > 0 && (
           <ul

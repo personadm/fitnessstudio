@@ -22,6 +22,8 @@ const personSchema = z.object({
   name: z.string().min(1),
   role: z.string().min(1),
   inactiveFrom: isoDate.nullable(),
+  /** Zeiträume, in denen die Person nicht in diesem Studio eingesetzt ist */
+  unavailable: z.array(z.object({ from: isoDate, to: isoDate, reason: z.string().min(1) })).default([]),
 });
 
 const shiftSchema = z

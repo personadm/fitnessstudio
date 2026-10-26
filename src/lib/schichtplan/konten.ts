@@ -103,6 +103,8 @@ export interface MonthAccount {
   costCents: number | null;
   /** null = kein Kontrollwert vorhanden */
   controlMismatches: string[] | null;
+  /** z. B. „im November nicht in Ochtrup eingesetzt“ – dann kein Saldo in diesem Plan */
+  note: string | null;
 }
 
 export interface MonthCost {
@@ -138,7 +140,7 @@ function loadKonten(): Konten {
   return cached;
 }
 
-function compareWithControl(konten: Konten, row: Omit<MonthAccount, "controlMismatches">): string[] | null {
+function compareWithControl(konten: Konten, row: Omit<MonthAccount, "controlMismatches" | "note">): string[] | null {
   const control = konten.controls.find((c) => c.person === row.person && c.month === row.month);
   if (!control) return null;
   const checks: [string, number | null, number | null][] = [
@@ -166,6 +168,32 @@ export function buildAccounts(plan: TeamPlan): AccountsOverview {
       const isActive = !person.inactiveFrom || person.inactiveFrom > `${m}-01`;
       const shifts = plan.shifts.filter((s) => s.person === person.name && s.date.startsWith(m));
       if (!isActive || (!hasAccount && shifts.length === 0)) return acc;
+      const away = person.unavailable.find((u) => u.from <= `${m}-01` && u.to >= `${m}-28`);
+      if (away && shifts.length === 0) {
+        const previous = acc[acc.length - 1];
+        return [
+          ...acc,
+          {
+            person: person.name,
+            role: person.role,
+            month: m,
+            openingHours: previous?.closingHours ?? opening?.hours ?? null,
+            creditedHours: 0,
+            byKind: {},
+            targetHours: null,
+            correctionsHours: 0,
+            differenceHours: null,
+            closingHours: null,
+            weekendShifts: 0,
+            closingShifts: 0,
+            earlyEnds: 0,
+            wageEUR: wage,
+            costCents: 0,
+            controlMismatches: null,
+            note: away.reason,
+          },
+        ];
+      }
 
       const studio = shifts.filter((s) => s.kind === "Studio");
       const creditedHours = round2(shifts.reduce((sum, s) => sum + s.hours, 0));
@@ -201,7 +229,7 @@ export function buildAccounts(plan: TeamPlan): AccountsOverview {
         wageEUR: wage,
         costCents: wage === null ? null : Math.round(creditedHours * wage * 100),
       };
-      return [...acc, { ...base, controlMismatches: compareWithControl(konten, base) }];
+      return [...acc, { ...base, controlMismatches: compareWithControl(konten, base), note: null }];
     }, []);
   });
 

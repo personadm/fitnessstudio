@@ -158,7 +158,8 @@ export const RULES: Record<RuleId, { title: string; description: string }> = {
   kurse: { title: "Kurse", description: "Jeder Kurs hat eine Kursleitung." },
   reserve: {
     title: "Falk-Reserve",
-    description: "Falk nur im Notfall: erst wenn kein Azubi (ohne mehr als 5 Überstunden im Monat) und niemand aus dem Stammteam frei ist.",
+    description:
+      "Falk nur im Notfall: erst wenn die Azubis an ihrer Grenze sind (35 h/Woche + 5 Überstunden im Monat, max. 5 Einsatztage) und niemand aus dem Stammteam frei ist.",
   },
 };
 
@@ -214,7 +215,8 @@ function weekdayIndex(iso: string): number {
 }
 
 function isActive(person: Person, date: string): boolean {
-  return !person.inactiveFrom || date < person.inactiveFrom;
+  const isAway = person.unavailable.some((u) => date >= u.from && date <= u.to);
+  return !isAway && (!person.inactiveFrom || date < person.inactiveFrom);
 }
 
 class PlanView {
