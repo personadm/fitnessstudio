@@ -61,7 +61,14 @@ const kontenSchema = z.object({
     }),
   ),
   planningNotes: z.array(
-    z.object({ month, kind: z.enum(["diskrepanz", "annahme", "offen"]), title: z.string(), text: z.string() }),
+    z.object({
+      month,
+      kind: z.enum(["diskrepanz", "annahme", "offen"]),
+      title: z.string(),
+      text: z.string(),
+      /** Datum, an dem die Leitung die Annahme bestätigt hat */
+      confirmedOn: isoDate.optional(),
+    }),
   ),
   octoberFile: z.object({
     label: z.string(),

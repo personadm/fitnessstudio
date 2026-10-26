@@ -1,6 +1,6 @@
 "use client";
 
-import { formatMonth, monthOfWeek, weekdayShort } from "@/lib/schichtplan/calendar";
+import { formatDate, formatMonth, monthOfWeek, weekdayShort } from "@/lib/schichtplan/calendar";
 import { type Finding, RULES, type RuleId, type Severity } from "@/lib/schichtplan/checks";
 import type { PlanningNote } from "@/lib/schichtplan/konten";
 import { POSITIVE_COLOR, WARNING_COLOR } from "@/lib/schichtplan/display";
@@ -20,7 +20,7 @@ type Props = {
 
 const NOTE_KINDS: { kind: PlanningNote["kind"]; label: string; color: string }[] = [
   { kind: "diskrepanz", label: "Widersprüche zwischen den Vorgaben", color: WARNING_COLOR },
-  { kind: "annahme", label: "Annahmen – bitte bestätigen", color: "#B5400F" },
+  { kind: "annahme", label: "Annahmen", color: "#B5400F" },
   { kind: "offen", label: "Offene Punkte", color: "#6B655C" },
 ];
 
@@ -77,6 +77,11 @@ export function PruefungView({ findings, notes, month }: Props) {
                   {list.map((n) => (
                     <li key={n.title}>
                       <p className="font-semibold">{n.title}</p>
+                      {kind === "annahme" && (
+                        <p className="text-[11px] font-semibold" style={{ color: n.confirmedOn ? POSITIVE_COLOR : color }}>
+                          {n.confirmedOn ? `✓ von der Leitung bestätigt am ${formatDate(n.confirmedOn)}` : "noch nicht bestätigt"}
+                        </p>
+                      )}
                       <p className="mt-0.5 leading-snug text-ink-soft">{n.text}</p>
                     </li>
                   ))}
