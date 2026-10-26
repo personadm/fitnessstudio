@@ -53,3 +53,22 @@ export const EVENT_STYLES: Record<EventCategory, CategoryStyle> = {
 };
 
 export const WARNING_COLOR = "#C42B1C";
+export const POSITIVE_COLOR = "#2F6F35";
+
+const euroFormat = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
+const signedHoursFormat = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2, signDisplay: "exceptZero" });
+
+/** Cent-Betrag → „4.745,67 €“ (Geld intern immer in Cent). */
+export function formatEuroCents(cents: number): string {
+  return euroFormat.format(cents / 100);
+}
+
+/** „+16,99 h“, „−20,5 h“, „0 h“ — mit echtem Minuszeichen. */
+export function formatSignedHours(hours: number): string {
+  return `${signedHoursFormat.format(hours).replace("-", "−")} h`;
+}
+
+export function balanceColor(hours: number | null): string | undefined {
+  if (hours === null || hours === 0) return undefined;
+  return hours < 0 ? WARNING_COLOR : POSITIVE_COLOR;
+}

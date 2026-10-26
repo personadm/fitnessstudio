@@ -16,23 +16,28 @@ import {
   weekdayShort,
 } from "@/lib/schichtplan/calendar";
 import { EVENT_STYLES, WARNING_COLOR, personColor } from "@/lib/schichtplan/display";
+import type { Finding } from "@/lib/schichtplan/checks";
+import type { AccountsOverview } from "@/lib/schichtplan/konten";
 import type { Shift, TeamPlan } from "@/lib/schichtplan/plan";
 import { buildPlanIndex, clampToPlan, isInPlan, totalsFor } from "@/lib/schichtplan/planIndex";
+import { LEITUNG_VIEWS, PLAN_VIEWS, type ViewMode, isPlanView } from "@/lib/schichtplan/views";
+import { KontenView } from "./KontenView";
 import { ListView } from "./ListView";
+import { PruefungView } from "./PruefungView";
 import { ShiftDetail } from "./ShiftDetail";
 import { Toolbar } from "./Toolbar";
 import { WeekGrid } from "./WeekGrid";
-
-export type ViewMode = "woche" | "liste" | "tag";
 
 type Props = {
   plan: TeamPlan;
   today: string;
   initialView: ViewMode;
   initialDate: string | null;
+  /** Nur mit Leitungs-Code gesetzt: Konten und Regelprüfung */
+  leitung: { accounts: AccountsOverview; findings: Finding[] } | null;
 };
 
-export function ScheduleView({ plan, today, initialView, initialDate }: Props) {
+export function ScheduleView({ plan, today, initialView, initialDate, leitung }: Props) {
   const index = useMemo(() => buildPlanIndex(plan), [plan]);
   const [view, setView] = useState<ViewMode>(initialView);
   const [focusDate, setFocusDate] = useState(() => clampToPlan(index, initialDate ?? today));
@@ -55,7 +60,8 @@ export function ScheduleView({ plan, today, initialView, initialDate }: Props) {
   // Randwochen gehören nach ISO-Regel zum Monat ihres Donnerstags — außer dieser
   // Monat liegt außerhalb des Planstands (z. B. Woche ab 30.11. → Dezember).
   const weekMonth = monthOfWeek(weekStart);
-  const activeMonth = view !== "tag" && months.includes(weekMonth) ? weekMonth : focusDate.slice(0, 7);
+  const isPlan = isPlanView(view);
+  const activeMonth = isPlan && view !== "tag" && months.includes(weekMonth) ? weekMonth : focusDate.slice(0, 7);
   const monthDays = [...index.shiftsByDate.keys()].filter((d) => d.startsWith(activeMonth));
 
   const scheduled = plan.people.filter((p) =>
@@ -72,10 +78,18 @@ export function ScheduleView({ plan, today, initialView, initialDate }: Props) {
   const canNext = view === "tag" ? focusDate < index.lastDate : weekStart < lastWeek;
   const move = (direction: 1 | -1) => setFocusDate((d) => clampToPlan(index, addDays(d, direction * step)));
 
-  const heading =
-    view === "tag"
+  const heading = !isPlan
+    ? formatMonth(activeMonth)
+    : view === "tag"
       ? `${weekdayLong(focusDate)}, ${formatDate(focusDate)}`
       : `${formatDayMonth(weekStart)}–${formatDate(addDays(weekStart, 6))}`;
+  const headingLabel = !isPlan
+    ? view === "konten"
+      ? "Stundenkonten"
+      : "Regelprüfung"
+    : view === "tag"
+      ? `KW ${isoWeekNumber(focusDate)}`
+      : `Kalenderwoche ${isoWeekNumber(weekStart)}`;
 
   const selectedEvents = selected
     ? (index.eventsByDate.get(selected.date) ?? []).filter(
@@ -88,13 +102,11 @@ export function ScheduleView({ plan, today, initialView, initialDate }: Props) {
       <div className="mx-auto max-w-[1880px] px-4 pb-10 pt-6 sm:px-6">
         <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b-2 border-ink pb-4">
           <div>
-            <p className="label">Team · nur lesen</p>
+            <p className="label">{leitung ? "Leitung" : "Team"} · nur lesen</p>
             <h1 className="text-display text-[2.6rem] leading-none sm:text-6xl">Schichtplan</h1>
           </div>
           <div className="sm:text-right">
-            <p className="label">
-              {view === "tag" ? `KW ${isoWeekNumber(focusDate)}` : `Kalenderwoche ${isoWeekNumber(weekStart)}`}
-            </p>
+            <p className="label">{headingLabel}</p>
             <p className="mt-1 font-mono text-lg font-semibold tabular-nums sm:text-xl">{heading}</p>
           </div>
         </header>
@@ -105,6 +117,7 @@ export function ScheduleView({ plan, today, initialView, initialDate }: Props) {
             activeMonth={activeMonth}
             onMonth={(m) => setFocusDate(clampToPlan(index, `${m}-01`))}
             view={view}
+            views={leitung ? [...PLAN_VIEWS, ...LEITUNG_VIEWS] : PLAN_VIEWS}
             onView={setView}
             weekStarts={index.weekStarts}
             currentWeek={weekStart}
@@ -124,7 +137,7 @@ export function ScheduleView({ plan, today, initialView, initialDate }: Props) {
           />
         </div>
 
-        {warnings.length > 0 && (
+        {isPlan && warnings.length > 0 && (
           <ul
             className="mt-4 space-y-1 rounded-xl border px-4 py-2.5 text-sm"
             style={{ borderColor: WARNING_COLOR, background: "rgba(196,43,28,0.06)" }}
@@ -142,17 +155,23 @@ export function ScheduleView({ plan, today, initialView, initialDate }: Props) {
           </ul>
         )}
 
-        <Totals
-          people={lanes}
-          allPeople={plan.people}
-          weekDaysList={view === "tag" ? weekDays(weekStart) : days}
-          monthDays={monthDays}
-          activeMonth={activeMonth}
-          index={index}
-        />
+        {isPlan && (
+          <Totals
+            people={lanes}
+            allPeople={plan.people}
+            weekDaysList={view === "tag" ? weekDays(weekStart) : days}
+            monthDays={monthDays}
+            activeMonth={activeMonth}
+            index={index}
+          />
+        )}
 
         <div className="mt-4">
-          {view === "liste" ? (
+          {view === "konten" && leitung ? (
+            <KontenView accounts={leitung.accounts} month={activeMonth} people={plan.people} />
+          ) : view === "pruefung" && leitung ? (
+            <PruefungView findings={leitung.findings} month={activeMonth} />
+          ) : view === "liste" ? (
             <ListView days={days} people={plan.people} hidden={hidden} index={index} today={today} onSelect={setSelected} />
           ) : lanes.length === 0 && days.every((d) => isInPlan(index, d)) ? (
             <p className="rounded-2xl border border-dashed border-ink/25 px-5 py-10 text-center text-sm text-muted">
@@ -170,7 +189,7 @@ export function ScheduleView({ plan, today, initialView, initialDate }: Props) {
           )}
         </div>
 
-        <Legend />
+        {isPlan && <Legend />}
 
         <footer className="mt-6 border-t border-ink/15 pt-4 text-xs leading-relaxed text-ink-soft">
           <p>

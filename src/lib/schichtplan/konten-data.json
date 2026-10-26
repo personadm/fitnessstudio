@@ -1,0 +1,233 @@
+{
+ "source": "Übergabe-Export vom 26.10.2026 (Studio-Daten.json, Lou-Stundenkonto-Originalexport.xlsx)",
+ "monthlyTargetHours": 150.5,
+ "wagesEUR": {
+  "Lou": 11.96,
+  "Lina": 9.96,
+  "Samuel": 9.86,
+  "Milena": null,
+  "Falk": 14
+ },
+ "openingBalances": [
+  {
+   "person": "Lou",
+   "date": "2026-09-30",
+   "hours": 21.66
+  },
+  {
+   "person": "Lina",
+   "date": "2026-09-30",
+   "hours": 0
+  },
+  {
+   "person": "Samuel",
+   "date": "2026-09-30",
+   "hours": 0
+  },
+  {
+   "person": "Milena",
+   "date": "2026-09-30",
+   "hours": -2.58
+  }
+ ],
+ "corrections": [],
+ "louHistory": {
+  "carryFrom2025Hours": -66.16,
+  "rows": [
+   {
+    "month": "2026-01",
+    "geleistet": 115.95,
+    "urlaub": 0,
+    "feiertage": 5.83,
+    "krankheit": 0,
+    "studium": 21,
+    "summe": 142.78,
+    "differenz": -7.72
+   },
+   {
+    "month": "2026-02",
+    "geleistet": 138,
+    "urlaub": 0,
+    "feiertage": 0,
+    "krankheit": 0,
+    "studium": 14,
+    "summe": 152,
+    "differenz": 1.5
+   },
+   {
+    "month": "2026-03",
+    "geleistet": 160.82,
+    "urlaub": 0,
+    "feiertage": 0,
+    "krankheit": 0,
+    "studium": 14,
+    "summe": 174.82,
+    "differenz": 24.32
+   },
+   {
+    "month": "2026-04",
+    "geleistet": 100.36,
+    "urlaub": 23.32,
+    "feiertage": 11.66,
+    "krankheit": 0,
+    "studium": 14,
+    "summe": 149.34,
+    "differenz": -1.16
+   },
+   {
+    "month": "2026-05",
+    "geleistet": 152.94,
+    "urlaub": 0,
+    "feiertage": 17.49,
+    "krankheit": 0,
+    "studium": 0,
+    "summe": 170.43,
+    "differenz": 19.93
+   },
+   {
+    "month": "2026-06",
+    "geleistet": 169.22,
+    "urlaub": 0,
+    "feiertage": 5.83,
+    "krankheit": 0,
+    "studium": 0,
+    "summe": 175.05,
+    "differenz": 24.55
+   },
+   {
+    "month": "2026-07",
+    "geleistet": 92.68,
+    "urlaub": 70,
+    "feiertage": 0,
+    "krankheit": 0,
+    "studium": 0,
+    "summe": 162.68,
+    "differenz": 12.18
+   },
+   {
+    "month": "2026-08",
+    "geleistet": 148.36,
+    "urlaub": 0,
+    "feiertage": 0,
+    "krankheit": 0,
+    "studium": 7,
+    "summe": 155.36,
+    "differenz": 4.86
+   },
+   {
+    "month": "2026-09",
+    "geleistet": 154.03,
+    "urlaub": 5.83,
+    "feiertage": 0,
+    "krankheit": 0,
+    "studium": 0,
+    "summe": 159.86,
+    "differenz": 9.36
+   }
+  ]
+ },
+ "controls": [
+  {
+   "person": "Lou",
+   "month": "2026-10",
+   "hours": 145.83,
+   "weekendShifts": 3,
+   "closingShifts": 15,
+   "earlyEnds": 0,
+   "closingBalanceHours": 16.99
+  },
+  {
+   "person": "Lou",
+   "month": "2026-11",
+   "hours": 140.5,
+   "weekendShifts": 3,
+   "closingShifts": 8,
+   "earlyEnds": 2,
+   "closingBalanceHours": 6.99
+  },
+  {
+   "person": "Lina",
+   "month": "2026-10",
+   "hours": 144,
+   "weekendShifts": 2,
+   "closingShifts": 11,
+   "earlyEnds": 0,
+   "closingBalanceHours": -6.5
+  },
+  {
+   "person": "Lina",
+   "month": "2026-11",
+   "hours": 136.5,
+   "weekendShifts": 3,
+   "closingShifts": 7,
+   "earlyEnds": 2,
+   "closingBalanceHours": -20.5
+  },
+  {
+   "person": "Samuel",
+   "month": "2026-10",
+   "hours": 145,
+   "weekendShifts": 2,
+   "closingShifts": 12,
+   "earlyEnds": 0,
+   "closingBalanceHours": -5.5
+  },
+  {
+   "person": "Samuel",
+   "month": "2026-11",
+   "hours": 137.5,
+   "weekendShifts": 3,
+   "closingShifts": 6,
+   "earlyEnds": 2,
+   "closingBalanceHours": -18.5
+  },
+  {
+   "person": "Milena",
+   "month": "2026-10",
+   "hours": 143,
+   "weekendShifts": 2,
+   "closingShifts": 11,
+   "earlyEnds": 0,
+   "closingBalanceHours": -10.08
+  },
+  {
+   "person": "Falk",
+   "month": "2026-11",
+   "hours": 25,
+   "weekendShifts": 1,
+   "closingShifts": 0,
+   "earlyEnds": 0,
+   "closingBalanceHours": null
+  }
+ ],
+ "controlTotals": [
+  {
+   "month": "2026-11",
+   "costEUR": 4745.67,
+   "reserveHours": 25
+  }
+ ],
+ "octoberFile": {
+  "label": "Schichtplan_Oktober_2026.xlsx",
+  "targetHours": 155,
+  "openingHours": 0,
+  "closing": {
+   "Lou": -9.17,
+   "Milena": -12,
+   "Lina": -11,
+   "Samuel": -10
+  }
+ },
+ "assumptions": [
+  "Soll 150,5 h pro Monat (aus Numbers). Die Oktober-Datei rechnete mit 155 h (35 h × 31/7) und Übertrag 0 – daher dort andere Endstände.",
+  "Schule wird mit 7 h, Urlaub/Feiertag mit 5,83 h pro Tag angerechnet.",
+  "Ahaus-Tage sind vorläufig mit 7 h (09–16 Uhr) als bezahlter externer Tag angerechnet – unbestätigt.",
+  "Krankheit würde vorläufig nach ausgefallenen Planstunden angerechnet.",
+  "Historische Zeiten ohne Pausenabzug übernommen.",
+  "Alle Werte sind Plan/Prognose, keine bestätigten Ist-Stunden.",
+  "Kosten = angerechnete Stunden × Stundenlohn, ohne Arbeitgeber-Nebenkosten und Zuschläge – keine Lohnabrechnung.",
+  "Milena: Stundenlohn unbekannt; ihr Saldo Ende Oktober ist kein bestätigter Austrittssaldo.",
+  "Falk: Notfallreserve ohne eigenes Stundenkonto.",
+  "38 h/Woche als Obergrenze ist eine Annahme aus der bisherigen Berechnung, keine bestätigte Vertragsregel."
+ ]
+}

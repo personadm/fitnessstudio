@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { isTeamCodeValid } from "@/lib/schichtplan/access";
+import { accessFor } from "@/lib/schichtplan/access";
 import { todayInBerlin } from "@/lib/schichtplan/calendar";
+import { checkPlan } from "@/lib/schichtplan/checks";
+import { buildAccounts } from "@/lib/schichtplan/konten";
 import { loadTeamPlan } from "@/lib/schichtplan/plan";
-import { ScheduleView, type ViewMode } from "./ScheduleView";
+import { LEITUNG_VIEWS, PLAN_VIEWS, type ViewMode } from "@/lib/schichtplan/views";
+import { ScheduleView } from "./ScheduleView";
 
 // Code-Prüfung braucht process.env zur Laufzeit; nie statisch cachen.
 export const runtime = "nodejs";
@@ -16,7 +19,6 @@ export const metadata: Metadata = {
   referrer: "no-referrer",
 };
 
-const VIEW_MODES: readonly ViewMode[] = ["woche", "liste", "tag"];
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 interface PageProps {
@@ -25,27 +27,34 @@ interface PageProps {
 }
 
 /**
- * Versteckte Team-Seite: /team/<SCHICHTPLAN_CODE>
+ * Versteckte Seite: /team/<code>, nur lesend, ohne Login, nirgends verlinkt.
  *
- * Nur lesend, ohne Login, nirgends verlinkt. Zeigt Schichten und Termine aus
- * dem Übergabe-Planstand — keine Löhne, Stundenkonten oder Kosten.
+ * Mit dem Team-Code: Schichten und Termine. Mit dem Leitungs-Code zusätzlich
+ * Stundenkonten, Kosten und Regelprüfung — diese Daten werden nur dann
+ * berechnet und an den Browser geschickt.
  */
 export default async function TeamSchedulePage({ params, searchParams }: PageProps) {
   const { code } = await params;
-  if (!isTeamCodeValid(code)) notFound();
+  const access = accessFor(code);
+  if (!access) notFound();
+
+  const plan = loadTeamPlan();
+  const leitung = access === "leitung" ? { accounts: buildAccounts(plan), findings: checkPlan(plan) } : null;
+  const allowedViews: readonly ViewMode[] = leitung ? [...PLAN_VIEWS, ...LEITUNG_VIEWS] : PLAN_VIEWS;
 
   const query = await searchParams;
-  const initialView = VIEW_MODES.find((mode) => mode === query.ansicht) ?? "woche";
+  const initialView = allowedViews.find((mode) => mode === query.ansicht) ?? "woche";
   const initialDate = query.datum && ISO_DATE.test(query.datum) ? query.datum : null;
 
   return (
     <>
       <style>{"@media print { @page { size: A4 landscape; margin: 8mm; } }"}</style>
       <ScheduleView
-        plan={loadTeamPlan()}
+        plan={plan}
         today={todayInBerlin()}
         initialView={initialView}
         initialDate={initialDate}
+        leitung={leitung}
       />
     </>
   );

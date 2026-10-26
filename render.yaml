@@ -61,3 +61,7 @@ services:
       # Ohne (oder mit < 24 Zeichen) ist die Seite deaktiviert (404).
       - key: SCHICHTPLAN_CODE
         sync: false
+      # Leitungs-Link /team/<SCHICHTPLAN_LEITUNG_CODE>: zusätzlich Stundenkonten,
+      # Kosten und Regelprüfung. Ohne (oder < 24 Zeichen) deaktiviert.
+      - key: SCHICHTPLAN_LEITUNG_CODE
+        sync: false

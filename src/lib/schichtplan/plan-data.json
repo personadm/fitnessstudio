@@ -2,7 +2,7 @@
  "source": {
   "exportDate": "2026-10-26",
   "label": "Übergabe-Export (veröffentlichter Ausgangsstand)",
-  "note": "Planstand – Planstunden sind keine bestätigten Ist-Stunden."
+  "note": "Planstand – Planstunden sind keine bestätigten Ist-Stunden. Oktober-Kurse aus Schichtplan_Oktober_2026.xlsx."
  },
  "people": [
   {
@@ -1519,6 +1519,288 @@
   }
  ],
  "events": [
+  {
+   "id": "2026-10-01-kurs-18-lina",
+   "date": "2026-10-01",
+   "category": "kurs",
+   "title": "Kurs mit Tina",
+   "people": [
+    "Lina"
+   ],
+   "start": 18,
+   "end": 20
+  },
+  {
+   "id": "2026-10-02-kurs-18-milena",
+   "date": "2026-10-02",
+   "category": "kurs",
+   "title": "Gesunde Gelenke",
+   "people": [
+    "Milena"
+   ],
+   "start": 18,
+   "end": 18.75
+  },
+  {
+   "id": "2026-10-05-kurs-18-extern",
+   "date": "2026-10-05",
+   "category": "kurs",
+   "title": "Kurse (Leon, extern)",
+   "short": "Leon",
+   "people": [],
+   "start": 18,
+   "end": 20,
+   "warning": "Kursleitung offen (Leon in der Schule)"
+  },
+  {
+   "id": "2026-10-06-kurs-18-lou",
+   "date": "2026-10-06",
+   "category": "kurs",
+   "title": "Kurs",
+   "people": [
+    "Lou"
+   ],
+   "start": 18,
+   "end": 20
+  },
+  {
+   "id": "2026-10-06-kurs-19-samuel",
+   "date": "2026-10-06",
+   "category": "kurs",
+   "title": "Kurs mit Tim",
+   "people": [
+    "Samuel"
+   ],
+   "start": 19,
+   "end": 20
+  },
+  {
+   "id": "2026-10-07-kurs-18-lou",
+   "date": "2026-10-07",
+   "category": "kurs",
+   "title": "Kurs",
+   "people": [
+    "Lou"
+   ],
+   "start": 18,
+   "end": 20
+  },
+  {
+   "id": "2026-10-08-kurs-18-lina",
+   "date": "2026-10-08",
+   "category": "kurs",
+   "title": "Kurs mit Tina",
+   "people": [
+    "Lina"
+   ],
+   "start": 18,
+   "end": 20
+  },
+  {
+   "id": "2026-10-09-kurs-18-milena",
+   "date": "2026-10-09",
+   "category": "kurs",
+   "title": "Gesunde Gelenke",
+   "people": [
+    "Milena"
+   ],
+   "start": 18,
+   "end": 18.75
+  },
+  {
+   "id": "2026-10-12-kurs-18-extern",
+   "date": "2026-10-12",
+   "category": "kurs",
+   "title": "Kurse (Leon, extern)",
+   "short": "Leon",
+   "people": [],
+   "start": 18,
+   "end": 20
+  },
+  {
+   "id": "2026-10-13-kurs-18-lou",
+   "date": "2026-10-13",
+   "category": "kurs",
+   "title": "Kurs",
+   "people": [
+    "Lou"
+   ],
+   "start": 18,
+   "end": 20
+  },
+  {
+   "id": "2026-10-13-kurs-19-samuel",
+   "date": "2026-10-13",
+   "category": "kurs",
+   "title": "Kurs mit Tim",
+   "people": [
+    "Samuel"
+   ],
+   "start": 19,
+   "end": 20
+  },
+  {
+   "id": "2026-10-14-kurs-18-lou",
+   "date": "2026-10-14",
+   "category": "kurs",
+   "title": "Kurs",
+   "people": [
+    "Lou"
+   ],
+   "start": 18,
+   "end": 20
+  },
+  {
+   "id": "2026-10-15-kurs-18-lina",
+   "date": "2026-10-15",
+   "category": "kurs",
+   "title": "Kurs mit Tina",
+   "people": [
+    "Lina"
+   ],
+   "start": 18,
+   "end": 20
+  },
+  {
+   "id": "2026-10-16-kurs-18-milena",
+   "date": "2026-10-16",
+   "category": "kurs",
+   "title": "Gesunde Gelenke",
+   "people": [
+    "Milena"
+   ],
+   "start": 18,
+   "end": 18.75
+  },
+  {
+   "id": "2026-10-19-kurs-18-extern",
+   "date": "2026-10-19",
+   "category": "kurs",
+   "title": "Kurse (Leon, extern)",
+   "short": "Leon",
+   "people": [],
+   "start": 18,
+   "end": 20
+  },
+  {
+   "id": "2026-10-20-kurs-18-lou",
+   "date": "2026-10-20",
+   "category": "kurs",
+   "title": "Kurs",
+   "people": [
+    "Lou"
+   ],
+   "start": 18,
+   "end": 20
+  },
+  {
+   "id": "2026-10-20-kurs-19-samuel",
+   "date": "2026-10-20",
+   "category": "kurs",
+   "title": "Kurs mit Tim",
+   "people": [
+    "Samuel"
+   ],
+   "start": 19,
+   "end": 20
+  },
+  {
+   "id": "2026-10-21-kurs-18-lou",
+   "date": "2026-10-21",
+   "category": "kurs",
+   "title": "Kurs",
+   "people": [
+    "Lou"
+   ],
+   "start": 18,
+   "end": 20
+  },
+  {
+   "id": "2026-10-22-kurs-18-extern",
+   "date": "2026-10-22",
+   "category": "kurs",
+   "title": "Kurs Tina (Lina in der Schule)",
+   "short": "Tina",
+   "people": [],
+   "start": 18,
+   "end": 20
+  },
+  {
+   "id": "2026-10-23-kurs-18-extern",
+   "date": "2026-10-23",
+   "category": "kurs",
+   "title": "Gesunde Gelenke",
+   "short": "Gelenke",
+   "people": [],
+   "start": 18,
+   "end": 18.75,
+   "warning": "Kursleitung offen (Milena in der Schule)"
+  },
+  {
+   "id": "2026-10-26-kurs-18-extern",
+   "date": "2026-10-26",
+   "category": "kurs",
+   "title": "Kurse (Leon, extern)",
+   "short": "Leon",
+   "people": [],
+   "start": 18,
+   "end": 20
+  },
+  {
+   "id": "2026-10-27-kurs-18-lou",
+   "date": "2026-10-27",
+   "category": "kurs",
+   "title": "Kurs",
+   "people": [
+    "Lou"
+   ],
+   "start": 18,
+   "end": 20
+  },
+  {
+   "id": "2026-10-27-kurs-19-samuel",
+   "date": "2026-10-27",
+   "category": "kurs",
+   "title": "Kurs mit Tim",
+   "people": [
+    "Samuel"
+   ],
+   "start": 19,
+   "end": 20
+  },
+  {
+   "id": "2026-10-28-kurs-18-lou",
+   "date": "2026-10-28",
+   "category": "kurs",
+   "title": "Kurs",
+   "people": [
+    "Lou"
+   ],
+   "start": 18,
+   "end": 20
+  },
+  {
+   "id": "2026-10-29-kurs-18-lina",
+   "date": "2026-10-29",
+   "category": "kurs",
+   "title": "Kurs mit Tina",
+   "people": [
+    "Lina"
+   ],
+   "start": 18,
+   "end": 20
+  },
+  {
+   "id": "2026-10-30-kurs-18-milena",
+   "date": "2026-10-30",
+   "category": "kurs",
+   "title": "Gesunde Gelenke",
+   "people": [
+    "Milena"
+   ],
+   "start": 18,
+   "end": 18.75
+  },
   {
    "id": "2026-11-02-kurs-18-extern",
    "date": "2026-11-02",
