@@ -170,7 +170,7 @@ export function ScheduleView({ plan, today, initialView, initialDate, leitung }:
           {view === "konten" && leitung ? (
             <KontenView accounts={leitung.accounts} month={activeMonth} people={plan.people} />
           ) : view === "pruefung" && leitung ? (
-            <PruefungView findings={leitung.findings} month={activeMonth} />
+            <PruefungView findings={leitung.findings} notes={leitung.accounts.planningNotes} month={activeMonth} />
           ) : view === "liste" ? (
             <ListView days={days} people={plan.people} hidden={hidden} index={index} today={today} onSelect={setSelected} />
           ) : lanes.length === 0 && days.every((d) => isInPlan(index, d)) ? (

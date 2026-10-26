@@ -396,6 +396,8 @@ function EventMark({ event, startHour, isWide }: { event: PlanEvent; startHour: 
 
 /** Ab dieser Dauer passt das Kurzlabel senkrecht in die schmale Kurs-Spalte. */
 const MIN_HOURS_FOR_VERTICAL_LABEL = 1.5;
+/** Kürzere Labels passen auch waagerecht in die schmale Spalte. */
+const MAX_SHORT_LABEL_CHARS = 4;
 
 function ExternalLane({
   events,
@@ -438,8 +440,11 @@ function ExternalLane({
             ) : (
               <>
                 {isWarning && <span aria-hidden>!</span>}
-                {fitsVertical && (
+                {fitsVertical ? (
                   <span className="uppercase tracking-wide [writing-mode:vertical-rl]">{event.short ?? event.title}</span>
+                ) : (
+                  event.short &&
+                  event.short.length <= MAX_SHORT_LABEL_CHARS && <span aria-hidden>{event.short}</span>
                 )}
                 <span className="sr-only">
                   {event.title}, {range} Uhr{event.warning ? ` – ${event.warning}` : ""}

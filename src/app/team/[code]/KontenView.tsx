@@ -8,7 +8,7 @@ import {
   formatSignedHours,
   personColor,
 } from "@/lib/schichtplan/display";
-import type { AccountsOverview, MonthAccount } from "@/lib/schichtplan/konten";
+import type { AccountsOverview, MonthAccount, PreviousPlan } from "@/lib/schichtplan/konten";
 import type { Person, ShiftKind } from "@/lib/schichtplan/plan";
 
 const KIND_COLUMNS: { kind: ShiftKind; label: string }[] = [
@@ -38,6 +38,7 @@ export function KontenView({ accounts, month, people }: Props) {
   const withAccount = rows.filter((r) => r.targetHours !== null);
   const reserve = rows.filter((r) => r.targetHours === null);
   const cost = accounts.costs.find((c) => c.month === month);
+  const previous = accounts.previousPlans.find((p) => p.month === month);
   const colorOf = (name: string) => personColor(name, people.findIndex((p) => p.name === name));
 
   return (
@@ -82,6 +83,8 @@ export function KontenView({ accounts, month, people }: Props) {
           </p>
         )}
       </section>
+
+      {previous && cost && <PlanComparison previous={previous} rows={rows} costCents={cost.cents} colorOf={colorOf} />}
 
       <section aria-labelledby="verlauf">
         <SectionTitle id="verlauf" title="Saldo-Verlauf" note="Kontostand jeweils am Monatsende" />
@@ -237,6 +240,71 @@ function MonthTable({ rows, colorOf }: { rows: MonthAccount[]; colorOf: (name: s
   );
 }
 
+function PlanComparison({
+  previous,
+  rows,
+  costCents,
+  colorOf,
+}: {
+  previous: PreviousPlan;
+  rows: MonthAccount[];
+  costCents: number;
+  colorOf: (name: string) => string;
+}) {
+  const names = [...new Set([...Object.keys(previous.hours), ...rows.map((r) => r.person)])];
+  const num = "whitespace-nowrap px-3 py-2 text-right font-mono tabular-nums";
+  return (
+    <section aria-labelledby="vergleich">
+      <SectionTitle id="vergleich" title="Vorher / Nachher" note={previous.label} />
+      <div className="mt-3 overflow-x-auto rounded-2xl border border-ink/15 bg-[#FBF8F2]">
+        <table className="w-full min-w-[620px] border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-ink/15 text-[10px] uppercase tracking-[0.12em] text-muted">
+              <th className="px-3 py-2 text-left font-semibold">Person</th>
+              <th className="px-3 py-2 text-right font-semibold">Stunden vorher</th>
+              <th className="px-3 py-2 text-right font-semibold">jetzt</th>
+              <th className="px-3 py-2 text-right font-semibold">Änderung</th>
+              <th className="px-3 py-2 text-right font-semibold">Stand vorher</th>
+              <th className="px-3 py-2 text-right font-semibold">Stand jetzt</th>
+            </tr>
+          </thead>
+          <tbody>
+            {names.map((name) => {
+              const before = previous.hours[name] ?? 0;
+              const row = rows.find((r) => r.person === name);
+              const now = row?.creditedHours ?? 0;
+              const closingBefore = previous.closingBalanceHours[name];
+              return (
+                <tr key={name} className="border-b border-ink/[0.07] last:border-b-0">
+                  <td className="px-3 py-2 font-semibold">
+                    <span className="flex items-center gap-2">
+                      <span aria-hidden className="h-2.5 w-2.5 rounded-full" style={{ background: colorOf(name) }} />
+                      {name}
+                    </span>
+                  </td>
+                  <td className={`${num} text-ink-soft`}>{formatHours(before)}</td>
+                  <td className={`${num} font-semibold`}>{formatHours(now)}</td>
+                  <td className={num}>{now === before ? "–" : formatSignedHours(Math.round((now - before) * 100) / 100)}</td>
+                  <td className={num} style={{ color: balanceColor(closingBefore ?? null) }}>
+                    {closingBefore === undefined ? "–" : formatSignedHours(closingBefore)}
+                  </td>
+                  <td className={`${num} font-semibold`} style={{ color: balanceColor(row?.closingHours ?? null) }}>
+                    {row?.closingHours == null ? "–" : formatSignedHours(row.closingHours)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-2 font-mono text-xs tabular-nums text-ink-soft">
+        Lohnkosten vorher {formatEuroCents(Math.round(previous.costEUR * 100))} → jetzt {formatEuroCents(costCents)}
+        {rows.some((r) => r.costCents === null) && " (ohne Personen mit unbekanntem Stundenlohn)"}
+      </p>
+    </section>
+  );
+}
+
 function BalanceHistory({ accounts, colorOf }: { accounts: AccountsOverview; colorOf: (name: string) => string }) {
   const people = [...new Set(accounts.rows.filter((r) => r.targetHours !== null).map((r) => r.person))];
   const firstMonth = accounts.months[0];
@@ -355,7 +423,7 @@ function Anomalies({ rows, month, accounts }: { rows: MonthAccount[]; month: str
       .map((r) => `${r.person}: ${formatSignedHours(r.closingHours ?? 0)} am ${label} (Minusstunden).`),
     ...rows
       .filter((r) => r.targetHours === null && r.creditedHours > 0)
-      .map((r) => `${r.person} (Reserve): ${formatHours(r.creditedHours)} im Einsatz${r.costCents !== null ? `, ${formatEuroCents(r.costCents)}` : ""}.`),
+      .map((r) => `${r.person} (${r.role}): ${formatHours(r.creditedHours)} im Einsatz${r.costCents !== null ? `, ${formatEuroCents(r.costCents)}` : ""}.`),
     ...rows.filter((r) => r.wageEUR === null).map((r) => `${r.person}: Stundenlohn unbekannt – Kosten unvollständig.`),
     ...rows
       .filter((r) => r.controlMismatches && r.controlMismatches.length > 0)

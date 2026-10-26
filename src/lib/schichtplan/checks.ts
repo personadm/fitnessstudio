@@ -35,7 +35,20 @@ export interface RuleConfig {
   lateShiftEndsAfter: number;
   minMentorOverlapHours: number;
   mentor: string;
+  /** Azubis: decken Kurszeiten auf der Fläche, vor Falk einzuplanen */
   trainees: readonly string[];
+  /** Rollen, die als Stammteam zählen (Ausgeschiedene nur bis zum Austritt) */
+  coreRoles: readonly string[];
+  monthlyTargetHours: number;
+  /** Regel 4: Falk erst, wenn Azubis sonst über diese Monats-Überstunden kämen */
+  traineeOvertimeLimit: number;
+  /** Feste Schichtzeiten mit Wechsel um 15 Uhr gelten ab diesem Tag */
+  shiftPatternFrom: string;
+  weekdayShifts: readonly Interval[];
+  tuesdayShifts: readonly Interval[];
+  stashShifts: readonly Interval[];
+  /** weekday: 0 = Sonntag … 6 = Samstag */
+  fixedShifts: readonly { person: string; weekday: number; start: number; end: number; from: string }[];
 }
 
 export const DEFAULT_RULES: RuleConfig = {
@@ -54,12 +67,34 @@ export const DEFAULT_RULES: RuleConfig = {
   minMentorOverlapHours: 1,
   mentor: "Lou",
   trainees: ["Lina", "Samuel"],
+  coreRoles: ["Stammteam", "Ausgeschieden"],
+  monthlyTargetHours: 150.5,
+  traineeOvertimeLimit: 5,
+  shiftPatternFrom: "2026-11-01",
+  weekdayShifts: [
+    { start: 9, end: 15 },
+    { start: 15, end: 22 },
+    { start: 15, end: 20.25 },
+  ],
+  tuesdayShifts: [
+    { start: 9, end: 16 },
+    { start: 15, end: 22 },
+    { start: 15, end: 20.25 },
+  ],
+  stashShifts: [
+    { start: 9, end: 16 },
+    { start: 14, end: 22 },
+    { start: 14, end: 20.25 },
+  ],
+  fixedShifts: [{ person: "Leon", weekday: 1, start: 15, end: 22, from: "2026-11-01" }],
 };
 
 export type Severity = "fehler" | "warnung" | "hinweis";
 
 export type RuleId =
   | "besetzung"
+  | "schichtzeiten"
+  | "festdienste"
   | "doppelbuchung"
   | "abwesenheit"
   | "ausgeschieden"
@@ -80,6 +115,12 @@ export const RULES: Record<RuleId, { title: string; description: string }> = {
     title: "Besetzung",
     description: "Mo–Fr 09–22 Uhr und Sa/So 10–15 Uhr immer mindestens eine Person auf der Fläche. Wer im Kurs ist, zählt nicht als Flächenkraft.",
   },
+  schichtzeiten: {
+    title: "Schichtzeiten",
+    description:
+      "Ab November Schichtwechsel um 15 Uhr: 9–15 und 15–22 bzw. 15–20:15, dienstags früh 9–16 (Teammeeting), an STASH-Tagen 9–16 und ab 14 Uhr, Wochenende 10–15.",
+  },
+  festdienste: { title: "Feste Dienste", description: "Leon arbeitet nur montags, 15–22 Uhr." },
   doppelbuchung: { title: "Doppelbuchungen", description: "Keine überlappenden Einträge einer Person am selben Tag." },
   abwesenheit: { title: "Abwesenheiten", description: "An Schul-, Ahaus- und Urlaubstagen kein Studiodienst." },
   ausgeschieden: { title: "Ausgeschiedene", description: "Nach dem Austritt keine Einplanung mehr." },
@@ -115,7 +156,10 @@ export const RULES: Record<RuleId, { title: string; description: string }> = {
     description: "Lou arbeitet möglichst mit Lina oder Samuel zusammen (wochentags; am Wochenende ist regulär nur eine Person da).",
   },
   kurse: { title: "Kurse", description: "Jeder Kurs hat eine Kursleitung." },
-  reserve: { title: "Falk-Reserve", description: "Falk nur im Notfall; jeder Einsatz braucht einen erkennbaren Grund." },
+  reserve: {
+    title: "Falk-Reserve",
+    description: "Falk nur im Notfall: erst wenn kein Azubi (ohne mehr als 5 Überstunden im Monat) und niemand aus dem Stammteam frei ist.",
+  },
 };
 
 export interface Finding {
@@ -165,6 +209,10 @@ function allDates(first: string, last: string): string[] {
   return Array.from({ length: days + 1 }, (_, i) => addDays(first, i));
 }
 
+function weekdayIndex(iso: string): number {
+  return new Date(`${iso}T00:00:00Z`).getUTCDay();
+}
+
 function isActive(person: Person, date: string): boolean {
   return !person.inactiveFrom || date < person.inactiveFrom;
 }
@@ -176,7 +224,10 @@ class PlanView {
   private readonly shiftsByDate: Map<string, Shift[]>;
   private readonly eventsByDate: Map<string, PlanEvent[]>;
 
-  constructor(readonly plan: TeamPlan) {
+  constructor(
+    readonly plan: TeamPlan,
+    private readonly cfg: RuleConfig,
+  ) {
     const sorted = [...plan.shifts].map((s) => s.date).sort();
     this.first = sorted[0];
     this.last = sorted[sorted.length - 1];
@@ -199,7 +250,7 @@ class PlanView {
   }
 
   core(date: string): Person[] {
-    return this.plan.people.filter((p) => p.role !== "Notfallreserve" && isActive(p, date));
+    return this.plan.people.filter((p) => this.cfg.coreRoles.includes(p.role) && isActive(p, date));
   }
 
   reserve(): Person[] {
@@ -445,7 +496,7 @@ function checkWeeklyHours(view: PlanView, cfg: RuleConfig): Finding[] {
     (w) => view.inPlan(w) && view.inPlan(addDays(w, 6)),
   );
   return view.plan.people
-    .filter((p) => p.role !== "Notfallreserve")
+    .filter((p) => cfg.coreRoles.includes(p.role))
     .flatMap((p) => {
       const weeks = fullWeeks
         .filter((w) => isActive(p, w))
@@ -588,24 +639,130 @@ export function reserveReason(view: PlanView, shift: Shift): string | null {
   return reasons.length > 0 ? reasons.join(" · ") : null;
 }
 
-function checkReserve(view: PlanView): Finding[] {
+/** Warum jemand den Dienst nicht hätte übernehmen können — null = frei. */
+function blockerFor(view: PlanView, cfg: RuleConfig, person: string, shift: Shift): string | null {
+  const date = shift.date;
+  const today = view.shifts(date, person);
+  if (today.length > 0) {
+    return today.map((s) => (s.kind === "Studio" ? `arbeitet ${formatTimeRange(s.start, s.end)}` : s.kind)).join(", ");
+  }
+  const week = startOfWeek(date);
+  const daysInWeek = Array.from({ length: 7 }, (_, i) => addDays(week, i)).filter(
+    (d) => view.shifts(d, person).length > 0,
+  ).length;
+  if (daysInWeek >= cfg.maxDaysPerWeek) return `schon ${daysInWeek} Tage in KW ${isoWeekNumber(date)}`;
+  const runLength = (dir: 1 | -1): number => {
+    const next = addDays(date, dir);
+    return view.shifts(next, person).length > 0 ? 1 + runLengthFrom(next, dir) : 0;
+  };
+  const runLengthFrom = (from: string, dir: 1 | -1): number => {
+    const next = addDays(from, dir);
+    return view.shifts(next, person).length > 0 ? 1 + runLengthFrom(next, dir) : 0;
+  };
+  const consecutive = runLength(-1) + 1 + runLength(1);
+  if (consecutive > cfg.maxConsecutiveDays) return `wären ${consecutive} Tage am Stück`;
+  const before = dayBounds(view, addDays(date, -1), person);
+  const after = dayBounds(view, addDays(date, 1), person);
+  if ((before && 24 - before.end + shift.start < cfg.minRestHours) || (after && 24 - shift.end + after.start < cfg.minRestHours)) {
+    return "Ruhezeit zu kurz";
+  }
+  if (shift.end > cfg.lateShiftEndsAfter && view.shifts(addDays(date, 1), person).some((s) => s.kind === "Schule")) {
+    return "am nächsten Tag Schule";
+  }
+  if (cfg.trainees.includes(person)) {
+    const month = date.slice(0, 7);
+    const hours = view.plan.shifts.filter((s) => s.person === person && s.date.startsWith(month)).reduce((sum, s) => sum + s.hours, 0);
+    if (hours + shift.hours - cfg.monthlyTargetHours > cfg.traineeOvertimeLimit) {
+      return `käme über ${cfg.traineeOvertimeLimit} Überstunden`;
+    }
+  }
+  return null;
+}
+
+function checkReserve(view: PlanView, cfg: RuleConfig): Finding[] {
   return view
     .reserve()
     .flatMap((p) => view.plan.shifts.filter((s) => s.person === p.name))
     .map((s) => {
-      const reason = reserveReason(view, s);
+      const blockers = view.core(s.date).map((p) => ({ name: p.name, blocker: blockerFor(view, cfg, p.name, s) }));
+      const free = blockers.filter((b) => b.blocker === null).map((b) => b.name);
+      const head = `${dayLabel(s.date)} ${formatTimeRange(s.start, s.end)} (${formatHours(s.hours)})`;
+      if (free.length > 0) {
+        return {
+          rule: "reserve" as const,
+          severity: "warnung" as const,
+          date: s.date,
+          person: s.person,
+          message: `${head}: ${free.join(", ")} ${free.length === 1 ? "wäre" : "wären"} frei gewesen.`,
+        };
+      }
+      // Abwesenheiten stehen schon in der Auslastung; nur Kurs-/Schulungsgründe zusätzlich nennen.
+      const reason = reserveReason(view, s)
+        ?.split(" · ")
+        .filter((r) => r.startsWith("Kurs") || r === "Five-Schulung")
+        .join(" · ");
+      const busy = blockers.map((b) => `${b.name}: ${b.blocker}`).join(" · ");
       return {
         rule: "reserve" as const,
-        severity: reason ? ("hinweis" as const) : ("warnung" as const),
+        severity: "hinweis" as const,
         date: s.date,
         person: s.person,
-        message: `${dayLabel(s.date)} ${formatTimeRange(s.start, s.end)} (${formatHours(s.hours)}): ${reason ?? "kein Grund im Plan erkennbar"}.`,
+        message: `${head}: ${reason ? `${reason}. ` : ""}Stammteam ausgelastet (${busy}).`,
       };
     });
 }
 
-export function createPlanView(plan: TeamPlan): PlanView {
-  return new PlanView(plan);
+function checkShiftPatterns(view: PlanView, cfg: RuleConfig): Finding[] {
+  return view.plan.shifts
+    .filter((s) => s.kind === "Studio" && s.date >= cfg.shiftPatternFrom)
+    .filter((s) => {
+      const stash = view.events(s.date).some((e) => e.category === "stash" && e.people.includes(s.person));
+      const allowed = isWeekend(s.date)
+        ? [cfg.weekendOpen]
+        : [
+            ...(weekdayIndex(s.date) === 2 ? cfg.tuesdayShifts : cfg.weekdayShifts),
+            ...(stash ? cfg.stashShifts : []),
+            ...cfg.fixedShifts.filter((f) => f.person === s.person && f.weekday === weekdayIndex(s.date)),
+          ];
+      return !allowed.some((a) => a.start === s.start && a.end === s.end);
+    })
+    .map((s) => ({
+      rule: "schichtzeiten" as const,
+      severity: "warnung" as const,
+      date: s.date,
+      person: s.person,
+      message: `${dayLabel(s.date)}: ${s.person} ${formatTimeRange(s.start, s.end)} passt nicht zu den festen Schichtzeiten.`,
+    }));
+}
+
+function checkFixedShifts(view: PlanView, cfg: RuleConfig): Finding[] {
+  return cfg.fixedShifts.flatMap((f) => {
+    const relevant = view.dates.filter((d) => d >= f.from);
+    const missing = relevant
+      .filter((d) => weekdayIndex(d) === f.weekday)
+      .filter((d) => !view.studio(d, f.person).some((s) => s.start === f.start && s.end === f.end))
+      .map((d) => ({
+        rule: "festdienste" as const,
+        severity: "fehler" as const,
+        date: d,
+        person: f.person,
+        message: `${dayLabel(d)}: ${f.person} fehlt (${formatTimeRange(f.start, f.end)}).`,
+      }));
+    const extra = relevant
+      .filter((d) => weekdayIndex(d) !== f.weekday && view.shifts(d, f.person).length > 0)
+      .map((d) => ({
+        rule: "festdienste" as const,
+        severity: "warnung" as const,
+        date: d,
+        person: f.person,
+        message: `${dayLabel(d)}: ${f.person} ist eingeplant, arbeitet aber nur ${weekdayShort(addDays(f.from, (f.weekday - weekdayIndex(f.from) + 7) % 7))}.`,
+      }));
+    return [...missing, ...extra];
+  });
+}
+
+export function createPlanView(plan: TeamPlan, cfg: RuleConfig = DEFAULT_RULES): PlanView {
+  return new PlanView(plan, cfg);
 }
 
 export type { PlanView };
@@ -613,9 +770,11 @@ export type { PlanView };
 const SEVERITY_ORDER: Record<Severity, number> = { fehler: 0, warnung: 1, hinweis: 2 };
 
 export function checkPlan(plan: TeamPlan, cfg: RuleConfig = DEFAULT_RULES): Finding[] {
-  const view = new PlanView(plan);
+  const view = new PlanView(plan, cfg);
   return [
     ...checkCoverage(view, cfg),
+    ...checkShiftPatterns(view, cfg),
+    ...checkFixedShifts(view, cfg),
     ...checkDoubleBookings(view),
     ...checkAbsences(view),
     ...checkInactive(view),
@@ -629,6 +788,6 @@ export function checkPlan(plan: TeamPlan, cfg: RuleConfig = DEFAULT_RULES): Find
     ...checkEarlyEnds(view, cfg),
     ...checkMentoring(view, cfg),
     ...checkCourses(view),
-    ...checkReserve(view),
+    ...checkReserve(view, cfg),
   ].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] || (a.date ?? "").localeCompare(b.date ?? ""));
 }

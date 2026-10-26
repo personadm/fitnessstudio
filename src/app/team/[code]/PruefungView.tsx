@@ -2,6 +2,7 @@
 
 import { formatMonth, monthOfWeek, weekdayShort } from "@/lib/schichtplan/calendar";
 import { type Finding, RULES, type RuleId, type Severity } from "@/lib/schichtplan/checks";
+import type { PlanningNote } from "@/lib/schichtplan/konten";
 import { POSITIVE_COLOR, WARNING_COLOR } from "@/lib/schichtplan/display";
 
 const SEVERITY_STYLE: Record<Severity, { label: string; plural: string; color: string }> = {
@@ -13,8 +14,15 @@ const SEVERITY_ORDER: readonly Severity[] = ["fehler", "warnung", "hinweis"];
 
 type Props = {
   findings: readonly Finding[];
+  notes: readonly PlanningNote[];
   month: string;
 };
+
+const NOTE_KINDS: { kind: PlanningNote["kind"]; label: string; color: string }[] = [
+  { kind: "diskrepanz", label: "Widersprüche zwischen den Vorgaben", color: WARNING_COLOR },
+  { kind: "annahme", label: "Annahmen – bitte bestätigen", color: "#B5400F" },
+  { kind: "offen", label: "Offene Punkte", color: "#6B655C" },
+];
 
 /**
  * Befunde mit Datum im Monat. Wochen-Befunde sind auf den Montag datiert und
@@ -26,7 +34,8 @@ function inMonth(finding: Finding, month: string): boolean {
   return finding.date.startsWith(month) || (isWeekStart && monthOfWeek(finding.date) === month);
 }
 
-export function PruefungView({ findings, month }: Props) {
+export function PruefungView({ findings, notes, month }: Props) {
+  const monthNotes = notes.filter((n) => n.month === month);
   const relevant = findings.filter((f) => inMonth(f, month));
   const counts = SEVERITY_ORDER.map((s) => ({
     severity: s,
@@ -50,6 +59,33 @@ export function PruefungView({ findings, month }: Props) {
           {formatMonth(month)} · Planungsregeln des Studios, keine rechtliche Prüfung
         </span>
       </div>
+
+      {monthNotes.length > 0 && (
+        <section aria-labelledby="planungshinweise" className="grid gap-3 lg:grid-cols-3">
+          <h2 id="planungshinweise" className="sr-only">
+            Planungshinweise
+          </h2>
+          {NOTE_KINDS.map(({ kind, label, color }) => {
+            const list = monthNotes.filter((n) => n.kind === kind);
+            if (list.length === 0) return null;
+            return (
+              <div key={kind} className="rounded-2xl border bg-[#FBF8F2] p-4" style={{ borderColor: color }}>
+                <h3 className="text-sm font-semibold" style={{ color }}>
+                  {label}
+                </h3>
+                <ul className="mt-2 space-y-3 text-sm">
+                  {list.map((n) => (
+                    <li key={n.title}>
+                      <p className="font-semibold">{n.title}</p>
+                      <p className="mt-0.5 leading-snug text-ink-soft">{n.text}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </section>
+      )}
 
       <ol className="divide-y divide-ink/10 overflow-hidden rounded-2xl border border-ink/15 bg-[#FBF8F2]">
         {ruleIds.map((id) => {

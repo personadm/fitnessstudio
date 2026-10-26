@@ -2,7 +2,7 @@
  "source": {
   "exportDate": "2026-10-26",
   "label": "Übergabe-Export (veröffentlichter Ausgangsstand)",
-  "note": "Planstand – Planstunden sind keine bestätigten Ist-Stunden. Oktober-Kurse aus Schichtplan_Oktober_2026.xlsx."
+  "note": "Planstand – Planstunden sind keine bestätigten Ist-Stunden. Oktober-Kurse aus Schichtplan_Oktober_2026.xlsx. November am 26.10.2026 nach geänderten Vorgaben neu geplant (Leon montags, Schichtwechsel 15 Uhr, Five-Schulung entfällt)."
  },
  "people": [
   {
@@ -24,6 +24,11 @@
    "name": "Milena",
    "role": "Ausgeschieden",
    "inactiveFrom": "2026-11-01"
+  },
+  {
+   "name": "Leon",
+   "role": "Montagsdienst",
+   "inactiveFrom": null
   },
   {
    "name": "Falk",
@@ -834,12 +839,21 @@
    "hours": 5
   },
   {
-   "id": "2026-11-02-lina-9",
+   "id": "2026-11-02-lou-9",
    "date": "2026-11-02",
-   "person": "Lina",
+   "person": "Lou",
    "kind": "Studio",
    "start": 9,
-   "end": 16,
+   "end": 15,
+   "hours": 6
+  },
+  {
+   "id": "2026-11-02-leon-15",
+   "date": "2026-11-02",
+   "person": "Leon",
+   "kind": "Studio",
+   "start": 15,
+   "end": 22,
    "hours": 7
   },
   {
@@ -848,17 +862,26 @@
    "person": "Samuel",
    "kind": "Studio",
    "start": 15,
-   "end": 22,
-   "hours": 7
+   "end": 20.25,
+   "hours": 5.25
   },
   {
-   "id": "2026-11-03-lina-9",
+   "id": "2026-11-03-samuel-9",
    "date": "2026-11-03",
-   "person": "Lina",
+   "person": "Samuel",
    "kind": "Studio",
    "start": 9,
    "end": 16,
    "hours": 7
+  },
+  {
+   "id": "2026-11-03-lina-15",
+   "date": "2026-11-03",
+   "person": "Lina",
+   "kind": "Studio",
+   "start": 15,
+   "end": 20.25,
+   "hours": 5.25
   },
   {
    "id": "2026-11-03-lou-15",
@@ -870,31 +893,13 @@
    "hours": 7
   },
   {
-   "id": "2026-11-03-samuel-15",
-   "date": "2026-11-03",
-   "person": "Samuel",
-   "kind": "Studio",
-   "start": 15,
-   "end": 20.25,
-   "hours": 5.25
-  },
-  {
-   "id": "2026-11-03-falk-19",
-   "date": "2026-11-03",
-   "person": "Falk",
-   "kind": "Studio",
-   "start": 19,
-   "end": 20,
-   "hours": 1
-  },
-  {
-   "id": "2026-11-04-samuel-9",
+   "id": "2026-11-04-lina-9",
    "date": "2026-11-04",
-   "person": "Samuel",
+   "person": "Lina",
    "kind": "Studio",
    "start": 9,
-   "end": 16,
-   "hours": 7
+   "end": 15,
+   "hours": 6
   },
   {
    "id": "2026-11-04-lou-15",
@@ -902,17 +907,17 @@
    "person": "Lou",
    "kind": "Studio",
    "start": 15,
-   "end": 22,
-   "hours": 7
+   "end": 20.25,
+   "hours": 5.25
   },
   {
-   "id": "2026-11-04-falk-18",
+   "id": "2026-11-04-samuel-15",
    "date": "2026-11-04",
-   "person": "Falk",
+   "person": "Samuel",
    "kind": "Studio",
-   "start": 18,
-   "end": 20,
-   "hours": 2
+   "start": 15,
+   "end": 22,
+   "hours": 7
   },
   {
    "id": "2026-11-05-lou-9",
@@ -929,80 +934,44 @@
    "person": "Lina",
    "kind": "Studio",
    "start": 14,
-   "end": 22,
-   "hours": 8
+   "end": 20.25,
+   "hours": 6.25
   },
   {
-   "id": "2026-11-05-falk-18",
+   "id": "2026-11-05-samuel-15",
    "date": "2026-11-05",
-   "person": "Falk",
-   "kind": "Studio",
-   "start": 18,
-   "end": 20,
-   "hours": 2
-  },
-  {
-   "id": "2026-11-06-samuel-9",
-   "date": "2026-11-06",
    "person": "Samuel",
-   "kind": "Studio",
-   "start": 9,
-   "end": 16,
-   "hours": 7
-  },
-  {
-   "id": "2026-11-06-lina-15",
-   "date": "2026-11-06",
-   "person": "Lina",
    "kind": "Studio",
    "start": 15,
    "end": 22,
    "hours": 7
   },
   {
-   "id": "2026-11-07-falk-10",
-   "date": "2026-11-07",
-   "person": "Falk",
+   "id": "2026-11-06-lina-9",
+   "date": "2026-11-06",
+   "person": "Lina",
    "kind": "Studio",
-   "start": 10,
-   "end": 13,
-   "hours": 3
+   "start": 9,
+   "end": 15,
+   "hours": 6
+  },
+  {
+   "id": "2026-11-06-samuel-15",
+   "date": "2026-11-06",
+   "person": "Samuel",
+   "kind": "Studio",
+   "start": 15,
+   "end": 22,
+   "hours": 7
   },
   {
    "id": "2026-11-07-lina-10",
    "date": "2026-11-07",
    "person": "Lina",
-   "kind": "Five-Schulung",
-   "start": 10,
-   "end": 13,
-   "hours": 3
-  },
-  {
-   "id": "2026-11-07-lou-10",
-   "date": "2026-11-07",
-   "person": "Lou",
-   "kind": "Five-Schulung",
-   "start": 10,
-   "end": 13,
-   "hours": 3
-  },
-  {
-   "id": "2026-11-07-samuel-10",
-   "date": "2026-11-07",
-   "person": "Samuel",
-   "kind": "Five-Schulung",
-   "start": 10,
-   "end": 13,
-   "hours": 3
-  },
-  {
-   "id": "2026-11-07-samuel-13",
-   "date": "2026-11-07",
-   "person": "Samuel",
    "kind": "Studio",
-   "start": 13,
+   "start": 10,
    "end": 15,
-   "hours": 2
+   "hours": 5
   },
   {
    "id": "2026-11-08-lou-10",
@@ -1014,22 +983,31 @@
    "hours": 5
   },
   {
-   "id": "2026-11-09-samuel-9",
-   "date": "2026-11-09",
-   "person": "Samuel",
-   "kind": "Studio",
-   "start": 9,
-   "end": 16,
-   "hours": 7
-  },
-  {
-   "id": "2026-11-09-lina-15",
+   "id": "2026-11-09-lina-9",
    "date": "2026-11-09",
    "person": "Lina",
+   "kind": "Studio",
+   "start": 9,
+   "end": 15,
+   "hours": 6
+  },
+  {
+   "id": "2026-11-09-leon-15",
+   "date": "2026-11-09",
+   "person": "Leon",
    "kind": "Studio",
    "start": 15,
    "end": 22,
    "hours": 7
+  },
+  {
+   "id": "2026-11-09-samuel-15",
+   "date": "2026-11-09",
+   "person": "Samuel",
+   "kind": "Studio",
+   "start": 15,
+   "end": 20.25,
+   "hours": 5.25
   },
   {
    "id": "2026-11-10-lina-9",
@@ -1059,22 +1037,13 @@
    "hours": 7
   },
   {
-   "id": "2026-11-10-falk-19",
-   "date": "2026-11-10",
-   "person": "Falk",
-   "kind": "Studio",
-   "start": 19,
-   "end": 20,
-   "hours": 1
-  },
-  {
-   "id": "2026-11-11-samuel-9",
+   "id": "2026-11-11-lina-9",
    "date": "2026-11-11",
-   "person": "Samuel",
+   "person": "Lina",
    "kind": "Studio",
    "start": 9,
-   "end": 16,
-   "hours": 7
+   "end": 15,
+   "hours": 6
   },
   {
    "id": "2026-11-11-lou-15",
@@ -1082,17 +1051,17 @@
    "person": "Lou",
    "kind": "Studio",
    "start": 15,
-   "end": 22,
-   "hours": 7
+   "end": 20.25,
+   "hours": 5.25
   },
   {
-   "id": "2026-11-11-falk-18",
+   "id": "2026-11-11-samuel-15",
    "date": "2026-11-11",
-   "person": "Falk",
+   "person": "Samuel",
    "kind": "Studio",
-   "start": 18,
-   "end": 20,
-   "hours": 2
+   "start": 15,
+   "end": 22,
+   "hours": 7
   },
   {
    "id": "2026-11-12-lou-9",
@@ -1109,17 +1078,8 @@
    "person": "Lina",
    "kind": "Studio",
    "start": 14,
-   "end": 20.25,
-   "hours": 6.25
-  },
-  {
-   "id": "2026-11-12-samuel-15",
-   "date": "2026-11-12",
-   "person": "Samuel",
-   "kind": "Studio",
-   "start": 15,
    "end": 22,
-   "hours": 7
+   "hours": 8
   },
   {
    "id": "2026-11-13-lou-9",
@@ -1136,8 +1096,8 @@
    "person": "Samuel",
    "kind": "Studio",
    "start": 9,
-   "end": 16,
-   "hours": 7
+   "end": 15,
+   "hours": 6
   },
   {
    "id": "2026-11-13-lina-15",
@@ -1158,9 +1118,9 @@
    "hours": 5
   },
   {
-   "id": "2026-11-15-lina-10",
+   "id": "2026-11-15-samuel-10",
    "date": "2026-11-15",
-   "person": "Lina",
+   "person": "Samuel",
    "kind": "Studio",
    "start": 10,
    "end": 15,
@@ -1172,25 +1132,43 @@
    "person": "Lou",
    "kind": "Studio",
    "start": 9,
-   "end": 16,
-   "hours": 7
+   "end": 15,
+   "hours": 6
   },
   {
-   "id": "2026-11-16-samuel-15",
+   "id": "2026-11-16-leon-15",
    "date": "2026-11-16",
-   "person": "Samuel",
+   "person": "Leon",
    "kind": "Studio",
    "start": 15,
    "end": 22,
    "hours": 7
   },
   {
-   "id": "2026-11-17-lina-9",
-   "date": "2026-11-17",
+   "id": "2026-11-16-lina-15",
+   "date": "2026-11-16",
    "person": "Lina",
+   "kind": "Studio",
+   "start": 15,
+   "end": 20.25,
+   "hours": 5.25
+  },
+  {
+   "id": "2026-11-17-samuel-9",
+   "date": "2026-11-17",
+   "person": "Samuel",
    "kind": "Studio",
    "start": 9,
    "end": 16,
+   "hours": 7
+  },
+  {
+   "id": "2026-11-17-lina-15",
+   "date": "2026-11-17",
+   "person": "Lina",
+   "kind": "Studio",
+   "start": 15,
+   "end": 22,
    "hours": 7
   },
   {
@@ -1203,30 +1181,21 @@
    "hours": 5.25
   },
   {
-   "id": "2026-11-17-samuel-15",
-   "date": "2026-11-17",
+   "id": "2026-11-18-samuel-9",
+   "date": "2026-11-18",
    "person": "Samuel",
    "kind": "Studio",
-   "start": 15,
-   "end": 22,
-   "hours": 7
+   "start": 9,
+   "end": 15,
+   "hours": 6
   },
   {
-   "id": "2026-11-17-falk-19",
-   "date": "2026-11-17",
-   "person": "Falk",
-   "kind": "Studio",
-   "start": 19,
-   "end": 20,
-   "hours": 1
-  },
-  {
-   "id": "2026-11-18-lina-9",
+   "id": "2026-11-18-lina-15",
    "date": "2026-11-18",
    "person": "Lina",
    "kind": "Studio",
-   "start": 9,
-   "end": 16,
+   "start": 15,
+   "end": 22,
    "hours": 7
   },
   {
@@ -1235,17 +1204,8 @@
    "person": "Lou",
    "kind": "Studio",
    "start": 15,
-   "end": 22,
-   "hours": 7
-  },
-  {
-   "id": "2026-11-18-falk-18",
-   "date": "2026-11-18",
-   "person": "Falk",
-   "kind": "Studio",
-   "start": 18,
-   "end": 20,
-   "hours": 2
+   "end": 20.25,
+   "hours": 5.25
   },
   {
    "id": "2026-11-19-lou-9",
@@ -1275,22 +1235,13 @@
    "hours": 8
   },
   {
-   "id": "2026-11-19-falk-18",
-   "date": "2026-11-19",
-   "person": "Falk",
-   "kind": "Studio",
-   "start": 18,
-   "end": 20,
-   "hours": 2
-  },
-  {
    "id": "2026-11-20-lou-9",
    "date": "2026-11-20",
    "person": "Lou",
    "kind": "Studio",
    "start": 9,
-   "end": 16,
-   "hours": 7
+   "end": 15,
+   "hours": 6
   },
   {
    "id": "2026-11-20-samuel-9",
@@ -1311,18 +1262,18 @@
    "hours": 7
   },
   {
-   "id": "2026-11-21-lina-10",
+   "id": "2026-11-21-samuel-10",
    "date": "2026-11-21",
-   "person": "Lina",
+   "person": "Samuel",
    "kind": "Studio",
    "start": 10,
    "end": 15,
    "hours": 5
   },
   {
-   "id": "2026-11-22-samuel-10",
+   "id": "2026-11-22-falk-10",
    "date": "2026-11-22",
-   "person": "Samuel",
+   "person": "Falk",
    "kind": "Studio",
    "start": 10,
    "end": 15,
@@ -1334,26 +1285,44 @@
    "person": "Lou",
    "kind": "Studio",
    "start": 9,
-   "end": 16,
-   "hours": 7
+   "end": 15,
+   "hours": 6
   },
   {
-   "id": "2026-11-23-lina-15",
+   "id": "2026-11-23-leon-15",
    "date": "2026-11-23",
-   "person": "Lina",
+   "person": "Leon",
    "kind": "Studio",
    "start": 15,
    "end": 22,
    "hours": 7
   },
   {
-   "id": "2026-11-24-lina-9",
+   "id": "2026-11-23-samuel-15",
+   "date": "2026-11-23",
+   "person": "Samuel",
+   "kind": "Studio",
+   "start": 15,
+   "end": 20.25,
+   "hours": 5.25
+  },
+  {
+   "id": "2026-11-24-samuel-9",
    "date": "2026-11-24",
-   "person": "Lina",
+   "person": "Samuel",
    "kind": "Studio",
    "start": 9,
    "end": 16,
    "hours": 7
+  },
+  {
+   "id": "2026-11-24-lina-15",
+   "date": "2026-11-24",
+   "person": "Lina",
+   "kind": "Studio",
+   "start": 15,
+   "end": 20.25,
+   "hours": 5.25
   },
   {
    "id": "2026-11-24-lou-15",
@@ -1365,31 +1334,13 @@
    "hours": 7
   },
   {
-   "id": "2026-11-24-samuel-15",
-   "date": "2026-11-24",
-   "person": "Samuel",
-   "kind": "Studio",
-   "start": 15,
-   "end": 20.25,
-   "hours": 5.25
-  },
-  {
-   "id": "2026-11-24-falk-19",
-   "date": "2026-11-24",
-   "person": "Falk",
-   "kind": "Studio",
-   "start": 19,
-   "end": 20,
-   "hours": 1
-  },
-  {
-   "id": "2026-11-25-samuel-9",
+   "id": "2026-11-25-lina-9",
    "date": "2026-11-25",
-   "person": "Samuel",
+   "person": "Lina",
    "kind": "Studio",
    "start": 9,
-   "end": 16,
-   "hours": 7
+   "end": 15,
+   "hours": 6
   },
   {
    "id": "2026-11-25-lou-15",
@@ -1401,13 +1352,13 @@
    "hours": 7
   },
   {
-   "id": "2026-11-25-falk-18",
+   "id": "2026-11-25-samuel-15",
    "date": "2026-11-25",
-   "person": "Falk",
+   "person": "Samuel",
    "kind": "Studio",
-   "start": 18,
-   "end": 20,
-   "hours": 2
+   "start": 15,
+   "end": 20.25,
+   "hours": 5.25
   },
   {
    "id": "2026-11-26-lina-9",
@@ -1424,8 +1375,8 @@
    "person": "Samuel",
    "kind": "Studio",
    "start": 9,
-   "end": 16,
-   "hours": 7
+   "end": 15,
+   "hours": 6
   },
   {
    "id": "2026-11-26-lou-15",
@@ -1473,18 +1424,18 @@
    "hours": 7
   },
   {
-   "id": "2026-11-28-samuel-10",
+   "id": "2026-11-28-lina-10",
    "date": "2026-11-28",
-   "person": "Samuel",
+   "person": "Lina",
    "kind": "Studio",
    "start": 10,
    "end": 15,
    "hours": 5
   },
   {
-   "id": "2026-11-29-lina-10",
+   "id": "2026-11-29-falk-10",
    "date": "2026-11-29",
-   "person": "Lina",
+   "person": "Falk",
    "kind": "Studio",
    "start": 10,
    "end": 15,
@@ -1496,7 +1447,16 @@
    "person": "Samuel",
    "kind": "Studio",
    "start": 9,
-   "end": 16,
+   "end": 15,
+   "hours": 6
+  },
+  {
+   "id": "2026-11-30-leon-15",
+   "date": "2026-11-30",
+   "person": "Leon",
+   "kind": "Studio",
+   "start": 15,
+   "end": 22,
    "hours": 7
   },
   {
@@ -1507,15 +1467,6 @@
    "start": 15,
    "end": 20.25,
    "hours": 5.25
-  },
-  {
-   "id": "2026-11-30-lou-15",
-   "date": "2026-11-30",
-   "person": "Lou",
-   "kind": "Studio",
-   "start": 15,
-   "end": 22,
-   "hours": 7
   }
  ],
  "events": [
@@ -1802,14 +1753,15 @@
    "end": 18.75
   },
   {
-   "id": "2026-11-02-kurs-18-extern",
+   "id": "2026-11-02-kurs-18-leon",
    "date": "2026-11-02",
    "category": "kurs",
-   "title": "Kurse (Leon, extern)",
-   "people": [],
+   "title": "Kurse (Leon)",
+   "people": [
+    "Leon"
+   ],
    "start": 18,
-   "end": 20,
-   "short": "Leon"
+   "end": 20
   },
   {
    "id": "2026-11-03-meeting-15-lou-lina-samuel",
@@ -1836,13 +1788,12 @@
    "end": 20
   },
   {
-   "id": "2026-11-03-kurs-19-samuel",
+   "id": "2026-11-03-kurs-19-extern",
    "date": "2026-11-03",
    "category": "kurs",
-   "title": "Kurs mit Tim",
-   "people": [
-    "Samuel"
-   ],
+   "title": "Kurs (Tim)",
+   "short": "Tim",
+   "people": [],
    "start": 19,
    "end": 20
   },
@@ -1870,13 +1821,12 @@
    "end": 16
   },
   {
-   "id": "2026-11-05-kurs-18-lina",
+   "id": "2026-11-05-kurs-18-extern",
    "date": "2026-11-05",
    "category": "kurs",
-   "title": "Kurs mit Tina",
-   "people": [
-    "Lina"
-   ],
+   "title": "Kurse (Tina)",
+   "short": "Tina",
+   "people": [],
    "start": 18,
    "end": 20
   },
@@ -1892,14 +1842,15 @@
    "short": "Gelenke"
   },
   {
-   "id": "2026-11-09-kurs-18-extern",
+   "id": "2026-11-09-kurs-18-leon",
    "date": "2026-11-09",
    "category": "kurs",
-   "title": "Kurse (Leon, extern)",
-   "people": [],
+   "title": "Kurse (Leon)",
+   "people": [
+    "Leon"
+   ],
    "start": 18,
-   "end": 20,
-   "short": "Leon"
+   "end": 20
   },
   {
    "id": "2026-11-10-meeting-15-lou-lina-samuel",
@@ -1926,13 +1877,12 @@
    "end": 20
   },
   {
-   "id": "2026-11-10-kurs-19-samuel",
+   "id": "2026-11-10-kurs-19-extern",
    "date": "2026-11-10",
    "category": "kurs",
-   "title": "Kurs mit Tim",
-   "people": [
-    "Samuel"
-   ],
+   "title": "Kurs (Tim)",
+   "short": "Tim",
+   "people": [],
    "start": 19,
    "end": 20
   },
@@ -1960,13 +1910,12 @@
    "end": 16
   },
   {
-   "id": "2026-11-12-kurs-18-lina",
+   "id": "2026-11-12-kurs-18-extern",
    "date": "2026-11-12",
    "category": "kurs",
-   "title": "Kurs mit Tina",
-   "people": [
-    "Lina"
-   ],
+   "title": "Kurse (Tina)",
+   "short": "Tina",
+   "people": [],
    "start": 18,
    "end": 20
   },
@@ -1982,14 +1931,15 @@
    "short": "Gelenke"
   },
   {
-   "id": "2026-11-16-kurs-18-extern",
+   "id": "2026-11-16-kurs-18-leon",
    "date": "2026-11-16",
    "category": "kurs",
-   "title": "Kurse (Leon, extern)",
-   "people": [],
+   "title": "Kurse (Leon)",
+   "people": [
+    "Leon"
+   ],
    "start": 18,
-   "end": 20,
-   "short": "Leon"
+   "end": 20
   },
   {
    "id": "2026-11-17-meeting-15-lou-lina-samuel",
@@ -2016,13 +1966,12 @@
    "end": 20
   },
   {
-   "id": "2026-11-17-kurs-19-samuel",
+   "id": "2026-11-17-kurs-19-extern",
    "date": "2026-11-17",
    "category": "kurs",
-   "title": "Kurs mit Tim",
-   "people": [
-    "Samuel"
-   ],
+   "title": "Kurs (Tim)",
+   "short": "Tim",
+   "people": [],
    "start": 19,
    "end": 20
   },
@@ -2050,13 +1999,12 @@
    "end": 16
   },
   {
-   "id": "2026-11-19-kurs-18-lina",
+   "id": "2026-11-19-kurs-18-extern",
    "date": "2026-11-19",
    "category": "kurs",
-   "title": "Kurs mit Tina",
-   "people": [
-    "Lina"
-   ],
+   "title": "Kurse (Tina)",
+   "short": "Tina",
+   "people": [],
    "start": 18,
    "end": 20
   },
@@ -2072,14 +2020,15 @@
    "short": "Gelenke"
   },
   {
-   "id": "2026-11-23-kurs-18-extern",
+   "id": "2026-11-23-kurs-18-leon",
    "date": "2026-11-23",
    "category": "kurs",
-   "title": "Kurse (Leon, extern)",
-   "people": [],
+   "title": "Kurse (Leon)",
+   "people": [
+    "Leon"
+   ],
    "start": 18,
-   "end": 20,
-   "short": "Leon"
+   "end": 20
   },
   {
    "id": "2026-11-24-meeting-15-lou-lina-samuel",
@@ -2106,13 +2055,12 @@
    "end": 20
   },
   {
-   "id": "2026-11-24-kurs-19-samuel",
+   "id": "2026-11-24-kurs-19-extern",
    "date": "2026-11-24",
    "category": "kurs",
-   "title": "Kurs mit Tim",
-   "people": [
-    "Samuel"
-   ],
+   "title": "Kurs (Tim)",
+   "short": "Tim",
+   "people": [],
    "start": 19,
    "end": 20
   },
@@ -2142,11 +2090,11 @@
    "id": "2026-11-26-kurs-18-extern",
    "date": "2026-11-26",
    "category": "kurs",
-   "title": "Kurs Tina (Lina in der Schule)",
+   "title": "Kurse (Tina)",
+   "short": "Tina",
    "people": [],
    "start": 18,
-   "end": 20,
-   "short": "Tina"
+   "end": 20
   },
   {
    "id": "2026-11-27-kurs-18-extern",
@@ -2160,14 +2108,15 @@
    "short": "Gelenke"
   },
   {
-   "id": "2026-11-30-kurs-18-extern",
+   "id": "2026-11-30-kurs-18-leon",
    "date": "2026-11-30",
    "category": "kurs",
-   "title": "Kurse (Leon, extern)",
-   "people": [],
+   "title": "Kurse (Leon)",
+   "people": [
+    "Leon"
+   ],
    "start": 18,
-   "end": 20,
-   "short": "Leon"
+   "end": 20
   }
  ]
 }

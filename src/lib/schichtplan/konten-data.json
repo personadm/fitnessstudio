@@ -6,6 +6,7 @@
   "Lina": 9.96,
   "Samuel": 9.86,
   "Milena": null,
+  "Leon": null,
   "Falk": 14
  },
  "openingBalances": [
@@ -137,15 +138,6 @@
    "closingBalanceHours": 16.99
   },
   {
-   "person": "Lou",
-   "month": "2026-11",
-   "hours": 140.5,
-   "weekendShifts": 3,
-   "closingShifts": 8,
-   "earlyEnds": 2,
-   "closingBalanceHours": 6.99
-  },
-  {
    "person": "Lina",
    "month": "2026-10",
    "hours": 144,
@@ -153,15 +145,6 @@
    "closingShifts": 11,
    "earlyEnds": 0,
    "closingBalanceHours": -6.5
-  },
-  {
-   "person": "Lina",
-   "month": "2026-11",
-   "hours": 136.5,
-   "weekendShifts": 3,
-   "closingShifts": 7,
-   "earlyEnds": 2,
-   "closingBalanceHours": -20.5
   },
   {
    "person": "Samuel",
@@ -173,15 +156,6 @@
    "closingBalanceHours": -5.5
   },
   {
-   "person": "Samuel",
-   "month": "2026-11",
-   "hours": 137.5,
-   "weekendShifts": 3,
-   "closingShifts": 6,
-   "earlyEnds": 2,
-   "closingBalanceHours": -18.5
-  },
-  {
    "person": "Milena",
    "month": "2026-10",
    "hours": 143,
@@ -189,24 +163,9 @@
    "closingShifts": 11,
    "earlyEnds": 0,
    "closingBalanceHours": -10.08
-  },
-  {
-   "person": "Falk",
-   "month": "2026-11",
-   "hours": 25,
-   "weekendShifts": 1,
-   "closingShifts": 0,
-   "earlyEnds": 0,
-   "closingBalanceHours": null
   }
  ],
- "controlTotals": [
-  {
-   "month": "2026-11",
-   "costEUR": 4745.67,
-   "reserveHours": 25
-  }
- ],
+ "controlTotals": [],
  "octoberFile": {
   "label": "Schichtplan_Oktober_2026.xlsx",
   "targetHours": 155,
@@ -228,6 +187,93 @@
   "Kosten = angerechnete Stunden × Stundenlohn, ohne Arbeitgeber-Nebenkosten und Zuschläge – keine Lohnabrechnung.",
   "Milena: Stundenlohn unbekannt; ihr Saldo Ende Oktober ist kein bestätigter Austrittssaldo.",
   "Falk: Notfallreserve ohne eigenes Stundenkonto.",
-  "38 h/Woche als Obergrenze ist eine Annahme aus der bisherigen Berechnung, keine bestätigte Vertragsregel."
+  "38 h/Woche als Obergrenze ist eine Annahme aus der bisherigen Berechnung, keine bestätigte Vertragsregel.",
+  "Leon: Stundenlohn unbekannt – seine Montagsdienste fehlen in den Kosten."
+ ],
+ "previousPlans": [
+  {
+   "month": "2026-11",
+   "label": "Übergabe-Plan (ersetzt am 26.10.2026)",
+   "hours": {
+    "Lou": 140.5,
+    "Lina": 136.5,
+    "Samuel": 137.5,
+    "Falk": 25
+   },
+   "closingBalanceHours": {
+    "Lou": 6.99,
+    "Lina": -20.5,
+    "Samuel": -18.5
+   },
+   "costEUR": 4745.67
+  }
+ ],
+ "planningNotes": [
+  {
+   "month": "2026-11",
+   "kind": "diskrepanz",
+   "title": "Feste Schichtzeiten ↔ 35-h-Woche und Soll 150,5 h",
+   "text": "Mit Schichtwechsel um 15 Uhr (Frühdienst 6 h, Abend 7 h bzw. 5,25 h bis 20:15, Wochenende 5 h) und höchstens 5 Tagen pro Woche erreicht niemand 35 h. Im November sind Lou 128,25 h, Lina 132,25 h und Samuel 132 h eingeplant (inkl. Schule/Ahaus), also je 18–22 h unter Soll. Stand 30.11.: Lou −5,26 h, Lina −24,75 h, Samuel −24 h (alter Plan: +6,99 / −20,5 / −18,5 h). Abhilfe nur über ein anderes Soll, einen Frühdienst bis 16 Uhr oder mehr als 5 Tage pro Woche."
+  },
+  {
+   "month": "2026-11",
+   "kind": "diskrepanz",
+   "title": "Regel 4 (Falk nur bei Azubi-Überstunden) ↔ 5-Tage-Regel",
+   "text": "In KW 47 (Samuel 2 Schultage) und KW 48 (Lina 2 Schultage, Lou in Ahaus) haben alle drei bereits 5 Einsatztage, obwohl die Azubis im Minus sind. Falk übernimmt deshalb So 22.11. und So 29.11. (je 10–15 Uhr) sowie Fr 27.11. 9–15 Uhr (Lou in Ahaus, Lina in der Schule) – zusammen 16 h statt 25 h. Alle Kurszeiten sind jetzt mit Azubis besetzt. Ohne Falk müsste ein Azubi an 6 Tagen arbeiten."
+  },
+  {
+   "month": "2026-11",
+   "kind": "diskrepanz",
+   "title": "Übergabe um 15 Uhr ↔ Einarbeitung durch Lou",
+   "text": "Früh- und Spätdienst überschneiden sich nicht mehr. Lou arbeitet nur dienstags und mittwochs abends, an den STASH-Tagen und beim Teammeeting mit Lina oder Samuel zusammen; am 2., 16., 20., 23. und 26.11. ohne Azubi."
+  },
+  {
+   "month": "2026-11",
+   "kind": "annahme",
+   "title": "Tim dienstags 19–20 Uhr",
+   "text": "Bisher hospitierte Samuel bei Tim. Nach Regel 4 stehen die Azubis in Kurszeiten auf der Fläche – angenommen ist deshalb, dass Tim den Kurs allein gibt. Soll Samuel weiter hospitieren, braucht es dienstags 19–20 Uhr eine zusätzliche Person (Falk)."
+  },
+  {
+   "month": "2026-11",
+   "kind": "annahme",
+   "title": "Leon montags 15–22 Uhr",
+   "text": "Leon gibt 18–20 Uhr seine Kurse und zählt in der Zeit nicht als Flächenkraft. Montags ist deshalb zusätzlich ein Azubi 15–20:15 Uhr eingeplant. Leons Stundenlohn ist unbekannt – seine 35 h im November fehlen in den Kosten."
+  },
+  {
+   "month": "2026-11",
+   "kind": "annahme",
+   "title": "Tina donnerstags 18–20 Uhr",
+   "text": "Tina gibt beide Kurse allein, Lina hospitiert nicht mehr. Donnerstags reicht abends eine Person (am 05.11. zwei, wegen STASH)."
+  },
+  {
+   "month": "2026-11",
+   "kind": "annahme",
+   "title": "„Mehr als 5 Überstunden pro Monat“",
+   "text": "Gelesen als: angerechnete Monatsstunden minus Soll über 5 h. Die Azubis liegen im November bei rund −18 h, die Grenze greift also nicht."
+  },
+  {
+   "month": "2026-11",
+   "kind": "annahme",
+   "title": "Five-Schulung 07.11. entfällt",
+   "text": "Die je 3 h Gutschrift für Lou, Lina und Samuel und Falks Vertretung 10–13 Uhr entfallen. Der 07.11. ist ein normaler Wochenenddienst (Lina)."
+  },
+  {
+   "month": "2026-11",
+   "kind": "offen",
+   "title": "„Gesunde Gelenke“ freitags",
+   "text": "18:00–18:45 Uhr weiterhin ohne Kursleitung."
+  },
+  {
+   "month": "2026-11",
+   "kind": "offen",
+   "title": "Teammeeting KW 49",
+   "text": "Die Woche ab 30.11. reicht in den Dezember; das Meeting am Di 01.12. ist noch nicht geplant."
+  },
+  {
+   "month": "2026-11",
+   "kind": "offen",
+   "title": "Spätdienste bei Minderjährigen",
+   "text": "Hinweis aus der Oktober-Datei: Falls Lina oder Samuel unter 18 sind, dürfen sie in der Regel nur bis 20 Uhr arbeiten – dann passen die Dienste bis 22 Uhr nicht."
+  }
  ]
 }

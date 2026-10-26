@@ -51,6 +51,18 @@ const kontenSchema = z.object({
     }),
   ),
   controlTotals: z.array(z.object({ month, costEUR: z.number(), reserveHours: z.number() })),
+  previousPlans: z.array(
+    z.object({
+      month,
+      label: z.string(),
+      hours: z.record(z.number()),
+      closingBalanceHours: z.record(z.number()),
+      costEUR: z.number(),
+    }),
+  ),
+  planningNotes: z.array(
+    z.object({ month, kind: z.enum(["diskrepanz", "annahme", "offen"]), title: z.string(), text: z.string() }),
+  ),
   octoberFile: z.object({
     label: z.string(),
     targetHours: z.number(),
@@ -63,6 +75,8 @@ const kontenSchema = z.object({
 type Konten = z.infer<typeof kontenSchema>;
 export type LouHistory = Konten["louHistory"];
 export type OctoberFile = Konten["octoberFile"];
+export type PreviousPlan = Konten["previousPlans"][number];
+export type PlanningNote = Konten["planningNotes"][number];
 
 export interface MonthAccount {
   person: string;
@@ -100,6 +114,8 @@ export interface AccountsOverview {
   octoberFile: OctoberFile;
   assumptions: string[];
   monthlyTargetHours: number;
+  previousPlans: PreviousPlan[];
+  planningNotes: PlanningNote[];
 }
 
 const CLOSING_END = 22;
@@ -202,5 +218,7 @@ export function buildAccounts(plan: TeamPlan): AccountsOverview {
     octoberFile: konten.octoberFile,
     assumptions: konten.assumptions,
     monthlyTargetHours: konten.monthlyTargetHours,
+    previousPlans: konten.previousPlans,
+    planningNotes: konten.planningNotes,
   };
 }
