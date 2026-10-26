@@ -57,3 +57,7 @@ services:
       #                          Klick auf "Versenden" im Admin-Panel)
       - key: CRON_SECRET
         sync: false
+      # Geheimer Teil des Team-Schichtplan-Links /team/<SCHICHTPLAN_CODE>.
+      # Ohne (oder mit < 24 Zeichen) ist die Seite deaktiviert (404).
+      - key: SCHICHTPLAN_CODE
+        sync: false
