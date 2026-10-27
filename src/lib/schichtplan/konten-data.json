@@ -230,19 +230,31 @@
    "month": "2026-11",
    "kind": "diskrepanz",
    "title": "Regel 3 (Azubis bis 35 h + 5 Überstunden vor Falk) ↔ max. 5 Einsatztage",
-   "text": "Ohne Lou braucht Ochtrup pro Woche 12 Dienste (Mo–Fr je zwei, Sa/So je einer; montags zusätzlich Leon). Lina und Samuel schaffen mit höchstens 5 Tagen zusammen 10. Sie arbeiten deshalb jeden Werktag, wochenweise im Wechsel früh und spät, kommen damit aber nur auf 31–33 h pro Woche (November: Lina 136,5 h, Samuel 135,75 h; Stand 30.11. −20,5 h bzw. −20,25 h). 35 h + 5 Überstunden sind mit 5 Tagen nicht erreichbar – Falk muss trotzdem einspringen: alle 9 Wochenendtage 10–15 Uhr und die Vormittage an den Schultagen 19., 20., 26. und 27.11., zusammen 69 h."
+   "text": "Lina und Samuel arbeiten jede Woche die erlaubten 5 Tage, kommen mit den festen Schichtzeiten (Frühdienst 6 h, Abend 7 h bzw. 5,25 h bis 20:15) aber nur auf 30–34 h pro Woche: November Lina 135 h, Samuel 131 h, Stand 30.11. −22 h bzw. −25 h. 35 h + 5 Überstunden sind so nicht erreichbar. In KW 47 und 48 sind alle drei an der 5-Tage-Grenze, deshalb springt Falk ein: Sa 21.11. und So 29.11. (je 10–15 Uhr) sowie Fr 27.11. 9–15 Uhr (Lou in Ahaus, Lina in der Schule) – zusammen 16 h."
   },
   {
    "month": "2026-11",
    "kind": "diskrepanz",
-   "title": "Lou nicht in Ochtrup ↔ Kurse, STASH, Einarbeitung",
-   "text": "Lous Kurse dienstags und mittwochs 18–20 Uhr haben im November keine Kursleitung. Die STASH-Übungen (05./12./19.11.), „Lou am 26.11. abends“ und die Einarbeitung durch Lou entfallen; die Ahaus-Tage gehören nicht mehr in diesen Plan."
+   "title": "Azubis an die Grenze ↔ Wochenenden fair",
+   "text": "Montags werden beide Azubis gebraucht (Lou fehlt montags), dienstags und mittwochs ebenfalls einer abends. Damit sind ihre 5 Tage fast ganz mit Werktagen gefüllt, und die Wochenenden bleiben bei Lou: Lou 4, Lina 1, Samuel 2, Falk 2. Eine gleichmäßigere Verteilung geht nur mit zusätzlichen Falk-Diensten oder mehr als 5 Tagen."
+  },
+  {
+   "month": "2026-11",
+   "kind": "diskrepanz",
+   "title": "Azubis zuerst ↔ Lous Stundenkonto",
+   "text": "Weil die Azubis Vorrang haben und Lou montags fehlt, kommt Lou auf 121,25 h (inkl. 14 h Ahaus). Ihr Stand fällt von +16,99 h auf −12,26 h am 30.11."
+  },
+  {
+   "month": "2026-11",
+   "kind": "diskrepanz",
+   "title": "Übergabe um 15 Uhr ↔ Einarbeitung durch Lou",
+   "text": "Früh- und Spätdienst überschneiden sich nicht. Lou arbeitet dienstags und mittwochs abends, an den STASH-Tagen und beim Teammeeting mit Lina oder Samuel zusammen; am 06., 20. und 26.11. ohne Azubi."
   },
   {
    "month": "2026-11",
    "kind": "annahme",
-   "title": "Lou im November",
-   "text": "Lou arbeitet im November nicht in Ochtrup; ihre Stunden werden andernorts erfasst. Ihr Konto bleibt hier beim Stand 31.10. (+16,99 h)."
+   "title": "Lou montags nicht in Ochtrup",
+   "text": "An allen anderen Tagen ist Lou normal eingeplant, inklusive Kurse Di/Mi 18–20 Uhr, STASH (05./12./19.11.), 26.11. abends und Ahaus am 13. und 27.11. Montags arbeiten Lina (bzw. Samuel) früh und der andere bis 20:15 Uhr neben Leon."
   },
   {
    "month": "2026-11",
@@ -254,13 +266,7 @@
    "month": "2026-11",
    "kind": "annahme",
    "title": "Tim entfernt",
-   "text": "Tim ist im November nicht mehr eingeplant. Der Oktober bleibt als Historie unverändert."
-  },
-  {
-   "month": "2026-11",
-   "kind": "annahme",
-   "title": "Teammeeting dienstags 15–16 Uhr",
-   "text": "Nur noch mit Lina und Samuel. Beide sind dienstags eingeplant (früh 9–16, spät ab 15 Uhr)."
+   "text": "Tim ist im November nicht mehr eingeplant; dienstags 19–20 Uhr steht ein Azubi auf der Fläche. Der Oktober bleibt als Historie unverändert."
   },
   {
    "month": "2026-11",
@@ -274,26 +280,14 @@
    "kind": "annahme",
    "title": "Tina donnerstags 18–20 Uhr",
    "confirmedOn": "2026-10-26",
-   "text": "Tina gibt beide Kurse allein. Donnerstags reicht abends eine Person."
+   "text": "Tina gibt beide Kurse allein, Lina hospitiert nicht mehr. Donnerstags reicht abends eine Person."
   },
   {
    "month": "2026-11",
    "kind": "annahme",
    "title": "Five-Schulung 07.11. entfällt",
    "confirmedOn": "2026-10-26",
-   "text": "Die je 3 h Gutschrift und Falks Vertretung 10–13 Uhr entfallen; der 07.11. ist ein normaler Wochenenddienst."
-  },
-  {
-   "month": "2026-11",
-   "kind": "offen",
-   "title": "Entscheidung: 6-Tage-Woche für die Azubis?",
-   "text": "Dürften Lina und Samuel 6 Tage pro Woche arbeiten, übernähmen sie zusätzlich je drei Wochenendtage: rund 151 h statt 136 h, Falk 39 h statt 69 h, Lohnkosten ohne Leon 3.541 € statt 3.664 €, Stand 30.11. etwa −5 h statt −20 h. Dafür müssten „max. 5 Einsatztage pro Woche“ und „max. 5 Tage am Stück“ entfallen."
-  },
-  {
-   "month": "2026-11",
-   "kind": "offen",
-   "title": "Kurse dienstags/mittwochs 18–20 Uhr",
-   "text": "Ohne Lou fehlt die Kursleitung – übernimmt jemand, oder fallen die Kurse im November aus?"
+   "text": "Die je 3 h Gutschrift für Lou, Lina und Samuel und Falks Vertretung 10–13 Uhr entfallen; der 07.11. ist ein normaler Wochenenddienst."
   },
   {
    "month": "2026-11",

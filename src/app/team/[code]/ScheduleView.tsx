@@ -72,7 +72,13 @@ export function ScheduleView({ plan, today, initialView, initialDate, leitung }:
   const away = plan.people.flatMap((p) =>
     p.unavailable
       .filter((u) => days.some((d) => d >= u.from && d <= u.to))
-      .map((u) => ({ key: `${p.name}-${u.from}`, text: `${p.name}: ${u.reason} (${formatDayMonth(u.from)}–${formatDate(u.to)})` })),
+      .map((u) => ({
+        key: `${p.name}-${u.from}`,
+        text:
+          u.from === u.to
+            ? `${p.name}: ${u.reason} (${weekdayShort(u.from)} ${formatDate(u.from)})`
+            : `${p.name}: ${u.reason} (${formatDayMonth(u.from)}–${formatDate(u.to)})`,
+      })),
   );
   const hasMonthEvents = [...index.eventsByDate.keys()].some((d) => d.startsWith(activeMonth));
 
