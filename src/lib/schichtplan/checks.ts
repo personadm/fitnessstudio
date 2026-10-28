@@ -44,6 +44,8 @@ export interface RuleConfig {
   traineeOvertimeLimit: number;
   /** Feste Schichtzeiten mit Wechsel um 15 Uhr gelten ab diesem Tag */
   shiftPatternFrom: string;
+  /** Vertretungen springen für einzelne Stunden ein und sind vom Schichtraster ausgenommen */
+  patternExemptRoles: readonly string[];
   weekdayShifts: readonly Interval[];
   tuesdayShifts: readonly Interval[];
   stashShifts: readonly Interval[];
@@ -71,6 +73,7 @@ export const DEFAULT_RULES: RuleConfig = {
   monthlyTargetHours: 150.5,
   traineeOvertimeLimit: 5,
   shiftPatternFrom: "2026-11-01",
+  patternExemptRoles: ["Notfallreserve", "Vertretung"],
   weekdayShifts: [
     { start: 9, end: 15 },
     { start: 15, end: 22 },
@@ -159,7 +162,7 @@ export const RULES: Record<RuleId, { title: string; description: string }> = {
   reserve: {
     title: "Falk-Reserve",
     description:
-      "Falk nur im Notfall: erst wenn die Azubis an ihrer Grenze sind (35 h/Woche + 5 Überstunden im Monat, max. 5 Einsatztage) und niemand aus dem Stammteam frei ist.",
+      "Falk nur im Notfall und nach Rückfrage bei der Leitung: erst wenn die Azubis an ihrer Grenze sind (35 h/Woche + 5 Überstunden im Monat, max. 5 Einsatztage) und niemand aus dem Stammteam frei ist.",
   },
 };
 
@@ -718,6 +721,8 @@ function checkShiftPatterns(view: PlanView, cfg: RuleConfig): Finding[] {
   return view.plan.shifts
     .filter((s) => s.kind === "Studio" && s.date >= cfg.shiftPatternFrom)
     .filter((s) => {
+      const role = view.plan.people.find((p) => p.name === s.person)?.role ?? "";
+      if (cfg.patternExemptRoles.includes(role)) return false;
       const stash = view.events(s.date).some((e) => e.category === "stash" && e.people.includes(s.person));
       const allowed = isWeekend(s.date)
         ? [cfg.weekendOpen]

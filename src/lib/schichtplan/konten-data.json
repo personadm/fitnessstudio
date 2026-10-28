@@ -7,6 +7,7 @@
   "Samuel": 9.86,
   "Milena": null,
   "Leon": null,
+  "Erik": null,
   "Falk": 14
  },
  "openingBalances": [
@@ -223,26 +224,37 @@
     "Samuel": -24
    },
    "costEUR": 4376.6
+  },
+  {
+   "month": "2026-11",
+   "label": "Plan vom 27.10.2026 (Lou montags frei, Falk 16 h)",
+   "hours": {
+    "Lou": 121.25,
+    "Lina": 135,
+    "Samuel": 131,
+    "Leon": 35,
+    "Falk": 16
+   },
+   "closingBalanceHours": {
+    "Lou": -12.26,
+    "Lina": -22,
+    "Samuel": -25
+   },
+   "costEUR": 4310.41
   }
  ],
  "planningNotes": [
   {
    "month": "2026-11",
    "kind": "diskrepanz",
-   "title": "Regel 3 (Azubis bis 35 h + 5 Überstunden vor Falk) ↔ max. 5 Einsatztage",
-   "text": "Lina und Samuel arbeiten jede Woche die erlaubten 5 Tage, kommen mit den festen Schichtzeiten (Frühdienst 6 h, Abend 7 h bzw. 5,25 h bis 20:15) aber nur auf 30–34 h pro Woche: November Lina 135 h, Samuel 131 h, Stand 30.11. −22 h bzw. −25 h. 35 h + 5 Überstunden sind so nicht erreichbar. In KW 47 und 48 sind alle drei an der 5-Tage-Grenze, deshalb springt Falk ein: Sa 21.11. und So 29.11. (je 10–15 Uhr) sowie Fr 27.11. 9–15 Uhr (Lou in Ahaus, Lina in der Schule) – zusammen 16 h."
-  },
-  {
-   "month": "2026-11",
-   "kind": "diskrepanz",
-   "title": "Azubis an die Grenze ↔ Wochenenden fair",
-   "text": "Montags werden beide Azubis gebraucht (Lou fehlt montags), dienstags und mittwochs ebenfalls einer abends. Damit sind ihre 5 Tage fast ganz mit Werktagen gefüllt, und die Wochenenden bleiben bei Lou: Lou 4, Lina 1, Samuel 2, Falk 2. Eine gleichmäßigere Verteilung geht nur mit zusätzlichen Falk-Diensten oder mehr als 5 Tagen."
+   "title": "Regel 3 (Azubis bis 35 h + 5 Überstunden) ↔ max. 5 Einsatztage",
+   "text": "Lina und Samuel arbeiten jede Woche die erlaubten 5 Tage, kommen mit den festen Schichtzeiten aber nur auf 28–34 h pro Woche: November Lina 132 h, Samuel 129,75 h, Stand 30.11. −25 h bzw. −26,25 h. 35 h + 5 Überstunden sind so nicht erreichbar."
   },
   {
    "month": "2026-11",
    "kind": "diskrepanz",
    "title": "Azubis zuerst ↔ Lous Stundenkonto",
-   "text": "Weil die Azubis Vorrang haben und Lou montags fehlt, kommt Lou auf 121,25 h (inkl. 14 h Ahaus). Ihr Stand fällt von +16,99 h auf −12,26 h am 30.11."
+   "text": "Weil die Azubis Vorrang haben und Lou montags fehlt, kommt Lou auf 119 h (inkl. 14 h Ahaus). Ihr Stand fällt von +16,99 h auf −14,51 h am 30.11."
   },
   {
    "month": "2026-11",
@@ -253,8 +265,29 @@
   {
    "month": "2026-11",
    "kind": "annahme",
+   "title": "Falk nur nach Rückfrage",
+   "confirmedOn": "2026-10-28",
+   "text": "Falk wird nur im Notfall und nach Rückfrage bei der Leitung eingeplant. Im November ist er nicht eingesetzt; Erik übernimmt am 16. und 23.11. 18–20 Uhr (Fläche während Leons Kurs) sowie am 20. und 27.11. 9–15 Uhr."
+  },
+  {
+   "month": "2026-11",
+   "kind": "annahme",
+   "title": "Faire Wochenenden durch Tausch",
+   "confirmedOn": "2026-10-28",
+   "text": "Lina übernimmt So 22.11. statt Lou, Lou dafür Fr 20.11. 15–22 Uhr statt Lina. Wochenenden: Lou 3, Lina 3, Samuel 3. Am Mi 11.11. geht Samuel um 20:15 und Lou bleibt bis 22 Uhr, damit die 20:15-Feierabende ausgeglichen sind (Lou 4, Lina 4, Samuel 3)."
+  },
+  {
+   "month": "2026-11",
+   "kind": "annahme",
    "title": "Lou montags nicht in Ochtrup",
-   "text": "An allen anderen Tagen ist Lou normal eingeplant, inklusive Kurse Di/Mi 18–20 Uhr, STASH (05./12./19.11.), 26.11. abends und Ahaus am 13. und 27.11. Montags arbeiten Lina (bzw. Samuel) früh und der andere bis 20:15 Uhr neben Leon."
+   "confirmedOn": "2026-10-27",
+   "text": "An allen anderen Tagen ist Lou eingeplant, inklusive Kurse Di/Mi 18–20 Uhr, STASH (05./12./19.11.), 26.11. abends und Ahaus am 13. und 27.11."
+  },
+  {
+   "month": "2026-11",
+   "kind": "annahme",
+   "title": "Erik als Vertretung",
+   "text": "Erik ist als „Vertretung“ geführt, ohne eigenes Stundenkonto und vom festen Schichtraster ausgenommen."
   },
   {
    "month": "2026-11",
@@ -273,7 +306,7 @@
    "kind": "annahme",
    "title": "Leon montags 15–22 Uhr",
    "confirmedOn": "2026-10-26",
-   "text": "Leon gibt 18–20 Uhr seine Kurse und zählt in der Zeit nicht als Flächenkraft. Montags ist deshalb zusätzlich ein Azubi 15–20:15 Uhr eingeplant."
+   "text": "Leon gibt 18–20 Uhr seine Kurse und zählt in der Zeit nicht als Flächenkraft; montags steht deshalb ein Azubi bis 20:15 Uhr oder Erik 18–20 Uhr auf der Fläche."
   },
   {
    "month": "2026-11",
@@ -298,8 +331,8 @@
   {
    "month": "2026-11",
    "kind": "offen",
-   "title": "Leons Stundenlohn",
-   "text": "Unbekannt – seine 35 h fehlen in den Kosten."
+   "title": "Stundenlöhne Leon und Erik",
+   "text": "Unbekannt – Leons 35 h und Eriks 16 h fehlen in den Kosten."
   },
   {
    "month": "2026-11",

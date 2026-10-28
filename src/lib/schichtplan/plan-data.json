@@ -2,7 +2,7 @@
  "source": {
   "exportDate": "2026-10-26",
   "label": "Übergabe-Export (veröffentlichter Ausgangsstand)",
-  "note": "Planstand – Planstunden sind keine bestätigten Ist-Stunden. Oktober-Kurse aus Schichtplan_Oktober_2026.xlsx. November am 27.10.2026 neu geplant: Lou montags nicht in Ochtrup, Leon montags, Tim entfernt, Azubis vor Falk."
+  "note": "Planstand – Planstunden sind keine bestätigten Ist-Stunden. Oktober-Kurse aus Schichtplan_Oktober_2026.xlsx. November am 28.10.2026 angepasst: Falk raus, Erik als Vertretung (16., 20., 27.11.)."
  },
  "people": [
   {
@@ -55,6 +55,11 @@
   {
    "name": "Leon",
    "role": "Montagsdienst",
+   "inactiveFrom": null
+  },
+  {
+   "name": "Erik",
+   "role": "Vertretung",
    "inactiveFrom": null
   },
   {
@@ -1069,8 +1074,8 @@
    "person": "Lou",
    "kind": "Studio",
    "start": 15,
-   "end": 20.25,
-   "hours": 5.25
+   "end": 22,
+   "hours": 7
   },
   {
    "id": "2026-11-11-samuel-15",
@@ -1078,8 +1083,8 @@
    "person": "Samuel",
    "kind": "Studio",
    "start": 15,
-   "end": 22,
-   "hours": 7
+   "end": 20.25,
+   "hours": 5.25
   },
   {
    "id": "2026-11-12-lou-9",
@@ -1163,13 +1168,13 @@
    "hours": 7
   },
   {
-   "id": "2026-11-16-samuel-15",
+   "id": "2026-11-16-erik-18",
    "date": "2026-11-16",
-   "person": "Samuel",
+   "person": "Erik",
    "kind": "Studio",
-   "start": 15,
-   "end": 20.25,
-   "hours": 5.25
+   "start": 18,
+   "end": 20,
+   "hours": 2
   },
   {
    "id": "2026-11-17-samuel-9",
@@ -1253,9 +1258,9 @@
    "hours": 8
   },
   {
-   "id": "2026-11-20-lou-9",
+   "id": "2026-11-20-erik-9",
    "date": "2026-11-20",
-   "person": "Lou",
+   "person": "Erik",
    "kind": "Studio",
    "start": 9,
    "end": 15,
@@ -1271,36 +1276,36 @@
    "hours": 7
   },
   {
-   "id": "2026-11-20-lina-15",
+   "id": "2026-11-20-lou-15",
    "date": "2026-11-20",
-   "person": "Lina",
+   "person": "Lou",
    "kind": "Studio",
    "start": 15,
    "end": 22,
    "hours": 7
   },
   {
-   "id": "2026-11-21-falk-10",
+   "id": "2026-11-21-samuel-10",
    "date": "2026-11-21",
-   "person": "Falk",
+   "person": "Samuel",
    "kind": "Studio",
    "start": 10,
    "end": 15,
    "hours": 5
   },
   {
-   "id": "2026-11-22-lou-10",
+   "id": "2026-11-22-lina-10",
    "date": "2026-11-22",
-   "person": "Lou",
+   "person": "Lina",
    "kind": "Studio",
    "start": 10,
    "end": 15,
    "hours": 5
   },
   {
-   "id": "2026-11-23-lina-9",
+   "id": "2026-11-23-samuel-9",
    "date": "2026-11-23",
-   "person": "Lina",
+   "person": "Samuel",
    "kind": "Studio",
    "start": 9,
    "end": 15,
@@ -1316,13 +1321,13 @@
    "hours": 7
   },
   {
-   "id": "2026-11-23-samuel-15",
+   "id": "2026-11-23-erik-18",
    "date": "2026-11-23",
-   "person": "Samuel",
+   "person": "Erik",
    "kind": "Studio",
-   "start": 15,
-   "end": 20.25,
-   "hours": 5.25
+   "start": 18,
+   "end": 20,
+   "hours": 2
   },
   {
    "id": "2026-11-24-samuel-9",
@@ -1406,9 +1411,9 @@
    "hours": 7
   },
   {
-   "id": "2026-11-27-falk-9",
+   "id": "2026-11-27-erik-9",
    "date": "2026-11-27",
-   "person": "Falk",
+   "person": "Erik",
    "kind": "Studio",
    "start": 9,
    "end": 15,
@@ -1451,9 +1456,9 @@
    "hours": 5
   },
   {
-   "id": "2026-11-29-falk-10",
+   "id": "2026-11-29-lina-10",
    "date": "2026-11-29",
-   "person": "Falk",
+   "person": "Lina",
    "kind": "Studio",
    "start": 10,
    "end": 15,
