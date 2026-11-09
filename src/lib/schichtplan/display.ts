@@ -9,6 +9,7 @@ const PERSON_COLORS: Record<string, string> = {
   Leon: "#3D4F8C",
   Erik: "#8C3D5A",
   Falk: "#B5400F",
+  "Lina Wessling": "#7A5C10",
 };
 const FALLBACK_COLORS = ["#3D4F8C", "#8C3D5A", "#4F6B2A"];
 

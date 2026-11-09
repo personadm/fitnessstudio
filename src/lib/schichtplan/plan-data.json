@@ -2,7 +2,7 @@
  "source": {
   "exportDate": "2026-10-26",
   "label": "Übergabe-Export (veröffentlichter Ausgangsstand)",
-  "note": "Planstand – Planstunden sind keine bestätigten Ist-Stunden. Oktober-Kurse aus Schichtplan_Oktober_2026.xlsx. November am 28.10.2026 angepasst: Falk raus, Erik als Vertretung (16., 20., 27.11.). Dezember am 09.11.2026 geplant (geschlossen 24., 25., 26. und 31.12.)."
+  "note": "Planstand – Planstunden sind keine bestätigten Ist-Stunden. Oktober-Kurse aus Schichtplan_Oktober_2026.xlsx. November am 28.10.2026 angepasst: Falk raus, Erik als Vertretung (16., 20., 27.11.). Dezember am 09.11.2026 geplant (geschlossen 24., 25., 26. und 31.12.) und ergänzt: Kurse in Lous Urlaub, „Gesunde Gelenke“ durch das Team."
  },
  "people": [
   {
@@ -61,6 +61,12 @@
    "name": "Erik",
    "role": "Vertretung",
    "inactiveFrom": null
+  },
+  {
+   "name": "Lina Wessling",
+   "role": "Kursleitung",
+   "inactiveFrom": null,
+   "unavailable": []
   },
   {
    "name": "Falk",
@@ -1600,6 +1606,15 @@
    "hours": 7
   },
   {
+   "id": "2026-12-04-erik-18",
+   "date": "2026-12-04",
+   "person": "Erik",
+   "kind": "Studio",
+   "start": 18,
+   "end": 18.75,
+   "hours": 0.75
+  },
+  {
    "id": "2026-12-05-lina-10",
    "date": "2026-12-05",
    "person": "Lina",
@@ -1726,13 +1741,22 @@
    "hours": 6
   },
   {
+   "id": "2026-12-11-lou-15",
+   "date": "2026-12-11",
+   "person": "Lou",
+   "kind": "Studio",
+   "start": 15,
+   "end": 22,
+   "hours": 7
+  },
+  {
    "id": "2026-12-11-samuel-15",
    "date": "2026-12-11",
    "person": "Samuel",
    "kind": "Studio",
    "start": 15,
-   "end": 22,
-   "hours": 7
+   "end": 20.25,
+   "hours": 5.25
   },
   {
    "id": "2026-12-12-lou-10",
@@ -1897,6 +1921,15 @@
    "hours": 7
   },
   {
+   "id": "2026-12-18-erik-18",
+   "date": "2026-12-18",
+   "person": "Erik",
+   "kind": "Studio",
+   "start": 18,
+   "end": 18.75,
+   "hours": 0.75
+  },
+  {
    "id": "2026-12-19-samuel-10",
    "date": "2026-12-19",
    "person": "Samuel",
@@ -2003,6 +2036,15 @@
    "start": 15,
    "end": 22,
    "hours": 7
+  },
+  {
+   "id": "2026-12-23-lina-wessling-18",
+   "date": "2026-12-23",
+   "person": "Lina Wessling",
+   "kind": "Studio",
+   "start": 18,
+   "end": 20,
+   "hours": 2
   },
   {
    "id": "2026-12-24-lina-9",
@@ -2840,15 +2882,16 @@
    "short": "Tina"
   },
   {
-   "id": "2026-12-04-kurs-18-extern",
+   "id": "2026-12-04-kurs-18-erik",
    "date": "2026-12-04",
    "category": "kurs",
    "title": "Gesunde Gelenke",
-   "people": [],
+   "short": "Gelenke",
+   "people": [
+    "Erik"
+   ],
    "start": 18,
-   "end": 18.75,
-   "warning": "Kursleitung offen",
-   "short": "Gelenke"
+   "end": 18.75
   },
   {
    "id": "2026-12-07-kurs-18-leon",
@@ -2907,15 +2950,16 @@
    "short": "Tina"
   },
   {
-   "id": "2026-12-11-kurs-18-extern",
+   "id": "2026-12-11-kurs-18-lou",
    "date": "2026-12-11",
    "category": "kurs",
    "title": "Gesunde Gelenke",
-   "people": [],
+   "short": "Gelenke",
+   "people": [
+    "Lou"
+   ],
    "start": 18,
-   "end": 18.75,
-   "warning": "Kursleitung offen",
-   "short": "Gelenke"
+   "end": 18.75
   },
   {
    "id": "2026-12-14-kurs-18-leon",
@@ -2973,15 +3017,16 @@
    "short": "Tina"
   },
   {
-   "id": "2026-12-18-kurs-18-extern",
+   "id": "2026-12-18-kurs-18-erik",
    "date": "2026-12-18",
    "category": "kurs",
    "title": "Gesunde Gelenke",
-   "people": [],
+   "short": "Gelenke",
+   "people": [
+    "Erik"
+   ],
    "start": 18,
-   "end": 18.75,
-   "warning": "Kursleitung offen",
-   "short": "Gelenke"
+   "end": 18.75
   },
   {
    "id": "2026-12-21-kurs-18-leon",
@@ -3010,23 +3055,22 @@
    "id": "2026-12-22-kurs-18-extern",
    "date": "2026-12-22",
    "category": "kurs",
-   "title": "Kurs",
+   "title": "Kurse (Tina)",
+   "short": "Tina",
    "people": [],
    "start": 18,
-   "end": 20,
-   "short": "Kurs",
-   "warning": "Lou im Urlaub – Vertretung oder Ausfall klären"
+   "end": 20
   },
   {
-   "id": "2026-12-23-kurs-18-extern",
+   "id": "2026-12-23-kurs-18-lina-wessling",
    "date": "2026-12-23",
    "category": "kurs",
-   "title": "Kurs",
-   "people": [],
+   "title": "Kurs (Lina Wessling)",
+   "people": [
+    "Lina Wessling"
+   ],
    "start": 18,
-   "end": 20,
-   "short": "Kurs",
-   "warning": "Lou im Urlaub – Vertretung oder Ausfall klären"
+   "end": 20
   },
   {
    "id": "2026-12-28-kurs-18-leon",
@@ -3052,26 +3096,24 @@
    "end": 16
   },
   {
-   "id": "2026-12-29-kurs-18-extern",
+   "id": "2026-12-29-hinweis-18-extern",
    "date": "2026-12-29",
-   "category": "kurs",
-   "title": "Kurs",
+   "category": "hinweis",
+   "title": "Kurs entfällt",
+   "short": "entfällt",
    "people": [],
    "start": 18,
-   "end": 20,
-   "short": "Kurs",
-   "warning": "Lou im Urlaub – Vertretung oder Ausfall klären"
+   "end": 20
   },
   {
    "id": "2026-12-30-kurs-18-extern",
    "date": "2026-12-30",
    "category": "kurs",
-   "title": "Kurs",
+   "title": "Kurse (Tina)",
+   "short": "Tina",
    "people": [],
    "start": 18,
-   "end": 20,
-   "short": "Kurs",
-   "warning": "Lou im Urlaub – Vertretung oder Ausfall klären"
+   "end": 20
   }
  ],
  "closures": [

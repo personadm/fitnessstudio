@@ -44,7 +44,7 @@ export interface RuleConfig {
   traineeOvertimeLimit: number;
   /** Feste Schichtzeiten mit Wechsel um 15 Uhr gelten ab diesem Tag */
   shiftPatternFrom: string;
-  /** Vertretungen springen für einzelne Stunden ein und sind vom Schichtraster ausgenommen */
+  /** Vertretungen und Kursleitungen kommen für einzelne Stunden und sind vom Schichtraster ausgenommen */
   patternExemptRoles: readonly string[];
   weekdayShifts: readonly Interval[];
   tuesdayShifts: readonly Interval[];
@@ -73,7 +73,7 @@ export const DEFAULT_RULES: RuleConfig = {
   monthlyTargetHours: 150.5,
   traineeOvertimeLimit: 5,
   shiftPatternFrom: "2026-11-01",
-  patternExemptRoles: ["Notfallreserve", "Vertretung"],
+  patternExemptRoles: ["Notfallreserve", "Vertretung", "Kursleitung"],
   weekdayShifts: [
     { start: 9, end: 15 },
     { start: 15, end: 22 },

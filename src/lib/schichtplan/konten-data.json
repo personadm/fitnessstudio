@@ -8,7 +8,8 @@
   "Milena": null,
   "Leon": null,
   "Erik": null,
-  "Falk": 14
+  "Falk": 14,
+  "Lina Wessling": null
  },
  "openingBalances": [
   {
@@ -344,19 +345,19 @@
    "month": "2026-12",
    "kind": "diskrepanz",
    "title": "Regel 3 (Azubis bis 35 h + 5 Überstunden) ↔ max. 5 Einsatztage",
-   "text": "Lina und Samuel arbeiten in KW 49–51 die erlaubten 5 Tage, kommen mit den festen Schichtzeiten aber nur auf 30–33 h pro Woche. Dezember: Lina 147,99 h, Samuel 146,99 h (je 14 h Schule und 17,49 h Feiertag/Schließtag). Stand 31.12.: −27,51 h bzw. −29,76 h."
+   "text": "Lina und Samuel arbeiten in KW 49–51 die erlaubten 5 Tage, kommen mit den festen Schichtzeiten aber nur auf 29,5–33 h pro Woche. Dezember: Lina 147,99 h, Samuel 145,24 h (je 14 h Schule und 17,49 h Feiertag/Schließtag). Stand 31.12.: −27,51 h bzw. −31,51 h."
   },
   {
    "month": "2026-12",
    "kind": "diskrepanz",
    "title": "Azubis zuerst ↔ Lous Stundenkonto",
-   "text": "Lou kommt auf 136,22 h: 76,75 h Studio, 34,98 h Urlaub, 7 h Ahaus und 17,49 h Feiertag/Schließtag. Ihr Stand fällt von −14,51 h auf −28,79 h am 31.12."
+   "text": "Lou kommt auf 143,22 h: 83,75 h Studio, 34,98 h Urlaub, 7 h Ahaus und 17,49 h Feiertag/Schließtag. Ihr Stand fällt von −14,51 h auf −21,79 h am 31.12."
   },
   {
    "month": "2026-12",
    "kind": "diskrepanz",
    "title": "Falk nur im Notfall ↔ Personalengpass",
-   "text": "In der Woche ab 30.11. hat Samuel nach Mo 30.11. und der Schule (03./04.12.) nur noch zwei Tage. In KW 51 fehlen Lina (Schule 14./15.12.) und Lou (Ahaus 18.12.). Das Stammteam reicht an drei Abenden nicht. Statt Falk springt Erik ein, siehe Annahme „Erik als Vertretung“."
+   "text": "In der Woche ab 30.11. hat Samuel nach Mo 30.11. und der Schule (03./04.12.) nur noch zwei Tage. In KW 51 fehlen Lina (Schule 14./15.12.) und Lou (Ahaus 18.12.). Das Stammteam reicht an drei Abenden und für „Gesunde Gelenke“ am 04. und 18.12. nicht. Statt Falk springt Erik ein, siehe Annahme „Erik als Vertretung“."
   },
   {
    "month": "2026-12",
@@ -368,7 +369,7 @@
    "month": "2026-12",
    "kind": "annahme",
    "title": "Erik als Vertretung",
-   "text": "Jeweils 18–20 Uhr: am 02.12. (Lous Kurs; Samuel arbeitet früh, weil er am 03.12. Schule hat), am 14.12. (Leons Kurs, Lina in der Schule) und am 15.12. (Lous Kurs, Lina in der Schule). Zusammen 6 h, Falk 0 h. Bitte mit Erik abstimmen."
+   "text": "18–20 Uhr am 02.12. (Lous Kurs; Samuel arbeitet früh, weil er am 03.12. Schule hat), am 14.12. (Leons Kurs, Lina in der Schule) und am 15.12. (Lous Kurs, Lina in der Schule). Dazu gibt er am 04. und 18.12. „Gesunde Gelenke“ (18:00–18:45 Uhr). Zusammen 7,5 h, Falk 0 h. Bitte mit Erik abstimmen."
   },
   {
    "month": "2026-12",
@@ -392,31 +393,46 @@
    "month": "2026-12",
    "kind": "annahme",
    "title": "Kurse und Termine im Dezember",
-   "text": "Leons Montagskurse und Tinas Donnerstagskurse finden wie gewohnt statt, außer an Schließtagen. Im Dezember ist kein STASH-Termin bekannt. Teammeetings sind dienstags (01., 08., 15., 22. und 29.12.); wer Schule oder Urlaub hat, ist entschuldigt."
+   "text": "Leons Montagskurse und Tinas Donnerstagskurse finden wie gewohnt statt, außer an Schließtagen. Im Dezember ist kein STASH-Termin bekannt."
+  },
+  {
+   "month": "2026-12",
+   "kind": "annahme",
+   "title": "Kurse während Lous Urlaub",
+   "text": "22. und 30.12. gibt Tina die Kurse, 23.12. Lina Wessling, am 29.12. entfallen sie. Abends reicht damit jeweils eine Person auf der Fläche.",
+   "confirmedOn": "2026-11-09"
+  },
+  {
+   "month": "2026-12",
+   "kind": "annahme",
+   "title": "Teammeetings 22. und 29.12. finden statt",
+   "text": "Lou hat Urlaub; dabei sind Lina und Samuel.",
+   "confirmedOn": "2026-11-09"
+  },
+  {
+   "month": "2026-12",
+   "kind": "annahme",
+   "title": "„Gesunde Gelenke“: alle Mitarbeiter",
+   "text": "Ab Dezember kann jede und jeder aus dem Team den Kurs übernehmen. Die Kursleitung zählt 18:00–18:45 Uhr nicht als Flächenkraft.",
+   "confirmedOn": "2026-11-09"
+  },
+  {
+   "month": "2026-12",
+   "kind": "annahme",
+   "title": "Wer „Gesunde Gelenke“ gibt",
+   "text": "11.12.: Lou (sie hatte in KW 50 noch einen freien Tag und arbeitet 15–22 Uhr, Samuel geht dafür um 20:15). 04. und 18.12.: Erik, weil Lou, Lina und Samuel dort schon 5 Einsatztage haben. Alternative wäre, die Fläche 45 Minuten unbesetzt zu lassen."
+  },
+  {
+   "month": "2026-12",
+   "kind": "annahme",
+   "title": "Lina Wessling als Kursleitung angelegt",
+   "text": "Neu im Plan mit der Rolle „Kursleitung“, ohne eigenes Stundenkonto und ohne festes Schichtraster. Eingeplant am 23.12. 18–20 Uhr für den Kurs."
   },
   {
    "month": "2026-12",
    "kind": "offen",
-   "title": "Lous Kurse während ihres Urlaubs",
-   "text": "Di/Mi 22., 23., 29. und 30.12., jeweils 18–20 Uhr: Vertretung oder Ausfall? Abends steht jeweils eine Person auf der Fläche."
-  },
-  {
-   "month": "2026-12",
-   "kind": "offen",
-   "title": "Teammeetings 22. und 29.12.",
-   "text": "Lou hat Urlaub, dabei wären nur Lina und Samuel. Stattfinden lassen oder ausfallen lassen?"
-  },
-  {
-   "month": "2026-12",
-   "kind": "offen",
-   "title": "„Gesunde Gelenke“ freitags",
-   "text": "04., 11. und 18.12. von 18:00 bis 18:45 Uhr weiterhin ohne Kursleitung; am 25.12. ist geschlossen."
-  },
-  {
-   "month": "2026-12",
-   "kind": "offen",
-   "title": "Stundenlöhne Leon und Erik",
-   "text": "Unbekannt – Leons 28 h und Eriks 6 h fehlen in den Kosten."
+   "title": "Stundenlöhne Leon, Erik und Lina Wessling",
+   "text": "Unbekannt – Leons 28 h, Eriks 7,5 h und Lina Wesslings 2 h fehlen in den Kosten."
   },
   {
    "month": "2026-12",
