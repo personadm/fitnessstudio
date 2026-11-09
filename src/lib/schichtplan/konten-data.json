@@ -242,6 +242,24 @@
     "Samuel": -25
    },
    "costEUR": 4310.41
+  },
+  {
+   "month": "2026-12",
+   "label": "Plan vom 09.11.2026 (Ahaus-Montage nicht gezählt)",
+   "hours": {
+    "Lou": 143.22,
+    "Lina": 147.99,
+    "Samuel": 145.24,
+    "Leon": 28,
+    "Erik": 7.5,
+    "Lina Wessling": 2
+   },
+   "closingBalanceHours": {
+    "Lou": -21.79,
+    "Lina": -27.51,
+    "Samuel": -31.51
+   },
+   "costEUR": 4618.96
   }
  ],
  "planningNotes": [
@@ -345,31 +363,31 @@
    "month": "2026-12",
    "kind": "diskrepanz",
    "title": "Regel 3 (Azubis bis 35 h + 5 Überstunden) ↔ max. 5 Einsatztage",
-   "text": "Lina und Samuel arbeiten in KW 49–51 die erlaubten 5 Tage, kommen mit den festen Schichtzeiten aber nur auf 29,5–33 h pro Woche. Dezember: Lina 147,99 h, Samuel 145,24 h (je 14 h Schule und 17,49 h Feiertag/Schließtag). Stand 31.12.: −27,51 h bzw. −31,51 h."
+   "text": "Lina und Samuel arbeiten in KW 49–51 die erlaubten 5 Tage, kommen mit den festen Schichtzeiten aber nur auf 30,25–33 h pro Woche. Dezember: Lina 148,99 h, Samuel 145,99 h (je 14 h Schule und 17,49 h Feiertag/Schließtag). Stand 31.12.: −26,51 h bzw. −30,76 h."
   },
   {
    "month": "2026-12",
    "kind": "diskrepanz",
    "title": "Azubis zuerst ↔ Lous Stundenkonto",
-   "text": "Lou kommt auf 143,22 h: 83,75 h Studio, 34,98 h Urlaub, 7 h Ahaus und 17,49 h Feiertag/Schließtag. Ihr Stand fällt von −14,51 h auf −21,79 h am 31.12."
+   "text": "Lou kommt auf 139,97 h: 66,5 h Studio, 34,98 h Urlaub, 21 h Ahaus und 17,49 h Feiertag/Schließtag. Ihr Stand fällt von −14,51 h auf −25,04 h am 31.12."
   },
   {
    "month": "2026-12",
    "kind": "diskrepanz",
    "title": "Falk nur im Notfall ↔ Personalengpass",
-   "text": "In der Woche ab 30.11. hat Samuel nach Mo 30.11. und der Schule (03./04.12.) nur noch zwei Tage. In KW 51 fehlen Lina (Schule 14./15.12.) und Lou (Ahaus 18.12.). Das Stammteam reicht an drei Abenden und für „Gesunde Gelenke“ am 04. und 18.12. nicht. Statt Falk springt Erik ein, siehe Annahme „Erik als Vertretung“."
+   "text": "Weil Lous Ahaus-Montage als Einsatztag zählen, hat sie in Ochtrup höchstens 4 Tage pro Woche, in KW 51 (auch 18.12. Ahaus) nur 3. Dazu hat Samuel in der Woche ab 30.11. nur zwei freie Tage (Schule 03./04.12.) und Lina ist am 14./15.12. in der Schule. Das Stammteam reicht deshalb an acht Terminen nicht. Statt Falk springt Erik ein, siehe Annahme „Erik als Vertretung“."
   },
   {
    "month": "2026-12",
    "kind": "diskrepanz",
    "title": "Übergabe um 15 Uhr ↔ Einarbeitung durch Lou",
-   "text": "Früh- und Spätdienst überschneiden sich nicht. Lou arbeitet bei ihren Kursen und beim Teammeeting mit Lina oder Samuel zusammen. Am 02., 03., 04., 10. und 17.12. arbeitet sie ohne Azubi."
+   "text": "Früh- und Spätdienst überschneiden sich nicht. Lou arbeitet bei ihren Kursen und beim Teammeeting mit Lina oder Samuel zusammen. Am 02., 03., 04., 11. und 16.12. arbeitet sie ohne Azubi."
   },
   {
    "month": "2026-12",
    "kind": "annahme",
    "title": "Erik als Vertretung",
-   "text": "18–20 Uhr am 02.12. (Lous Kurs; Samuel arbeitet früh, weil er am 03.12. Schule hat), am 14.12. (Leons Kurs, Lina in der Schule) und am 15.12. (Lous Kurs, Lina in der Schule). Dazu gibt er am 04. und 18.12. „Gesunde Gelenke“ (18:00–18:45 Uhr). Zusammen 7,5 h, Falk 0 h. Bitte mit Erik abstimmen."
+   "text": "18–20 Uhr am 02.12. (Lous Kurs), 14.12. (Leons Kurs) sowie 15. und 16.12. (Lous Kurse); „Gesunde Gelenke“ am 04., 11. und 18.12. (18:00–18:45 Uhr); So 06.12. 10–15 Uhr. Zusammen 15,25 h, Falk 0 h. Bitte mit Erik abstimmen."
   },
   {
    "month": "2026-12",
@@ -380,8 +398,9 @@
   {
    "month": "2026-12",
    "kind": "annahme",
-   "title": "Lou montags weiterhin nicht in Ochtrup",
-   "text": "Wie im November ist Lou montags nicht eingeplant (07. und 14.12.; am 21. und 28.12. hat sie Urlaub). Am Ergebnis ändert das nichts: In KW 51 hat Lou schon 5 Einsatztage, Erik bliebe am 14.12. nötig."
+   "title": "Ahaus-Tage zählen als Einsatztag",
+   "text": "Auch Lous Montage in Ahaus zählen für die Grenze von 5 Tagen pro Woche und am Stück: 30.11. (nur mitgezählt, der November bleibt unverändert), 07. und 14.12.; am 21. und 28.12. hat sie Urlaub. Wochenenden: Lou, Lina und Samuel je 2, Erik 1.",
+   "confirmedOn": "2026-11-09"
   },
   {
    "month": "2026-12",
@@ -420,7 +439,7 @@
    "month": "2026-12",
    "kind": "annahme",
    "title": "Wer „Gesunde Gelenke“ gibt",
-   "text": "11.12.: Lou (sie hatte in KW 50 noch einen freien Tag und arbeitet 15–22 Uhr, Samuel geht dafür um 20:15). 04. und 18.12.: Erik, weil Lou, Lina und Samuel dort schon 5 Einsatztage haben. Alternative wäre, die Fläche 45 Minuten unbesetzt zu lassen."
+   "text": "Erik an allen drei Freitagen (04., 11. und 18.12.), weil Lou, Lina und Samuel dort keinen freien Tag mehr haben. Alternative wäre, die Fläche 45 Minuten unbesetzt zu lassen."
   },
   {
    "month": "2026-12",
@@ -432,7 +451,13 @@
    "month": "2026-12",
    "kind": "offen",
    "title": "Stundenlöhne Leon, Erik und Lina Wessling",
-   "text": "Unbekannt – Leons 28 h, Eriks 7,5 h und Lina Wesslings 2 h fehlen in den Kosten."
+   "text": "Unbekannt – Leons 28 h, Eriks 15,25 h und Lina Wesslings 2 h fehlen in den Kosten."
+  },
+  {
+   "month": "2026-12",
+   "kind": "offen",
+   "title": "Ahaus-Montage im Stundenkonto",
+   "text": "07. und 14.12. sind wie die anderen Ahaus-Tage mit je 7 h angerechnet. Die Montage im November stehen nicht als Ahaus-Tag im Plan – falls Lou dort gearbeitet hat, fehlen ihr im Novemberkonto bis zu 35 h."
   },
   {
    "month": "2026-12",
