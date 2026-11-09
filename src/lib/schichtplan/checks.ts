@@ -9,7 +9,7 @@ import {
   startOfWeek,
   weekdayShort,
 } from "./calendar";
-import type { Person, PlanEvent, Shift, TeamPlan } from "./plan";
+import { type Person, type PlanEvent, type Shift, type TeamPlan, countsAsWorkday } from "./plan";
 
 /**
  * Regelprüfung für einen Planstand. Rein lesend: findet Auffälligkeiten,
@@ -116,7 +116,8 @@ export type RuleId =
 export const RULES: Record<RuleId, { title: string; description: string }> = {
   besetzung: {
     title: "Besetzung",
-    description: "Mo–Fr 09–22 Uhr und Sa/So 10–15 Uhr immer mindestens eine Person auf der Fläche. Wer im Kurs ist, zählt nicht als Flächenkraft.",
+    description:
+      "Mo–Fr 09–22 Uhr und Sa/So 10–15 Uhr immer mindestens eine Person auf der Fläche. Wer im Kurs ist, zählt nicht als Flächenkraft. An Schließtagen ist niemand eingeplant.",
   },
   schichtzeiten: {
     title: "Schichtzeiten",
@@ -133,13 +134,15 @@ export const RULES: Record<RuleId, { title: string; description: string }> = {
   },
   teammeeting: {
     title: "Teammeeting",
-    description: "Einmal pro Woche ca. 15–16 Uhr zum Schichtwechsel, möglichst mit allen aus dem Stammteam.",
+    description:
+      "Einmal pro Woche ca. 15–16 Uhr zum Schichtwechsel, möglichst mit allen aus dem Stammteam. Wer Schule, Urlaub oder Ahaus hat, ist entschuldigt.",
   },
   ruhezeit: { title: "Ruhezeit", description: "Mindestens 11 Stunden zwischen zwei Einsätzen." },
   schule: { title: "Schule", description: "Keine Spätschicht am Abend vor einem Schultag." },
   einsatztage: {
     title: "Einsatztage",
-    description: "Höchstens 5 Einsatztage pro Kalenderwoche und 5 Tage am Stück (Schule, Schulung und Abwesenheiten zählen mit).",
+    description:
+      "Höchstens 5 Einsatztage pro Kalenderwoche und 5 Tage am Stück (Schule, Schulung und Abwesenheiten zählen mit, angerechnete Feier- und Schließtage nicht).",
   },
   wochenstunden: {
     title: "Wochenstunden",
@@ -228,6 +231,7 @@ class PlanView {
   readonly last: string;
   private readonly shiftsByDate: Map<string, Shift[]>;
   private readonly eventsByDate: Map<string, PlanEvent[]>;
+  private readonly closures: Map<string, string>;
 
   constructor(
     readonly plan: TeamPlan,
@@ -239,6 +243,12 @@ class PlanView {
     this.dates = allDates(this.first, this.last);
     this.shiftsByDate = group(plan.shifts);
     this.eventsByDate = group(plan.events);
+    this.closures = new Map(plan.closures.map((c) => [c.date, c.label]));
+  }
+
+  /** Anlass, falls das Studio an dem Tag geschlossen ist */
+  closure(date: string): string | null {
+    return this.closures.get(date) ?? null;
   }
 
   shifts(date: string, person?: string): Shift[] {
@@ -248,6 +258,15 @@ class PlanView {
 
   studio(date: string, person?: string): Shift[] {
     return this.shifts(date, person).filter((s) => s.kind === "Studio");
+  }
+
+  /** Einträge, die als Einsatztag zählen (ohne reine Feiertags-Gutschrift) */
+  workday(date: string, person: string): Shift[] {
+    return this.shifts(date, person).filter(countsAsWorkday);
+  }
+
+  isAbsent(date: string, person: string): boolean {
+    return this.shifts(date, person).some((s) => ABSENCE_KINDS.has(s.kind));
   }
 
   events(date: string): PlanEvent[] {
@@ -274,7 +293,17 @@ function group<T extends { date: string; start: number }>(items: readonly T[]): 
 }
 
 function checkCoverage(view: PlanView, cfg: RuleConfig): Finding[] {
-  return view.dates.flatMap((date) => {
+  return view.dates.flatMap((date): Finding[] => {
+    const closure = view.closure(date);
+    if (closure) {
+      return view.studio(date).map((s) => ({
+        rule: "besetzung",
+        severity: "fehler",
+        date,
+        person: s.person,
+        message: `${dayLabel(date)}: Studio geschlossen (${closure}), aber ${s.person} ist ${formatTimeRange(s.start, s.end)} eingeplant.`,
+      }));
+    }
     const open = isWeekend(date) ? cfg.weekendOpen : cfg.weekdayOpen;
     const courses = view.events(date).filter((e) => e.category === "kurs");
     const floor = view.studio(date).flatMap((s) =>
@@ -291,8 +320,8 @@ function checkCoverage(view: PlanView, cfg: RuleConfig): Finding[] {
         return prev && prev.end === t ? [...acc.slice(0, -1), { start: prev.start, end: t + SLOT }] : [...acc, { start: t, end: t + SLOT }];
       }, []);
     return gaps.map((g) => ({
-      rule: "besetzung" as const,
-      severity: "fehler" as const,
+      rule: "besetzung",
+      severity: "fehler",
       date,
       message: `${dayLabel(date)}: ${formatTimeRange(g.start, g.end)} niemand auf der Fläche.`,
     }));
@@ -377,6 +406,7 @@ function checkMeetings(view: PlanView, cfg: RuleConfig): Finding[] {
   const weekFindings = weeks.flatMap((week): Finding[] => {
     const days = Array.from({ length: 7 }, (_, i) => addDays(week, i));
     if (!monthsWithMeetings.has(monthOfWeek(week))) return [];
+    if (meetings.some((m) => days.includes(m.date))) return [];
     if (!days.every((d) => view.inPlan(d))) {
       return [
         {
@@ -387,14 +417,13 @@ function checkMeetings(view: PlanView, cfg: RuleConfig): Finding[] {
         },
       ];
     }
-    const inWeek = meetings.filter((m) => days.includes(m.date));
-    if (inWeek.length > 0) return [];
     return [{ rule: "teammeeting", severity: "warnung", date: week, message: `KW ${isoWeekNumber(week)}: kein Teammeeting geplant.` }];
   });
 
   const lastWeek = startOfWeek(view.last);
+  const hasLastWeekMeeting = meetings.some((m) => m.date >= lastWeek && m.date <= addDays(lastWeek, 6));
   const openEnd: Finding[] =
-    addDays(lastWeek, 6) > view.last && !weekFindings.some((f) => f.date === lastWeek)
+    addDays(lastWeek, 6) > view.last && !hasLastWeekMeeting && !weekFindings.some((f) => f.date === lastWeek)
       ? [
           {
             rule: "teammeeting",
@@ -408,6 +437,7 @@ function checkMeetings(view: PlanView, cfg: RuleConfig): Finding[] {
   const attendance = meetings.flatMap((m) =>
     view
       .core(m.date)
+      .filter((p) => !view.isAbsent(m.date, p.name))
       .filter((p) => !view.studio(m.date, p.name).some((s) => covers(s, m)))
       .map((p) => ({
         rule: "teammeeting" as const,
@@ -422,7 +452,7 @@ function checkMeetings(view: PlanView, cfg: RuleConfig): Finding[] {
 }
 
 function dayBounds(view: PlanView, date: string, person: string): Interval | null {
-  const entries = view.shifts(date, person);
+  const entries = view.workday(date, person);
   if (entries.length === 0) return null;
   return { start: Math.min(...entries.map((e) => e.start)), end: Math.max(...entries.map((e) => e.end)) };
 }
@@ -468,7 +498,7 @@ function checkLateBeforeSchool(view: PlanView, cfg: RuleConfig): Finding[] {
 
 function checkWorkingDays(view: PlanView, cfg: RuleConfig): Finding[] {
   return view.plan.people.flatMap((p) => {
-    const worked = view.dates.filter((d) => view.shifts(d, p.name).length > 0);
+    const worked = view.dates.filter((d) => view.workday(d, p.name).length > 0);
     const perWeek = worked.reduce((m, d) => m.set(startOfWeek(d), (m.get(startOfWeek(d)) ?? 0) + 1), new Map<string, number>());
     const weekFindings = [...perWeek]
       .filter(([, n]) => n > cfg.maxDaysPerWeek)
@@ -653,16 +683,16 @@ function blockerFor(view: PlanView, cfg: RuleConfig, person: string, shift: Shif
   }
   const week = startOfWeek(date);
   const daysInWeek = Array.from({ length: 7 }, (_, i) => addDays(week, i)).filter(
-    (d) => view.shifts(d, person).length > 0,
+    (d) => view.workday(d, person).length > 0,
   ).length;
   if (daysInWeek >= cfg.maxDaysPerWeek) return `schon ${daysInWeek} Tage in KW ${isoWeekNumber(date)}`;
   const runLength = (dir: 1 | -1): number => {
     const next = addDays(date, dir);
-    return view.shifts(next, person).length > 0 ? 1 + runLengthFrom(next, dir) : 0;
+    return view.workday(next, person).length > 0 ? 1 + runLengthFrom(next, dir) : 0;
   };
   const runLengthFrom = (from: string, dir: 1 | -1): number => {
     const next = addDays(from, dir);
-    return view.shifts(next, person).length > 0 ? 1 + runLengthFrom(next, dir) : 0;
+    return view.workday(next, person).length > 0 ? 1 + runLengthFrom(next, dir) : 0;
   };
   const consecutive = runLength(-1) + 1 + runLength(1);
   if (consecutive > cfg.maxConsecutiveDays) return `wären ${consecutive} Tage am Stück`;
@@ -744,7 +774,7 @@ function checkShiftPatterns(view: PlanView, cfg: RuleConfig): Finding[] {
 
 function checkFixedShifts(view: PlanView, cfg: RuleConfig): Finding[] {
   return cfg.fixedShifts.flatMap((f) => {
-    const relevant = view.dates.filter((d) => d >= f.from);
+    const relevant = view.dates.filter((d) => d >= f.from && !view.closure(d));
     const missing = relevant
       .filter((d) => weekdayIndex(d) === f.weekday)
       .filter((d) => !view.studio(d, f.person).some((s) => s.start === f.start && s.end === f.end))

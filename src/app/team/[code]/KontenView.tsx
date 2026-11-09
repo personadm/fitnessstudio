@@ -17,6 +17,7 @@ const KIND_COLUMNS: { kind: ShiftKind; label: string }[] = [
   { kind: "Urlaub", label: "Urlaub" },
   { kind: "Five-Schulung", label: "Schulung" },
   { kind: "Ahaus", label: "Ahaus" },
+  { kind: "Feiertag", label: "Feiertag" },
 ];
 /** Skala der Saldo-Balken: ±25 h füllen die halbe Breite. */
 const BALANCE_SCALE_HOURS = 25;

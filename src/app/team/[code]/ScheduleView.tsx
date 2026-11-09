@@ -69,17 +69,23 @@ export function ScheduleView({ plan, today, initialView, initialDate, leitung }:
   );
   const lanes = scheduled.filter((p) => !hidden.includes(p.name));
   const warnings = days.flatMap((d) => (index.eventsByDate.get(d) ?? []).filter((e) => e.warning));
-  const away = plan.people.flatMap((p) =>
-    p.unavailable
-      .filter((u) => days.some((d) => d >= u.from && d <= u.to))
-      .map((u) => ({
-        key: `${p.name}-${u.from}`,
-        text:
-          u.from === u.to
-            ? `${p.name}: ${u.reason} (${weekdayShort(u.from)} ${formatDate(u.from)})`
-            : `${p.name}: ${u.reason} (${formatDayMonth(u.from)}–${formatDate(u.to)})`,
-      })),
-  );
+  const closed = plan.closures
+    .filter((c) => days.includes(c.date))
+    .map((c) => ({ key: `zu-${c.date}`, text: `${weekdayShort(c.date)} ${formatDate(c.date)}: Studio geschlossen (${c.label})` }));
+  const away = [
+    ...closed,
+    ...plan.people.flatMap((p) =>
+      p.unavailable
+        .filter((u) => days.some((d) => d >= u.from && d <= u.to))
+        .map((u) => ({
+          key: `${p.name}-${u.from}`,
+          text:
+            u.from === u.to
+              ? `${p.name}: ${u.reason} (${weekdayShort(u.from)} ${formatDate(u.from)})`
+              : `${p.name}: ${u.reason} (${formatDayMonth(u.from)}–${formatDate(u.to)})`,
+        })),
+    ),
+  ];
   const hasMonthEvents = [...index.eventsByDate.keys()].some((d) => d.startsWith(activeMonth));
 
   const step = view === "tag" ? 1 : 7;
@@ -301,7 +307,7 @@ function Legend() {
           className="h-3.5 w-5 rounded border border-dashed border-ink-soft"
           style={{ background: "repeating-linear-gradient(135deg, rgba(58,53,48,0.25) 0 3px, transparent 3px 6px)" }}
         />
-        Urlaub, Schule, Schulung, Ahaus (angerechnet)
+        Urlaub, Schule, Schulung, Ahaus, Feiertag (angerechnet)
       </span>
       {marks.map((m) => (
         <span key={m.key} className="flex items-center gap-1.5">

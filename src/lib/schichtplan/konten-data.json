@@ -180,7 +180,7 @@
  },
  "assumptions": [
   "Soll 150,5 h pro Monat (aus Numbers). Die Oktober-Datei rechnete mit 155 h (35 h × 31/7) und Übertrag 0 – daher dort andere Endstände.",
-  "Schule wird mit 7 h, Urlaub/Feiertag mit 5,83 h pro Tag angerechnet.",
+  "Schule wird mit 7 h, Urlaub/Feiertag mit 5,83 h pro Tag angerechnet. Feier- und Schließtage Mo–Fr gelten nur als Gutschrift und nicht als Einsatztag; Feiertage am Samstag (03.10., 26.12.) ohne Gutschrift.",
   "Ahaus-Tage sind vorläufig mit 7 h (09–16 Uhr) als bezahlter externer Tag angerechnet – unbestätigt.",
   "Krankheit würde vorläufig nach ausgefallenen Planstunden angerechnet.",
   "Historische Zeiten ohne Pausenabzug übernommen.",
@@ -337,11 +337,89 @@
   {
    "month": "2026-11",
    "kind": "offen",
-   "title": "Teammeeting KW 49",
-   "text": "Die Woche ab 30.11. reicht in den Dezember; das Meeting am Di 01.12. ist noch nicht geplant."
+   "title": "Spätdienste bei Minderjährigen",
+   "text": "Hinweis aus der Oktober-Datei: Falls Lina oder Samuel unter 18 sind, dürfen sie in der Regel nur bis 20 Uhr arbeiten – dann passen die Dienste bis 22 Uhr nicht."
   },
   {
-   "month": "2026-11",
+   "month": "2026-12",
+   "kind": "diskrepanz",
+   "title": "Regel 3 (Azubis bis 35 h + 5 Überstunden) ↔ max. 5 Einsatztage",
+   "text": "Lina und Samuel arbeiten in KW 49–51 die erlaubten 5 Tage, kommen mit den festen Schichtzeiten aber nur auf 30–33 h pro Woche. Dezember: Lina 147,99 h, Samuel 146,99 h (je 14 h Schule und 17,49 h Feiertag/Schließtag). Stand 31.12.: −27,51 h bzw. −29,76 h."
+  },
+  {
+   "month": "2026-12",
+   "kind": "diskrepanz",
+   "title": "Azubis zuerst ↔ Lous Stundenkonto",
+   "text": "Lou kommt auf 136,22 h: 76,75 h Studio, 34,98 h Urlaub, 7 h Ahaus und 17,49 h Feiertag/Schließtag. Ihr Stand fällt von −14,51 h auf −28,79 h am 31.12."
+  },
+  {
+   "month": "2026-12",
+   "kind": "diskrepanz",
+   "title": "Falk nur im Notfall ↔ Personalengpass",
+   "text": "In der Woche ab 30.11. hat Samuel nach Mo 30.11. und der Schule (03./04.12.) nur noch zwei Tage. In KW 51 fehlen Lina (Schule 14./15.12.) und Lou (Ahaus 18.12.). Das Stammteam reicht an drei Abenden nicht. Statt Falk springt Erik ein, siehe Annahme „Erik als Vertretung“."
+  },
+  {
+   "month": "2026-12",
+   "kind": "diskrepanz",
+   "title": "Übergabe um 15 Uhr ↔ Einarbeitung durch Lou",
+   "text": "Früh- und Spätdienst überschneiden sich nicht. Lou arbeitet bei ihren Kursen und beim Teammeeting mit Lina oder Samuel zusammen. Am 02., 03., 04., 10. und 17.12. arbeitet sie ohne Azubi."
+  },
+  {
+   "month": "2026-12",
+   "kind": "annahme",
+   "title": "Erik als Vertretung",
+   "text": "Jeweils 18–20 Uhr: am 02.12. (Lous Kurs; Samuel arbeitet früh, weil er am 03.12. Schule hat), am 14.12. (Leons Kurs, Lina in der Schule) und am 15.12. (Lous Kurs, Lina in der Schule). Zusammen 6 h, Falk 0 h. Bitte mit Erik abstimmen."
+  },
+  {
+   "month": "2026-12",
+   "kind": "annahme",
+   "title": "Schließtage 24. und 31.12. angerechnet",
+   "text": "Wie Feiertage mit 5,83 h für Lou, Lina und Samuel; der 25.12. ist ein gesetzlicher Feiertag. Der 26.12. fällt auf einen Samstag und wird wie der 03.10. nicht angerechnet. Alternativ wären es Urlaub oder Minusstunden."
+  },
+  {
+   "month": "2026-12",
+   "kind": "annahme",
+   "title": "Lou montags weiterhin nicht in Ochtrup",
+   "text": "Wie im November ist Lou montags nicht eingeplant (07. und 14.12.; am 21. und 28.12. hat sie Urlaub). Am Ergebnis ändert das nichts: In KW 51 hat Lou schon 5 Einsatztage, Erik bliebe am 14.12. nötig."
+  },
+  {
+   "month": "2026-12",
+   "kind": "annahme",
+   "title": "Lou vom 21. bis 30.12. frei",
+   "text": "Urlaub an 6 Tagen (21.–23. und 28.–30.12.) mit je 5,83 h angerechnet. Dazwischen liegen die Schließtage. Den Sonntag 27.12. übernimmt Lina, damit Lous freie Zeit nicht unterbrochen wird."
+  },
+  {
+   "month": "2026-12",
+   "kind": "annahme",
+   "title": "Kurse und Termine im Dezember",
+   "text": "Leons Montagskurse und Tinas Donnerstagskurse finden wie gewohnt statt, außer an Schließtagen. Im Dezember ist kein STASH-Termin bekannt. Teammeetings sind dienstags (01., 08., 15., 22. und 29.12.); wer Schule oder Urlaub hat, ist entschuldigt."
+  },
+  {
+   "month": "2026-12",
+   "kind": "offen",
+   "title": "Lous Kurse während ihres Urlaubs",
+   "text": "Di/Mi 22., 23., 29. und 30.12., jeweils 18–20 Uhr: Vertretung oder Ausfall? Abends steht jeweils eine Person auf der Fläche."
+  },
+  {
+   "month": "2026-12",
+   "kind": "offen",
+   "title": "Teammeetings 22. und 29.12.",
+   "text": "Lou hat Urlaub, dabei wären nur Lina und Samuel. Stattfinden lassen oder ausfallen lassen?"
+  },
+  {
+   "month": "2026-12",
+   "kind": "offen",
+   "title": "„Gesunde Gelenke“ freitags",
+   "text": "04., 11. und 18.12. von 18:00 bis 18:45 Uhr weiterhin ohne Kursleitung; am 25.12. ist geschlossen."
+  },
+  {
+   "month": "2026-12",
+   "kind": "offen",
+   "title": "Stundenlöhne Leon und Erik",
+   "text": "Unbekannt – Leons 28 h und Eriks 6 h fehlen in den Kosten."
+  },
+  {
+   "month": "2026-12",
    "kind": "offen",
    "title": "Spätdienste bei Minderjährigen",
    "text": "Hinweis aus der Oktober-Datei: Falls Lina oder Samuel unter 18 sind, dürfen sie in der Regel nur bis 20 Uhr arbeiten – dann passen die Dienste bis 22 Uhr nicht."

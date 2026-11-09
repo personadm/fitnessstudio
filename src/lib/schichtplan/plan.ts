@@ -15,8 +15,17 @@ import rawPlan from "./plan-data.json";
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const hour = z.number().min(0).max(24);
 
-export const SHIFT_KINDS = ["Studio", "Urlaub", "Schule", "Ahaus", "Five-Schulung"] as const;
+export const SHIFT_KINDS = ["Studio", "Urlaub", "Schule", "Ahaus", "Five-Schulung", "Feiertag"] as const;
 export const EVENT_CATEGORIES = ["kurs", "meeting", "stash", "hinweis"] as const;
+
+/** Nur angerechnete Zeit an Feier- und Schließtagen — zählt nicht als Einsatztag. */
+const CREDIT_ONLY_KINDS: ReadonlySet<string> = new Set(["Feiertag"]);
+
+const closureSchema = z.object({
+  date: isoDate,
+  /** z. B. „Heiligabend“ */
+  label: z.string().min(1),
+});
 
 const personSchema = z.object({
   name: z.string().min(1),
@@ -58,14 +67,22 @@ const planSchema = z.object({
   people: z.array(personSchema).min(1),
   shifts: z.array(shiftSchema),
   events: z.array(eventSchema),
+  /** Tage, an denen das Studio ganz geschlossen ist */
+  closures: z.array(closureSchema).default([]),
 });
 
 export type TeamPlan = z.infer<typeof planSchema>;
 export type Person = z.infer<typeof personSchema>;
 export type Shift = z.infer<typeof shiftSchema>;
 export type PlanEvent = z.infer<typeof eventSchema>;
+export type Closure = z.infer<typeof closureSchema>;
 export type ShiftKind = (typeof SHIFT_KINDS)[number];
 export type EventCategory = (typeof EVENT_CATEGORIES)[number];
+
+/** Einsatztag = jeder Eintrag außer reiner Gutschrift (Feiertag/Schließtag). */
+export function countsAsWorkday(shift: Pick<Shift, "kind">): boolean {
+  return !CREDIT_ONLY_KINDS.has(shift.kind);
+}
 
 let cached: TeamPlan | null = null;
 

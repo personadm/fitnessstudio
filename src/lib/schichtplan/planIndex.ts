@@ -1,5 +1,5 @@
 import { addDays, startOfWeek } from "./calendar";
-import type { PlanEvent, Shift, TeamPlan } from "./plan";
+import { type PlanEvent, type Shift, type TeamPlan, countsAsWorkday } from "./plan";
 
 /** Vorberechnete Nachschlage-Strukturen für die Ansichten (rein, ohne Seiteneffekte). */
 export interface PlanIndex {
@@ -8,6 +8,8 @@ export interface PlanIndex {
   weekStarts: string[];
   shiftsByDate: ReadonlyMap<string, readonly Shift[]>;
   eventsByDate: ReadonlyMap<string, readonly PlanEvent[]>;
+  /** Schließtage: Datum → Anlass */
+  closures: ReadonlyMap<string, string>;
   startHour: number;
   endHour: number;
 }
@@ -44,6 +46,7 @@ export function buildPlanIndex(plan: TeamPlan): PlanIndex {
     weekStarts,
     shiftsByDate: groupByDate(plan.shifts),
     eventsByDate: groupByDate(plan.events),
+    closures: new Map(plan.closures.map((c) => [c.date, c.label])),
     startHour,
     endHour,
   };
@@ -65,14 +68,14 @@ export interface PersonTotals {
   days: number;
 }
 
-/** Angerechnete Stunden und Einsatztage einer Person über eine Liste von Tagen. */
+/** Angerechnete Stunden und Einsatztage einer Person (Feiertags-Gutschriften zählen nur als Stunden). */
 export function totalsFor(index: PlanIndex, person: string, days: readonly string[]): PersonTotals {
   const perDay = days.map((day) =>
     (index.shiftsByDate.get(day) ?? []).filter((s) => s.person === person),
   );
   return {
     hours: perDay.flat().reduce((sum, s) => sum + s.hours, 0),
-    days: perDay.filter((entries) => entries.length > 0).length,
+    days: perDay.filter((entries) => entries.some(countsAsWorkday)).length,
   };
 }
 

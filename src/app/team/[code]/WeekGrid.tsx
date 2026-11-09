@@ -157,6 +157,7 @@ function DayColumn({
 }: DayColumnProps) {
   const { startHour, endHour } = index;
   const isOutsidePlan = !isInPlan(index, day);
+  const closure = index.closures.get(day) ?? null;
   const weekend = isWeekend(day);
   const headerTone = isToday ? "bg-acid" : weekend ? "bg-[#EFE8DC]" : "";
   const showNow = isToday && nowHour !== null && nowHour >= startHour && nowHour <= endHour;
@@ -198,7 +199,11 @@ function DayColumn({
         className={`relative flex ${weekend ? "bg-[#F4EEE3]" : ""}`}
         style={{ height: (endHour - startHour) * HOUR_PX, backgroundImage: HOUR_LINES }}
       >
-        {weekend && <ClosedBlocks startHour={startHour} endHour={endHour} />}
+        {closure ? (
+          <ClosedDay label={closure} />
+        ) : (
+          weekend && <ClosedBlocks startHour={startHour} endHour={endHour} />
+        )}
         {lanes.map((person, i) => (
           <Lane
             key={person.name}
@@ -261,6 +266,18 @@ function ClosedBlocks({ startHour, endHour }: { startHour: number; endHour: numb
         </div>
       ))}
     </>
+  );
+}
+
+/** Schließtag: ganzer Tag schraffiert, Anlass im unteren Teil (oben stehen die angerechneten Gutschriften). */
+function ClosedDay({ label }: { label: string }) {
+  return (
+    <div className="absolute inset-0 z-0 flex flex-col items-center justify-end px-1 pb-8 text-center" style={{ background: HATCH }}>
+      <span className="rounded bg-cream/90 px-1.5 py-1 leading-tight">
+        <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-soft">geschlossen</span>
+        <span className="block text-[11px] text-ink-soft">{label}</span>
+      </span>
+    </div>
   );
 }
 

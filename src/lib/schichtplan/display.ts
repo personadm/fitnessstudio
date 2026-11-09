@@ -39,6 +39,7 @@ export const KIND_STYLES: Record<ShiftKind, KindStyle> = {
   Schule: { label: "Schule", short: "Schule", isFloor: false },
   Ahaus: { label: "Ahaus (extern)", short: "Ahaus", isFloor: false },
   "Five-Schulung": { label: "Five-Schulung", short: "Schulung", isFloor: false },
+  Feiertag: { label: "Feiertag/Schließtag", short: "Frei", isFloor: false },
 };
 
 interface CategoryStyle {

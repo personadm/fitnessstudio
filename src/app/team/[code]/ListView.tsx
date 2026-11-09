@@ -50,7 +50,12 @@ function DaySection({ day, hasDivider, people, hidden, index, isToday, onSelect 
     (e) => e.people.length === 0 || e.people.some(isVisible),
   );
   const colorOf = (name: string) => personColor(name, people.findIndex((p) => p.name === name));
-  const emptyText = isInPlan(index, day) ? "Keine Schichten eingetragen." : "Kein Planstand für diesen Tag.";
+  const closure = index.closures.get(day) ?? null;
+  const emptyText = closure
+    ? null
+    : isInPlan(index, day)
+      ? "Keine Schichten eingetragen."
+      : "Kein Planstand für diesen Tag.";
 
   return (
     <section
@@ -64,8 +69,14 @@ function DaySection({ day, hasDivider, people, hidden, index, isToday, onSelect 
       </h3>
 
       <div className="min-w-0 space-y-2">
+        {closure && (
+          <p className="text-sm">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-soft">Studio geschlossen</span>{" "}
+            · {closure}
+          </p>
+        )}
         {shifts.length === 0 ? (
-          <p className="text-sm text-muted">{emptyText}</p>
+          emptyText && <p className="text-sm text-muted">{emptyText}</p>
         ) : (
           <ul className="space-y-1">
             {shifts.map((shift) => (
