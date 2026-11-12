@@ -11,6 +11,11 @@ export type ActivityKind =
   | "FUNNEL_MAIL"
   | "CAMPAIGN_MAIL";
 
+// Kontakte, deren createdAt so nah an signupAt liegt, sind beim Absenden der
+// Anmeldung angelegt worden (signupAt wird im Code gesetzt, createdAt von der
+// DB beim Insert — wenige Millisekunden Abstand).
+const CREATED_BY_SIGNUP_WINDOW_MS = 60_000;
+
 export type ActivityItem = {
   id: string;
   kind: ActivityKind;
@@ -42,7 +47,7 @@ export async function GET() {
   // Letzte 14 Tage
   const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
 
-  const [contacts, funnelEvents, campaignEvents] = await Promise.all([
+  const [contacts, signupContacts, funnelEvents, campaignEvents] = await Promise.all([
     db.contact.findMany({
       where: {
         OR: [
@@ -56,17 +61,34 @@ export async function GET() {
         firstName: true,
         lastName: true,
         email: true,
-        source: true,
         sourceChannel: true,
         newsletterOnly: true,
-        signupStaff: true,
         createdAt: true,
         doiConfirmedAt: true,
         signupAt: true,
-        pricingPlan: { select: { name: true } },
       },
       orderBy: { createdAt: "desc" },
       take: 200,
+    }),
+    // Anmeldungen separat nach signupAt: Die Kontakt-Query oben sortiert nach
+    // createdAt und schneidet bei 200 ab — ein älterer Bestandskontakt, der
+    // sich jetzt anmeldet, fiel dort heraus, sobald in 14 Tagen mehr als 200
+    // Kontakte neu dazukamen (z. B. Newsletter-Eintragungen). Außerdem gilt
+    // eine Anmeldung auch dann, wenn der Kontakt vorher Nur-Newsletter war.
+    db.contact.findMany({
+      where: { signupAt: { gte: since } },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        source: true,
+        signupStaff: true,
+        signupAt: true,
+        pricingPlan: { select: { name: true } },
+      },
+      orderBy: { signupAt: "desc" },
+      take: 80,
     }),
     db.funnelStepEvent.findMany({
       // skipped: false → nur echte Sends im Feed, keine Skip-Marker
@@ -141,6 +163,15 @@ export async function GET() {
       continue;
     }
 
+    // Kontakt ist erst durch die Anmeldung selbst entstanden (direkt auf
+    // /anmelden bzw. im Club, ohne vorherigen Gratis-Start-Plan): kein
+    // „Gratis-Start-Plan"-Eintrag — sonst stünde dieser Millisekunden nach
+    // der Anmeldung über ihr in der Liste. Die Anmeldung selbst kommt unten.
+    const createdBySignup =
+      c.signupAt !== null &&
+      Math.abs(c.createdAt.getTime() - c.signupAt.getTime()) < CREATED_BY_SIGNUP_WINDOW_MS;
+    if (createdBySignup) continue;
+
     items.push({
       id: `lead-${c.id}`,
       kind: "LEAD",
@@ -163,24 +194,26 @@ export async function GET() {
         href,
       });
     }
+  }
 
-    if (c.signupAt) {
-      const isClub = c.source === "CLUB_OFFLINE" || c.source === "CLUB_ONLINE";
-      const planLabel = c.pricingPlan?.name ? `Tarif: ${c.pricingPlan.name}` : "";
-      const staffLabel = c.signupStaff ? `· angelegt von ${c.signupStaff}` : "";
+  for (const c of signupContacts) {
+    if (!c.signupAt) continue;
+    const name = displayName(c);
+    const isClub = c.source === "CLUB_OFFLINE" || c.source === "CLUB_ONLINE";
+    const planLabel = c.pricingPlan?.name ? `Tarif: ${c.pricingPlan.name}` : "";
+    const staffLabel = c.signupStaff ? `· angelegt von ${c.signupStaff}` : "";
 
-      items.push({
-        id: `signup-${c.id}`,
-        kind: isClub ? "SIGNUP_CLUB" : "SIGNUP_ONLINE",
-        at: c.signupAt.toISOString(),
-        title: isClub
-          ? `${name} im Club angemeldet`
-          : `${name} hat sich online angemeldet`,
-        subtitle: [planLabel, staffLabel].filter(Boolean).join(" "),
-        contactId: c.id,
-        href,
-      });
-    }
+    items.push({
+      id: `signup-${c.id}`,
+      kind: isClub ? "SIGNUP_CLUB" : "SIGNUP_ONLINE",
+      at: c.signupAt.toISOString(),
+      title: isClub
+        ? `${name} im Club angemeldet`
+        : `${name} hat sich online angemeldet`,
+      subtitle: [planLabel, staffLabel].filter(Boolean).join(" "),
+      contactId: c.id,
+      href: `/admin/contacts/${c.id}`,
+    });
   }
 
   for (const fe of funnelEvents) {

@@ -76,10 +76,14 @@ export default async function AdminDashboard() {
         createdAt: { gte: thirtyDaysAgo },
       },
     }),
+    // Alle Online-Anmeldungen (nur Club-Anmeldungen ausgenommen). Eine
+    // Online-Anmeldung behält die Quelle des Bestandskontakts — z. B.
+    // NEWSLETTER, IMPORT oder MANUAL — und wurde mit dem früheren Filter
+    // auf LANDING/DIRECT nicht mitgezählt.
     db.contact.count({
       where: {
         signupAt: { gte: thirtyDaysAgo, not: null },
-        source: { in: ["LANDING", "DIRECT"] },
+        source: { notIn: ["CLUB_OFFLINE", "CLUB_ONLINE"] },
       },
     }),
   ]);

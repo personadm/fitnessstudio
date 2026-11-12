@@ -1,7 +1,7 @@
 const STUDIO = process.env.STUDIO_NAME ?? "Deine Gesundheitscoaches";
 
 export const metadata = {
-  title: "Bestellung eingegangen",
+  title: "Anmeldung eingegangen",
 };
 
 export default function DankePage() {
@@ -12,12 +12,12 @@ export default function DankePage() {
           <a href="/" className="font-mono">
             {STUDIO}
           </a>
-          <span className="hidden font-mono text-muted md:inline">Bestellung eingegangen</span>
+          <span className="hidden font-mono text-muted md:inline">Anmeldung eingegangen</span>
         </div>
       </header>
 
       <section className="mx-auto max-w-3xl px-6 py-20 md:py-32">
-        <p className="label mb-6">✓ Bestellung eingegangen</p>
+        <p className="label mb-6">✓ Anmeldung eingegangen</p>
         <h1 className="text-display text-5xl leading-[0.95] md:text-7xl">
           Danke,
           <br />
@@ -26,13 +26,13 @@ export default function DankePage() {
 
         <div className="mt-10 space-y-5 max-w-2xl text-base leading-relaxed text-ink-soft md:text-lg">
           <p>
-            Deine Bestellung ist bei uns angekommen. Wir melden uns in den nächsten Werktagen
+            Deine Anmeldung ist bei uns angekommen. Wir melden uns in den nächsten Werktagen
             <strong className="text-ink"> telefonisch bei dir zum ersten Kennenlernen</strong> —
             damit wir alles in Ruhe besprechen können und deinen Start optimal auf dich abstimmen.
           </p>
           <p>
             Halt dein Telefon griffbereit. Falls wir dich nicht direkt erreichen, hinterlassen wir
-            eine Nachricht oder schreiben dir eine SMS.
+            eine Nachricht oder schreiben dir eine WhatsApp.
           </p>
         </div>
 

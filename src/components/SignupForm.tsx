@@ -377,10 +377,16 @@ export function SignupForm({
         <button
           type="submit"
           disabled={submitting || !canSubmit}
-          className="mt-6 w-full rounded-lg px-5 py-3.5 text-base font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-6 w-full text-balance rounded-lg px-3 py-3.5 text-[15px] font-semibold leading-snug text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:px-5 sm:text-base"
           style={{ backgroundColor: PETROL }}
         >
-          {submitting ? "Wird gesendet…" : "Jetzt starten →"}
+          {/* Ochtrup steht bewusst im Knopf: ohne Studioauswahl ist das die
+              letzte Stelle, an der man vor dem Absenden sieht, welcher Club
+              gemeint ist. Darf mobil zweizeilig umbrechen; der Pfeil hängt
+              per geschütztem Leerzeichen am letzten Wort. Mobil 15 px und
+              schmalerer Innenabstand, damit „Gesundheitsclub in Ochtrup →"
+              (breite Mono-Schrift) ab 360 px in die zweite Zeile passt. */}
+          {submitting ? "Wird gesendet…" : "Jetzt starten im Gesundheitsclub in Ochtrup\u00A0→"}
         </button>
 
         {/* Microcopy unter Button */}
