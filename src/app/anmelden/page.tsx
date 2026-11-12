@@ -5,6 +5,8 @@ import { CookieConsent } from "@/components/CookieConsent";
 import { CookieSettingsButton } from "@/components/CookieSettingsButton";
 import { AttributionCapture } from "@/components/AttributionCapture";
 import { computeScarcity } from "@/lib/scarcity";
+import { resolveSignupLocation } from "@/lib/signup-location";
+import { SignupVideo } from "@/components/signup/SignupVideo";
 
 interface PageProps {
   searchParams: Promise<{ ref?: string }>;
@@ -29,17 +31,18 @@ export default async function AnmeldenPage({ searchParams }: PageProps) {
       ? computeScarcity(ref, existingContact.doiConfirmedAt ?? existingContact.createdAt)
       : null;
 
-  const [allPlans, locations] = await Promise.all([
-    db.pricingPlan.findMany({
-      where: { active: true, availableOnline: true },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    }),
-    db.location.findMany({
-      where: { active: true },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      select: { id: true, name: true, city: true },
-    }),
-  ]);
+  // Keine Studioauswahl mehr: Anmeldungen laufen fest auf Vital-Fit Ochtrup
+  // (Ahaus schließt). Deshalb nur Tarife zeigen, die dort buchbar sind
+  // (allgemeine oder Ochtrup-Tarife) — die API prüft das zusätzlich.
+  const signupLocation = await resolveSignupLocation();
+  const allPlans = await db.pricingPlan.findMany({
+    where: {
+      active: true,
+      availableOnline: true,
+      OR: [{ locationId: null }, ...(signupLocation ? [{ locationId: signupLocation.id }] : [])],
+    },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
 
   if (allPlans.length === 0) {
     return (
@@ -89,19 +92,31 @@ export default async function AnmeldenPage({ searchParams }: PageProps) {
         </div>
       </header>
 
-      <section className="mx-auto max-w-3xl px-4 py-10 md:py-16 md:px-6">
+      <section className="mx-auto max-w-3xl px-4 pb-10 pt-5 md:px-6 md:py-12">
         {/* Fortschrittsanzeige */}
         <ProgressBar />
 
-        {/* H1 + Subtitle */}
-        <h1 className="mt-6 text-3xl font-bold leading-tight text-[#2C2C2A] md:text-4xl lg:text-5xl">
+        {/* H1 + Subtitle — bewusst kompakt, damit das Video auf dem Handy
+            ohne Scrollen ins Bild kommt. */}
+        <h1 className="mt-4 text-2xl font-bold leading-tight text-[#2C2C2A] md:mt-6 md:text-4xl lg:text-5xl">
           Jetzt starten — deine Krankenkasse zahlt.
         </h1>
-        <p className="mt-4 text-base leading-relaxed text-[#5F5E5A] md:text-lg">
-          Dein 6-Wochen-Programm. Danach entscheidest du frei, ob du weitermachst.
+        <p className="mt-2 text-sm leading-relaxed text-[#5F5E5A] md:mt-4 md:text-lg">
+          {/* Mobil gekürzt (eine Zeile), damit Eriks Gesicht im ersten
+              Bildschirm liegt; die Garantie steht ausführlich unterm Formular. */}
+          <span className="md:hidden">6 Wochen. Danach entscheidest du frei.</span>
+          <span className="hidden md:inline">
+            Dein 6-Wochen-Programm. Danach entscheidest du frei, ob du weitermachst.
+          </span>
         </p>
 
-        {/* Tarif-Auswahl + Karte */}
+        {/* Eriks Video — beantwortet die Fragen vor der Anmeldung. */}
+        <div className="mt-4 md:mt-8">
+          <SignupVideo />
+        </div>
+
+        {/* Schritt 1 „Was ist dein Ziel?" + Formular, darunter Leistungen,
+            Garantie und Kundenstimmen. */}
         <div className="mt-8">
           <SignupForm
             plans={allPlans.map((p) => ({
@@ -115,13 +130,11 @@ export default async function AnmeldenPage({ searchParams }: PageProps) {
               agb: p.agb,
               locationId: p.locationId,
             }))}
-            locations={locations}
             ref_={ref ?? null}
             prefilledEmail={existingContact?.email ?? ""}
             prefilledFirstName={existingContact?.firstName ?? undefined}
             prefilledLastName={existingContact?.lastName ?? undefined}
             prefilledGender={existingContact?.gender ?? null}
-            prefilledLocationId={existingContact?.locationId ?? null}
             scarcityPlaces={scarcity?.placesLeft ?? null}
             scarcityDeadlineIso={scarcity?.deadlineIso ?? null}
           />

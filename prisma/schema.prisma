@@ -129,6 +129,12 @@ model Contact {
   signupAt          DateTime?
   signupStaff       String? // Name des Mitarbeiters bei Club-Anmeldung
 
+  // Aus der Online-Anmeldung (/anmelden): gewählte Ziele (Mehrfachauswahl,
+  // IDs siehe src/lib/signup-goals.ts) und freiwillige Anmerkung. Kann
+  // Gesundheitsangaben enthalten → nie an Tracking, Push oder Logs weitergeben.
+  goals      String[] @default([])
+  signupNote String?
+
   notes String?
 
   createdAt DateTime @default(now())

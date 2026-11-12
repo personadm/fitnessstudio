@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { describeChangedFields } from "@/lib/contact-edit";
+import { formatSignupGoals } from "@/lib/signup-goals";
 import { ContactDetailActions } from "./ContactDetailActions";
 import { ClearSavedParam } from "./ClearSavedParam";
 
@@ -353,6 +354,9 @@ export default async function ContactDetail({ params, searchParams }: PageProps)
               />
               <DataRow k="Standort" v={contact.location?.name ?? "—"} />
               <DataRow k="Telefon" v={contact.phone ?? "—"} />
+              {/* Aus der Online-Anmeldung (Schritt 1) — fürs Startgespräch am Telefon. */}
+              <DataRow k="Ziel" v={formatSignupGoals(contact.goals) || "—"} />
+              <DataRow k="Anmerkung" v={contact.signupNote ?? "—"} multiline />
               <DataRow
                 k="Geburtsdatum"
                 v={contact.birthDate ? contact.birthDate.toLocaleDateString("de-DE") : "—"}
@@ -453,14 +457,24 @@ export default async function ContactDetail({ params, searchParams }: PageProps)
   );
 }
 
-function DataRow({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
+function DataRow({
+  k,
+  v,
+  mono,
+  multiline,
+}: {
+  k: string;
+  v: string;
+  mono?: boolean;
+  multiline?: boolean;
+}) {
   return (
     <div className="grid grid-cols-3 border-b border-ink/10 last:border-b-0">
       <p className="bg-ink/5 px-3 py-3 font-mono text-[10px] uppercase tracking-[0.1em] text-muted md:px-4 md:text-[11px]">
         {k}
       </p>
       <p
-        className={`col-span-2 px-3 py-3 text-sm break-words md:px-4 ${mono ? "font-mono" : ""}`}
+        className={`col-span-2 px-3 py-3 text-sm break-words md:px-4 ${mono ? "font-mono" : ""} ${multiline ? "whitespace-pre-line" : ""}`}
       >
         {v}
       </p>

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SIGNUP_GOAL_IDS, SIGNUP_NOTE_MAX } from "./signup-goals";
 
 // Einheitlicher Versand-Guard für ALLE Mail-Wege (Funnels + Kampagnen).
 //
@@ -168,7 +169,29 @@ export const signupSchema = z
       (v) => (v == null ? "" : v),
       z.string().min(1, "Bitte wähle einen Tarif aus."),
     ),
+    // Wird seit der Schließung von Ahaus ignoriert (Standort fest Ochtrup,
+    // siehe src/lib/signup-location.ts) — bleibt erlaubt, damit noch
+    // gecachte alte Clients nicht an der Validierung scheitern.
     locationId: z.string().trim().optional().nullable(),
+    // Schritt 1 „Was ist dein Ziel?": alles freiwillig. Doppelte Werte werden
+    // entfernt; Reihenfolge wie im Formular.
+    goals: z.preprocess(
+      (v) => (v == null ? [] : v),
+      z
+        .array(z.enum(SIGNUP_GOAL_IDS, { errorMap: () => ({ message: "Ungültige Ziel-Auswahl." }) }))
+        .max(SIGNUP_GOAL_IDS.length, "Ungültige Ziel-Auswahl.")
+        .transform((ids) => SIGNUP_GOAL_IDS.filter((id) => ids.includes(id))),
+    ),
+    note: z.preprocess(
+      (v) => (v == null ? "" : v),
+      z
+        .string()
+        .trim()
+        .max(
+          SIGNUP_NOTE_MAX,
+          `Deine Anmerkung ist zu lang (max. ${SIGNUP_NOTE_MAX} Zeichen).`,
+        ),
+    ),
     ref: z.string().optional().nullable(),
     // Consent: entweder das alte einzelne `consent: true` ODER beide neuen Felder.
     consent: z.boolean().optional(),

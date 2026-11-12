@@ -263,7 +263,9 @@ export default async function VertragPage({ params }: PageProps) {
 
         <section className="mt-8">
           <div className="grid grid-cols-2 gap-12">
-            <SignatureField label="Ort, Datum" value={`Ahaus / Ochtrup, ${today}`} />
+            {/* Ort = Studio des Kontakts (Online-Anmeldungen: Ochtrup); ohne
+                Standort wie bisher beide Orte. */}
+            <SignatureField label="Ort, Datum" value={`${location?.city || "Ahaus / Ochtrup"}, ${today}`} />
             <SignatureField label="Unterschrift Anbieter" />
           </div>
           <div className="mt-8 grid grid-cols-2 gap-12">

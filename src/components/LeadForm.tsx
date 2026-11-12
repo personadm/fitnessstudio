@@ -5,39 +5,26 @@ import { getAttribution } from "@/lib/attribution";
 
 type State = "idle" | "loading" | "success" | "error";
 
-type Location = {
-  id: string;
-  name: string;
-  city: string | null;
-};
-
-interface Props {
-  locations: Location[];
-}
-
 const PETROL = "#0F6E56";
 
 /**
  * Schlankes Lead-Formular für die Landing-Page Hero-Sektion:
  *  - Vorname (required)
  *  - E-Mail (required)
- *  - Standort (Pflicht nur wenn mehrere aktive Locations existieren)
  *  - DSGVO-Consent
+ *
+ * Keine Studioauswahl mehr: Der Standort wird serverseitig fest auf
+ * Vital-Fit Ochtrup gesetzt (Ahaus schließt) — siehe src/lib/signup-location.ts.
  *
  * Backend (/api/leads) akzeptiert lastName und gender als optional, sodass
  * dieses schlanke Formular weiterhin funktioniert.
  */
-export function LeadForm({ locations }: Props) {
+export function LeadForm() {
   const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
-  const [locationId, setLocationId] = useState(
-    locations.length === 1 ? locations[0].id : "",
-  );
   const [consent, setConsent] = useState(false);
   const [state, setState] = useState<State>("idle");
   const [message, setMessage] = useState("");
-
-  const needsLocationChoice = locations.length > 1;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -51,7 +38,6 @@ export function LeadForm({ locations }: Props) {
         body: JSON.stringify({
           firstName,
           email,
-          locationId: locationId || null,
           consent,
           // Herkunft (gclid/fbclid/utm/referrer) — first-party, beim ersten
           // Aufruf erfasst; der Server ermittelt daraus den Klartext-Kanal.
@@ -102,11 +88,7 @@ export function LeadForm({ locations }: Props) {
     );
   }
 
-  const canSubmit =
-    consent &&
-    firstName.trim() &&
-    email.trim() &&
-    (!needsLocationChoice || locationId);
+  const canSubmit = consent && firstName.trim() && email.trim();
 
   return (
     <form
@@ -172,29 +154,6 @@ export function LeadForm({ locations }: Props) {
             className="mt-1.5 w-full rounded-lg border border-[#D8D2C7] bg-white px-3 py-2.5 text-base placeholder:text-[#A8A39A] outline-none transition-colors focus:border-[#0F6E56] focus:ring-1 focus:ring-[#0F6E56] disabled:opacity-50"
           />
         </label>
-
-        {needsLocationChoice && (
-          <label className="block">
-            <span className="block text-sm font-medium text-[#2C2C2A]">Standort</span>
-            <select
-              required
-              value={locationId}
-              onChange={(e) => setLocationId(e.target.value)}
-              disabled={state === "loading"}
-              className="mt-1.5 w-full rounded-lg border border-[#D8D2C7] bg-white px-3 py-2.5 text-base outline-none transition-colors focus:border-[#0F6E56] focus:ring-1 focus:ring-[#0F6E56] disabled:opacity-50"
-            >
-              <option value="" disabled>
-                Standort wählen…
-              </option>
-              {locations.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                  {l.city ? ` · ${l.city}` : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
       </div>
 
       <label className="mt-5 flex cursor-pointer items-start gap-3 text-xs leading-relaxed text-[#5F5E5A]">

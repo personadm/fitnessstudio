@@ -7,6 +7,7 @@ import { generateToken } from "@/lib/tokens";
 import { sendPricingMail } from "@/lib/mail";
 import { enrollIntoMatchingFunnels } from "@/lib/funnels";
 import { checkRateLimit, clientIp } from "@/lib/rateLimit";
+import { resolveSignupLocation } from "@/lib/signup-location";
 
 export const runtime = "nodejs";
 
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, message }, { status: 400 });
     }
 
-    const { email, firstName, lastName, gender, locationId, attribution } = result.data;
+    const { email, firstName, lastName, gender, attribution } = result.data;
 
     // Echten Herkunftskanal (Klartext) aus der first-party-Erfassung ableiten.
     // Wird nur für NEUE Leads gesetzt (Bestandsleads behalten ihren Wert bzw.
@@ -47,17 +48,9 @@ export async function POST(req: NextRequest) {
     // gespeichert als DSGVO-Beleg zusammen mit IP + Zeitstempel).
     const consentText = "Ja, schickt mir meinen Gratis-Start-Plan per E-Mail.";
 
-    // Standort validieren — nur falls übergeben
-    let resolvedLocationId: string | null = null;
-    if (locationId) {
-      const loc = await db.location.findUnique({
-        where: { id: locationId },
-        select: { id: true, active: true },
-      });
-      if (loc && loc.active) {
-        resolvedLocationId = loc.id;
-      }
-    }
+    // Standort: fest Vital-Fit Ochtrup (Ahaus schließt) — eine evtl.
+    // mitgeschickte locationId wird bewusst ignoriert.
+    const resolvedLocationId = (await resolveSignupLocation())?.id ?? null;
 
     // Single-Opt-In: keine Bestätigungsmail mehr. Wir vergeben sofort den
     // ref-Token für die Anmelde-Seite und markieren den Kontakt als bestätigt.
@@ -65,7 +58,7 @@ export async function POST(req: NextRequest) {
     // erneutes Eintragen die Angebots-Mail ein zweites Mal auslöst.
     const existing = await db.contact.findUnique({
       where: { email },
-      select: { doiConfirmedAt: true, refToken: true },
+      select: { doiConfirmedAt: true, refToken: true, locationId: true },
     });
     const alreadyOnboarded = Boolean(existing?.doiConfirmedAt);
     const refToken = existing?.refToken ?? generateToken();
@@ -86,7 +79,9 @@ export async function POST(req: NextRequest) {
     };
     if (lastName) updateData.lastName = lastName;
     if (gender) updateData.gender = gender;
-    if (resolvedLocationId) updateData.locationId = resolvedLocationId;
+    // Standort nur setzen, wenn der Kontakt noch keinen hat — bestehende
+    // Einträge (z. B. Ahaus-Kunden, die sich erneut eintragen) bleiben unverändert.
+    if (resolvedLocationId && !existing?.locationId) updateData.locationId = resolvedLocationId;
 
     const contact = await db.contact.upsert({
       where: { email },

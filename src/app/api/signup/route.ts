@@ -5,6 +5,7 @@ import { sendSignupConfirmation } from "@/lib/mail";
 import { enrollIntoMatchingFunnels } from "@/lib/funnels";
 import { notifyOnlineSignup } from "@/lib/push";
 import { checkRateLimit, clientIp } from "@/lib/rateLimit";
+import { resolveSignupLocation } from "@/lib/signup-location";
 
 export const runtime = "nodejs";
 
@@ -46,31 +47,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, message: "Tarif nicht verfügbar." }, { status: 400 });
     }
 
-    // Standort-Logik (analog zu /api/leads).
-    const activeLocations = await db.location.findMany({
-      where: { active: true },
-      select: { id: true, name: true },
-    });
-
-    let resolvedLocationId: string | null = null;
-
-    if (data.locationId) {
-      const valid = activeLocations.find((l) => l.id === data.locationId);
-      if (!valid) {
-        return NextResponse.json(
-          { ok: false, message: "Standort nicht verfügbar." },
-          { status: 400 },
-        );
-      }
-      resolvedLocationId = data.locationId;
-    } else if (activeLocations.length === 1) {
-      resolvedLocationId = activeLocations[0].id;
-    } else if (activeLocations.length > 1) {
-      return NextResponse.json(
-        { ok: false, message: "Bitte wähle einen Standort aus." },
-        { status: 400 },
-      );
-    }
+    // Standort: fest Vital-Fit Ochtrup (Ahaus schließt) — eine evtl.
+    // mitgeschickte locationId wird bewusst ignoriert.
+    const signupLocation = await resolveSignupLocation();
+    const resolvedLocationId = signupLocation?.id ?? null;
 
     // Plan muss zum Standort passen (oder Allgemein sein)
     if (plan.locationId && plan.locationId !== resolvedLocationId) {
@@ -112,6 +92,10 @@ export async function POST(req: NextRequest) {
       signupAt: new Date(),
       pricingPlanId: data.pricingPlanId,
       locationId: resolvedLocationId,
+      // Schritt 1 „Was ist dein Ziel?" (freiwillig). Leere Angaben
+      // überschreiben frühere Werte nicht (z. B. bei doppelter Anmeldung).
+      ...(data.goals.length > 0 ? { goals: data.goals } : {}),
+      ...(data.note ? { signupNote: data.note } : {}),
       status: "NEUKUNDE" as const,
       source: contact ? contact.source : ("DIRECT" as const),
       consentText:
@@ -137,8 +121,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Studioname für die studioabhängige Widerrufsbelehrung in der Mail.
-    const resolvedLocationName =
-      activeLocations.find((l) => l.id === resolvedLocationId)?.name ?? null;
+    const resolvedLocationName = signupLocation?.name ?? null;
 
     try {
       await sendSignupConfirmation({

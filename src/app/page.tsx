@@ -7,7 +7,6 @@ import { GoogleAds } from "@/components/GoogleAds";
 import { CookieConsent } from "@/components/CookieConsent";
 import { CookieSettingsButton } from "@/components/CookieSettingsButton";
 import { AttributionCapture } from "@/components/AttributionCapture";
-import { db } from "@/lib/db";
 import { getTestimonials, TESTIMONIALS } from "@/lib/testimonials";
 
 // Live-Daten (Standorte) → pro Request server-rendern statt beim Build statisch
@@ -52,32 +51,10 @@ const LOGO_URL =
   "https://static.wixstatic.com/media/fe97c9_89b309723d40451699a7888dfac8593a~mv2.png/v1/fill/w_180,h_180,al_c,q_85,enc_avif,quality_auto/Logo-FB-NEU.png";
 
 export default async function LandingPage() {
-  let locations: {
-    id: string;
-    name: string;
-    city: string | null;
-    street: string | null;
-    postalCode: string | null;
-    phone: string | null;
-  }[] = [];
   let testimonials: Awaited<ReturnType<typeof getTestimonials>> = TESTIMONIALS;
 
   try {
-    [locations, testimonials] = await Promise.all([
-      db.location.findMany({
-        where: { active: true },
-        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-        select: {
-          id: true,
-          name: true,
-          city: true,
-          street: true,
-          postalCode: true,
-          phone: true,
-        },
-      }),
-      getTestimonials(),
-    ]);
+    testimonials = await getTestimonials();
   } catch (err) {
     // DB kurz nicht erreichbar → Seite trotzdem ausliefern (mit Fallback-Daten),
     // statt die gesamte Startseite mit einem 500er abstürzen zu lassen.
@@ -160,7 +137,7 @@ export default async function LandingPage() {
                 oben und bleibt im ersten Viewport sichtbar (row-span hält sie
                 oben, ohne vom Video nach unten gedrückt zu werden). */}
             <div className="lg:col-span-5 lg:col-start-8 lg:row-start-1 lg:row-span-3 lg:self-start">
-              <LeadForm locations={locations} />
+              <LeadForm />
             </div>
 
             {/* Restlicher Hero-Text — mobil unterhalb des Formulars.
