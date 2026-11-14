@@ -6,6 +6,7 @@ import { enrollIntoMatchingFunnels } from "@/lib/funnels";
 import { notifyOnlineSignup } from "@/lib/push";
 import { checkRateLimit, clientIp } from "@/lib/rateLimit";
 import { resolveSignupLocation } from "@/lib/signup-location";
+import { CONTACT_EVENT } from "@/lib/contact-events";
 
 export const runtime = "nodejs";
 
@@ -97,11 +98,17 @@ export async function POST(req: NextRequest) {
       ...(data.goals.length > 0 ? { goals: data.goals } : {}),
       ...(data.note ? { signupNote: data.note } : {}),
       status: "NEUKUNDE" as const,
+      // Wer sich anmeldet, ist Neukunde — auch wenn er vorher nur den
+      // Newsletter hatte: Markierung fällt weg → zählt in der Kachel
+      // „Neukunden" und kommt in den Neukunden-Funnel.
+      newsletterOnly: false,
       source: contact ? contact.source : ("DIRECT" as const),
       consentText:
         "Ich habe AGB und Datenschutzerklärung gelesen und stimme der Verarbeitung meiner Daten zur Vertragsabwicklung zu.",
       consentIp: ip,
     };
+
+    const wasNewsletterOnly = contact?.newsletterOnly === true;
 
     if (contact) {
       contact = await db.contact.update({
@@ -119,6 +126,11 @@ export async function POST(req: NextRequest) {
         meta: { plan: plan.name, ref: data.ref ?? null, locationId: resolvedLocationId },
       },
     });
+    if (wasNewsletterOnly) {
+      await db.contactEvent.create({
+        data: { contactId: contact.id, type: CONTACT_EVENT.NEWSLETTER_TO_SIGNUP },
+      });
+    }
 
     // Studioname für die studioabhängige Widerrufsbelehrung in der Mail.
     const resolvedLocationName = signupLocation?.name ?? null;

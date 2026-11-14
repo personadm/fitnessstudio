@@ -2,6 +2,7 @@ import { db } from "./db";
 import { sendFunnelMail } from "./mail";
 import { calculateDueAt } from "./funnel-schedule";
 import { isSendableEmail } from "./validation";
+import { CONTACT_EVENT } from "./contact-events";
 import { Prisma } from "@prisma/client";
 import type { ContactStatus, FunnelTrigger } from "@prisma/client";
 
@@ -89,6 +90,7 @@ export type ProcessResult = {
   sent?: number;
   cancelled?: number;
   skippedSteps?: number;
+  promoted?: number;
 };
 
 // Termin-Berechnung (calculateDueAt / nextWeekdayOccurrence) lebt jetzt in
@@ -124,7 +126,8 @@ export async function processFunnels(
   try {
     const enrolled = await enrollIntoMatchingFunnels();
     const stats = await processFunnelsInner();
-    return { skipped: false, enrolled, ...stats };
+    const promoted = await promoteFinishedNewcomers();
+    return { skipped: false, enrolled, ...stats, promoted };
   } finally {
     isProcessing = false;
   }
@@ -579,6 +582,144 @@ async function processFunnelsInner() {
   }
 
   return { sent, cancelled, skippedSteps };
+}
+
+// ─────────────────────────────────────────────────────────────
+// NEUKUNDE → MITGLIED nach dem Neukunden-Funnel
+// ─────────────────────────────────────────────────────────────
+/**
+ * Ab wann der automatische Wechsel gilt. Vorgabe (Erik, 14.11.2026): nur für
+ * das, was ab jetzt neu passiert. Wer VORHER schon im Neukunden-Funnel war,
+ * wird nicht automatisch umgestellt — darüber entscheidet Erik separat.
+ * Die Env-Variable MEMBER_SWITCH_FROM (ISO-Datum) überschreibt den Wert,
+ * z. B. für Tests in der Wegwerf-Datenbank.
+ */
+const MEMBER_SWITCH_DEFAULT_FROM = new Date("2026-11-14T18:55:00+01:00");
+
+function memberSwitchFrom(): Date {
+  const raw = process.env.MEMBER_SWITCH_FROM;
+  const fromEnv = raw ? new Date(raw) : null;
+  return fromEnv && !Number.isNaN(fromEnv.getTime()) ? fromEnv : MEMBER_SWITCH_DEFAULT_FROM;
+}
+
+/** Grund im Protokoll-Event — zugleich Merker „wurde schon automatisch umgestellt". */
+const MEMBER_SWITCH_REASON = "NEUKUNDE_FUNNEL_COMPLETED";
+
+/** Obergrenze pro Lauf; der Rest folgt im nächsten Lauf. */
+const MEMBER_SWITCH_BATCH = 100;
+
+/**
+ * Macht Neukunden nach der letzten Mail ihres Neukunden-Funnels zum Mitglied
+ * (Status KUNDE) und schreibt sie in die Mitglieder-Funnels ein — dort
+ * beginnen sie bei Schritt 1, dessen Wartezeit ab dem Wechsel läuft.
+ *
+ * „Letzte Mail" = Neukunden-Funnel abgeschlossen (alle Schritte erledigt),
+ * keine feste Schrittzahl: wird der Funnel verlängert, wechselt der Kontakt
+ * erst nach der neuen letzten Mail.
+ *
+ * Läuft bei jedem Funnel-Lauf über den Zustand in der DB (statt nur im Moment
+ * des Abschlusses). Dadurch holt der nächste Lauf einen Wechsel nach, falls
+ * der Server direkt nach der letzten Mail neu gestartet wurde oder die DB kurz
+ * nicht erreichbar war.
+ *
+ * Gewechselt wird nur, wer
+ *   - noch Neukunde ist (hat Erik ihn von Hand anders eingestuft, bleibt das so),
+ *   - einen Neukunden-Funnel abgeschlossen hat, in den er ab memberSwitchFrom()
+ *     kam (Bestand bleibt unberührt),
+ *   - keinen aktiven Neukunden-Funnel mehr offen hat (nie zwei Funnels zugleich),
+ *   - noch nie automatisch gewechselt wurde (setzt Erik ihn danach von Hand
+ *     zurück auf Neukunde, wird das respektiert).
+ *
+ * Ändert bewusst NUR Status + Funnel: kein „Mitglied seit", keine Mail, kein
+ * Push (anders als der Statuswechsel per Hand im Admin). Doppel-Mails sind
+ * ausgeschlossen: die Einschreibung ist pro Funnel+Kontakt eindeutig.
+ */
+async function promoteFinishedNewcomers(): Promise<number> {
+  const candidates = await db.contact.findMany({
+    where: {
+      status: "NEUKUNDE",
+      funnelEnrollments: {
+        some: {
+          completedAt: { not: null },
+          startedAt: { gte: memberSwitchFrom() },
+          funnel: { trigger: "NEUKUNDE" },
+        },
+      },
+      NOT: [
+        {
+          funnelEnrollments: {
+            some: {
+              completedAt: null,
+              cancelledAt: null,
+              funnel: { trigger: "NEUKUNDE", active: true, steps: { some: {} } },
+            },
+          },
+        },
+        {
+          events: {
+            some: {
+              type: CONTACT_EVENT.STATUS_CHANGED,
+              meta: { path: ["reason"], equals: MEMBER_SWITCH_REASON },
+            },
+          },
+        },
+      ],
+    },
+    select: {
+      id: true,
+      funnelEnrollments: {
+        where: { completedAt: { not: null }, funnel: { trigger: "NEUKUNDE" } },
+        orderBy: { completedAt: "desc" },
+        take: 1,
+        select: { funnel: { select: { id: true, name: true } } },
+      },
+    },
+    take: MEMBER_SWITCH_BATCH,
+  });
+
+  let promoted = 0;
+  for (const candidate of candidates) {
+    try {
+      const switched = await switchToMember(candidate.id, candidate.funnelEnrollments[0]?.funnel);
+      if (switched) promoted++;
+    } catch (err) {
+      // Nächster Lauf versucht es erneut (Zustand in der DB ist unverändert).
+      console.error(`[funnels] Wechsel zum Mitglied fehlgeschlagen (Kontakt ${candidate.id})`, err);
+    }
+  }
+  return promoted;
+}
+
+async function switchToMember(
+  contactId: string,
+  completedFunnel: { id: string; name: string } | undefined,
+): Promise<boolean> {
+  // updateMany mit Status-Bedingung = atomar: laufen zwei Funnel-Läufe
+  // parallel, wechselt nur einer (count 1), der andere macht nichts.
+  const { count } = await db.contact.updateMany({
+    where: { id: contactId, status: "NEUKUNDE" },
+    data: { status: "KUNDE" },
+  });
+  if (count === 0) return false;
+
+  await db.contactEvent.create({
+    data: {
+      contactId,
+      type: CONTACT_EVENT.STATUS_CHANGED,
+      meta: {
+        from: "NEUKUNDE",
+        to: "KUNDE",
+        reason: MEMBER_SWITCH_REASON,
+        funnelId: completedFunnel?.id ?? null,
+        funnelName: completedFunnel?.name ?? null,
+      },
+    },
+  });
+
+  // Schlägt das fehl, schreibt der globale Lauf (enrollIntoMatchingFunnels)
+  // den Kontakt beim nächsten Mal ein — er ist ja jetzt Mitglied.
+  await enrollIntoMatchingFunnels(contactId, "KUNDE");
+  return true;
 }
 
 function sleep(ms: number): Promise<void> {

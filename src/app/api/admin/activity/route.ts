@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { CONTACT_EVENT } from "@/lib/contact-events";
 
 export type ActivityKind =
   | "LEAD"
@@ -47,7 +48,7 @@ export async function GET() {
   // Letzte 14 Tage
   const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
 
-  const [contacts, signupContacts, funnelEvents, campaignEvents] = await Promise.all([
+  const [contacts, signupContacts, upgradeEvents, funnelEvents, campaignEvents] = await Promise.all([
     db.contact.findMany({
       where: {
         OR: [
@@ -61,6 +62,7 @@ export async function GET() {
         firstName: true,
         lastName: true,
         email: true,
+        source: true,
         sourceChannel: true,
         newsletterOnly: true,
         createdAt: true,
@@ -89,6 +91,25 @@ export async function GET() {
       },
       orderBy: { signupAt: "desc" },
       take: 80,
+    }),
+    // Aufstiege vom Nur-Newsletter-Kontakt (Gratis-Start-Plan angefordert bzw.
+    // angemeldet). Liefern den Zeitpunkt der Plan-Anforderung — createdAt ist
+    // bei diesen Kontakten die Newsletter-Eintragung.
+    db.contactEvent.findMany({
+      where: {
+        type: { in: [CONTACT_EVENT.NEWSLETTER_TO_LEAD, CONTACT_EVENT.NEWSLETTER_TO_SIGNUP] },
+        createdAt: { gte: since },
+      },
+      select: {
+        id: true,
+        type: true,
+        createdAt: true,
+        contact: {
+          select: { id: true, firstName: true, lastName: true, email: true, sourceChannel: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 200,
     }),
     db.funnelStepEvent.findMany({
       // skipped: false → nur echte Sends im Feed, keine Skip-Marker
@@ -143,23 +164,51 @@ export async function GET() {
   const displayName = (c: { firstName: string | null; lastName: string | null; email: string }) =>
     [c.firstName, c.lastName].filter(Boolean).join(" ").trim() || c.email;
 
+  const upgradedIds = new Set(upgradeEvents.map((e) => e.contact.id));
+  const leadUpgradeIds = new Set(
+    upgradeEvents
+      .filter((e) => e.type === CONTACT_EVENT.NEWSLETTER_TO_LEAD)
+      .map((e) => e.contact.id),
+  );
+
   for (const c of contacts) {
     const name = displayName(c);
     const href = `/admin/contacts/${c.id}`;
+    const newsletterItem: ActivityItem = {
+      id: `newsletter-${c.id}`,
+      kind: "NEWSLETTER",
+      at: c.createdAt.toISOString(),
+      title: `${name} hat sich für den Newsletter eingetragen`,
+      subtitle: c.email,
+      contactId: c.id,
+      href,
+    };
 
     // Nur-Newsletter-Abonnenten erscheinen mit eigenem Eintrag ("hat sich für
     // den Newsletter eingetragen") — NICHT als Lead/Angebot. Sie zählen bewusst
     // nicht in die Sales-Statistik, sollen aber im Live-Feed sichtbar sein.
     if (c.newsletterOnly) {
-      items.push({
-        id: `newsletter-${c.id}`,
-        kind: "NEWSLETTER",
-        at: c.createdAt.toISOString(),
-        title: `${name} hat sich für den Newsletter eingetragen`,
-        subtitle: c.email,
-        contactId: c.id,
-        href,
-      });
+      items.push(newsletterItem);
+      continue;
+    }
+
+    // Vom Newsletter aufgestiegen: createdAt bleibt die Newsletter-Eintragung.
+    // Die Plan-Anforderung kommt als eigener Eintrag aus dem Aufstiegs-Event
+    // (unten); „Plan verschickt" nur, wenn der Plan auch angefordert wurde —
+    // sonst ist doiConfirmedAt noch die Newsletter-Bestätigung.
+    if (c.source === "NEWSLETTER" || upgradedIds.has(c.id)) {
+      if (c.createdAt >= since) items.push(newsletterItem);
+      if (c.doiConfirmedAt && leadUpgradeIds.has(c.id)) {
+        items.push({
+          id: `doi-${c.id}`,
+          kind: "DOI_CONFIRMED",
+          at: c.doiConfirmedAt.toISOString(),
+          title: `${name} – Gratis-Start-Plan verschickt`,
+          subtitle: "Plan-Mail ging raus",
+          contactId: c.id,
+          href,
+        });
+      }
       continue;
     }
 
@@ -194,6 +243,20 @@ export async function GET() {
         href,
       });
     }
+  }
+
+  for (const e of upgradeEvents) {
+    if (e.type !== CONTACT_EVENT.NEWSLETTER_TO_LEAD) continue;
+    const c = e.contact;
+    items.push({
+      id: `lead-upgrade-${e.id}`,
+      kind: "LEAD",
+      at: e.createdAt.toISOString(),
+      title: `${displayName(c)} hat sich für den Gratis-Start-Plan eingetragen`,
+      subtitle: [c.sourceChannel, c.email].filter(Boolean).join(" · "),
+      contactId: c.id,
+      href: `/admin/contacts/${c.id}`,
+    });
   }
 
   for (const c of signupContacts) {
@@ -243,7 +306,9 @@ export async function GET() {
     });
   }
 
-  items.sort((a, b) => (a.at < b.at ? 1 : -1));
+  // Neueste zuerst. Gleiche Zeit → 0, damit die (stabile) Sortierung die
+  // Einfüge-Reihenfolge behält statt zufällig zu tauschen.
+  items.sort((a, b) => (a.at === b.at ? 0 : a.at < b.at ? 1 : -1));
 
   return NextResponse.json({ items: items.slice(0, 80) });
 }

@@ -4,6 +4,12 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { GoalStep } from "@/components/signup/GoalStep";
 import type { SignupGoalId } from "@/lib/signup-goals";
+import {
+  BIRTHDATE_FORMAT_HINT,
+  BIRTHDATE_INPUT_PATTERN,
+  BIRTHDATE_MAX_LENGTH,
+  formatBirthDateInput,
+} from "@/lib/birthdate-input";
 
 type TopHighlight = {
   text: string;
@@ -248,16 +254,20 @@ export function SignupForm({
 
           {/* Geburtsdatum + Telefon */}
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {/* Textfeld statt type="date": iOS Safari zeigt ein leeres
+                Datumsfeld ohne Beschriftung und zu breit an. Siehe
+                src/lib/birthdate-input.ts. */}
             <Input
               label="Geburtsdatum"
               required
-              type="date"
-              // Kein Zukunftsdatum; Hinweis greift im Text-Fallback mancher
-              // In-App-Browser, die type="date" nicht als Picker rendern.
-              max={new Date().toISOString().slice(0, 10)}
-              placeholder="Geburtsdatum (TT.MM.JJJJ)"
+              inputMode="numeric"
+              autoComplete="bday"
+              pattern={BIRTHDATE_INPUT_PATTERN}
+              maxLength={BIRTHDATE_MAX_LENGTH}
+              title={`Bitte im Format ${BIRTHDATE_FORMAT_HINT} eingeben, z. B. 20.11.1989`}
+              placeholder={`Geburtsdatum (${BIRTHDATE_FORMAT_HINT})`}
               value={birthDate}
-              onChange={setBirthDate}
+              onChange={(v) => setBirthDate(formatBirthDateInput(v))}
               disabled={submitting}
             />
             <Input
@@ -640,8 +650,11 @@ function Input({
   required,
   autoComplete,
   disabled,
-  max,
   placeholder,
+  inputMode,
+  pattern,
+  maxLength,
+  title,
 }: {
   label: string;
   value: string;
@@ -650,8 +663,11 @@ function Input({
   required?: boolean;
   autoComplete?: string;
   disabled?: boolean;
-  max?: string;
   placeholder?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  pattern?: string;
+  maxLength?: number;
+  title?: string;
 }) {
   return (
     <label className="block">
@@ -661,7 +677,10 @@ function Input({
         required={required}
         autoComplete={autoComplete}
         placeholder={placeholder ?? label}
-        max={max}
+        inputMode={inputMode}
+        pattern={pattern}
+        maxLength={maxLength}
+        title={title}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}

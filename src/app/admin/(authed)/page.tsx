@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { CONTACT_EVENT } from "@/lib/contact-events";
 import { LiveActivity } from "@/components/admin/LiveActivity";
 import { PushSubscribe } from "@/components/admin/PushSubscribe";
 
@@ -60,7 +61,7 @@ export default async function AdminDashboard() {
   // ─── CONVERSION-FUNNEL (letzte 30 Tage) ───────────────────
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-  const [pageViews30, uniqueVisitors30Raw, leads30, signups30] = await Promise.all([
+  const [pageViews30, uniqueVisitors30Raw, landingLeads30, newsletterLeads30Raw, signups30] = await Promise.all([
     db.pageView.count({
       where: { path: "/", createdAt: { gte: thirtyDaysAgo } },
     }),
@@ -76,6 +77,14 @@ export default async function AdminDashboard() {
         createdAt: { gte: thirtyDaysAgo },
       },
     }),
+    // Newsletter-Kontakte, die den Gratis-Start-Plan angefordert haben, sind
+    // ebenfalls Leads (ihr createdAt ist die Newsletter-Eintragung, daher über
+    // das Aufstiegs-Event gezählt).
+    db.contactEvent.findMany({
+      where: { type: CONTACT_EVENT.NEWSLETTER_TO_LEAD, createdAt: { gte: thirtyDaysAgo } },
+      select: { contactId: true },
+      distinct: ["contactId"],
+    }),
     // Alle Online-Anmeldungen (nur Club-Anmeldungen ausgenommen). Eine
     // Online-Anmeldung behält die Quelle des Bestandskontakts — z. B.
     // NEWSLETTER, IMPORT oder MANUAL — und wurde mit dem früheren Filter
@@ -89,6 +98,7 @@ export default async function AdminDashboard() {
   ]);
 
   const uniqueVisitors30 = uniqueVisitors30Raw.length;
+  const leads30 = landingLeads30 + newsletterLeads30Raw.length;
   const leadRate =
     uniqueVisitors30 > 0 ? ((leads30 / uniqueVisitors30) * 100).toFixed(1) : "—";
   const signupRate = leads30 > 0 ? ((signups30 / leads30) * 100).toFixed(1) : "—";

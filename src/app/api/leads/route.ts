@@ -8,6 +8,7 @@ import { sendPricingMail } from "@/lib/mail";
 import { enrollIntoMatchingFunnels } from "@/lib/funnels";
 import { checkRateLimit, clientIp } from "@/lib/rateLimit";
 import { resolveSignupLocation } from "@/lib/signup-location";
+import { CONTACT_EVENT } from "@/lib/contact-events";
 
 export const runtime = "nodejs";
 
@@ -58,9 +59,24 @@ export async function POST(req: NextRequest) {
     // erneutes Eintragen die Angebots-Mail ein zweites Mal auslöst.
     const existing = await db.contact.findUnique({
       where: { email },
-      select: { doiConfirmedAt: true, refToken: true, locationId: true },
+      select: { doiConfirmedAt: true, refToken: true, locationId: true, newsletterOnly: true },
     });
-    const alreadyOnboarded = Boolean(existing?.doiConfirmedAt);
+    // Nur-Newsletter-Kontakt fordert den Gratis-Start-Plan an → steigt zum
+    // Interessenten auf (bekommt Plan, Funnel, Live-Eintrag wie jeder Lead).
+    // Sein doiConfirmedAt stammt von der Newsletter-Eintragung und zählt hier
+    // NICHT als „Plan schon verschickt".
+    // Atomar „beanspruchen": Bei Doppelklick/Retry kommt nur EINE Anfrage
+    // durch (count 1) und verschickt den Plan; die andere gilt als „schon
+    // eingetragen" → nie zwei Plan-Mails.
+    let isNewsletterUpgrade = false;
+    if (existing?.newsletterOnly) {
+      const claim = await db.contact.updateMany({
+        where: { email, newsletterOnly: true },
+        data: { newsletterOnly: false },
+      });
+      isNewsletterUpgrade = claim.count === 1;
+    }
+    const alreadyOnboarded = Boolean(existing?.doiConfirmedAt) && !isNewsletterUpgrade;
     const refToken = existing?.refToken ?? generateToken();
 
     // Atomares upsert statt findUnique→create/update: verhindert eine Race
@@ -108,6 +124,15 @@ export async function POST(req: NextRequest) {
         ok: true,
         alreadyConfirmed: true,
         message: "Du bist schon eingetragen – schau in dein Postfach.",
+      });
+    }
+
+    // Aufstieg vom Newsletter festhalten — VOR doiConfirmedAt, damit der
+    // Live-Eintrag „hat sich für den Gratis-Start-Plan eingetragen" (aus
+    // diesem Event) unter „Gratis-Start-Plan verschickt" einsortiert wird.
+    if (isNewsletterUpgrade) {
+      await db.contactEvent.create({
+        data: { contactId: contact.id, type: CONTACT_EVENT.NEWSLETTER_TO_LEAD },
       });
     }
 
