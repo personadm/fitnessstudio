@@ -214,7 +214,16 @@ export default async function VertragPage({ params }: PageProps) {
               </li>
               <li>
                 Ich verlange ausdrücklich, dass mit dem Programm schon vor Ablauf der 14-tägigen
-                Widerrufsfrist begonnen wird.
+                Widerrufsfrist begonnen wird.{" "}
+                {/* Ergänzung (Erik, 15.11.2026): Wortlaut exakt, kleiner als der Satz
+                    davor, aber nicht kleiner/blasser als die Schlusszeile (text-xs,
+                    gray-700) — deshalb text-xs in Schwarz. */}
+                <span className="text-xs text-black">
+                  Vom Programmpreis sind 79,00 € für den Starttermin (Analyse, Personal Coaching,
+                  Begleitbuch, Starterpaket) vereinbart, der zu Beginn vollständig erbracht wird.
+                  Widerrufe ich nach dem Starttermin, zahle ich diese 79,00 €;
+                  Online-Ernährungscoaching und Krankenkassen-Bescheinigung entfallen dann.
+                </span>
               </li>
             </ul>
             <p className="mt-3 text-xs text-gray-700">

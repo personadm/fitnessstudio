@@ -39,7 +39,7 @@ const TRIGGER_TO_STATUS: Record<FunnelTrigger, ContactStatus> = {
   EHEMALIGER: "EHEMALIGER",
 };
 
-function triggerToStatus(t: FunnelTrigger): ContactStatus {
+export function triggerToStatus(t: FunnelTrigger): ContactStatus {
   return TRIGGER_TO_STATUS[t];
 }
 
@@ -349,10 +349,19 @@ async function processFunnelsInner() {
 
       if (statusMismatch || locationMismatch) {
         const reason = locationMismatch ? "LOCATION_CHANGED" : "STATUS_CHANGED";
-        await db.funnelEnrollment.update({
-          where: { id: enrollment.id },
+        // Bedingt auf den geladenen Stand: Hat Erik die Enrollment inzwischen
+        // neu gestartet (Widerruf → Interessenten-Funnel neu), darf dieser Lauf
+        // sie mit seinen veralteten Daten nicht wieder beenden.
+        const { count } = await db.funnelEnrollment.updateMany({
+          where: {
+            id: enrollment.id,
+            startedAt: enrollment.startedAt,
+            completedAt: null,
+            cancelledAt: null,
+          },
           data: { cancelledAt: new Date(), cancelReason: reason },
         });
+        if (count === 0) continue;
         await db.contactEvent.create({
           data: {
             contactId: enrollment.contactId,
@@ -447,6 +456,9 @@ async function processFunnelsInner() {
 
         // SKIP-Step: zeitlich vor einem bereits gesendeten
         if (skipStepIds.has(step.id)) {
+          // Veraltete Seite (Enrollment inzwischen beendet/neu gestartet)? →
+          // keine Markierung schreiben, sonst fehlt im Neustart dieser Schritt.
+          if (!(await isStillSendable(enrollment, funnel.autoStop, targetStatus))) break;
           try {
             await db.funnelStepEvent.create({
               data: { enrollmentId: enrollment.id, stepId: step.id, skipped: true },
@@ -499,6 +511,17 @@ async function processFunnelsInner() {
             continue;
           }
           console.error("[funnels] step-claim insert failed", err);
+          break;
+        }
+
+        // Die Seite oben kann schon einige Sekunden alt sein. Hat Erik den
+        // Kontakt inzwischen umgestellt (z. B. Widerruf: Neukunde → Interessent),
+        // ist diese Enrollment beendet oder neu gestartet → Mail NICHT senden,
+        // Claim zurücknehmen.
+        if (!(await isStillSendable(enrollment, funnel.autoStop, targetStatus))) {
+          await db.funnelStepEvent
+            .deleteMany({ where: { enrollmentId: enrollment.id, stepId: step.id } })
+            .catch((e) => console.error("[funnels] claim rollback (stale) failed", e));
           break;
         }
 
@@ -567,9 +590,16 @@ async function processFunnelsInner() {
       }
 
       // Enrollment komplett durch?
+      // Bedingt auf den geladenen Stand: Wurde die Enrollment währenddessen
+      // neu gestartet oder beendet (Widerruf im Admin), bleibt sie so.
       if (sentStepIds.size >= funnel.steps.length) {
-        await db.funnelEnrollment.update({
-          where: { id: enrollment.id },
+        await db.funnelEnrollment.updateMany({
+          where: {
+            id: enrollment.id,
+            startedAt: enrollment.startedAt,
+            completedAt: null,
+            cancelledAt: null,
+          },
           data: { completedAt: new Date() },
         });
       }
@@ -584,24 +614,32 @@ async function processFunnelsInner() {
   return { sent, cancelled, skippedSteps };
 }
 
+/**
+ * Frische Prüfung direkt vor dem Versand: Enrollment noch offen und nicht neu
+ * gestartet, Kontakt nicht abgemeldet und (bei autoStop) noch im passenden Status.
+ */
+async function isStillSendable(
+  enrollment: PagedEnrollment,
+  autoStop: boolean,
+  targetStatus: ContactStatus,
+): Promise<boolean> {
+  const fresh = await db.funnelEnrollment.findUnique({
+    where: { id: enrollment.id },
+    select: {
+      startedAt: true,
+      completedAt: true,
+      cancelledAt: true,
+      contact: { select: { status: true, optedOutAt: true } },
+    },
+  });
+  if (!fresh || fresh.completedAt || fresh.cancelledAt || fresh.contact.optedOutAt) return false;
+  if (fresh.startedAt.getTime() !== enrollment.startedAt.getTime()) return false;
+  return !autoStop || fresh.contact.status === targetStatus;
+}
+
 // ─────────────────────────────────────────────────────────────
 // NEUKUNDE → MITGLIED nach dem Neukunden-Funnel
 // ─────────────────────────────────────────────────────────────
-/**
- * Ab wann der automatische Wechsel gilt. Vorgabe (Erik, 14.11.2026): nur für
- * das, was ab jetzt neu passiert. Wer VORHER schon im Neukunden-Funnel war,
- * wird nicht automatisch umgestellt — darüber entscheidet Erik separat.
- * Die Env-Variable MEMBER_SWITCH_FROM (ISO-Datum) überschreibt den Wert,
- * z. B. für Tests in der Wegwerf-Datenbank.
- */
-const MEMBER_SWITCH_DEFAULT_FROM = new Date("2026-11-14T18:55:00+01:00");
-
-function memberSwitchFrom(): Date {
-  const raw = process.env.MEMBER_SWITCH_FROM;
-  const fromEnv = raw ? new Date(raw) : null;
-  return fromEnv && !Number.isNaN(fromEnv.getTime()) ? fromEnv : MEMBER_SWITCH_DEFAULT_FROM;
-}
-
 /** Grund im Protokoll-Event — zugleich Merker „wurde schon automatisch umgestellt". */
 const MEMBER_SWITCH_REASON = "NEUKUNDE_FUNNEL_COMPLETED";
 
@@ -623,9 +661,11 @@ const MEMBER_SWITCH_BATCH = 100;
  * nicht erreichbar war.
  *
  * Gewechselt wird nur, wer
- *   - noch Neukunde ist (hat Erik ihn von Hand anders eingestuft, bleibt das so),
- *   - einen Neukunden-Funnel abgeschlossen hat, in den er ab memberSwitchFrom()
- *     kam (Bestand bleibt unberührt),
+ *   - noch Neukunde ist (hat Erik ihn von Hand anders eingestuft, bleibt das so —
+ *     z. B. nach einem Widerruf zurück auf Interessent),
+ *   - einen Neukunden-Funnel abgeschlossen hat (ohne Stichtag — Vorgabe Erik,
+ *     15.11.2026: auch wer schon vorher im Funnel war, wechselt nach seiner
+ *     eigenen letzten Mail; ein abgebrochener Funnel zählt nicht),
  *   - keinen aktiven Neukunden-Funnel mehr offen hat (nie zwei Funnels zugleich),
  *   - noch nie automatisch gewechselt wurde (setzt Erik ihn danach von Hand
  *     zurück auf Neukunde, wird das respektiert).
@@ -641,7 +681,6 @@ async function promoteFinishedNewcomers(): Promise<number> {
       funnelEnrollments: {
         some: {
           completedAt: { not: null },
-          startedAt: { gte: memberSwitchFrom() },
           funnel: { trigger: "NEUKUNDE" },
         },
       },
@@ -667,18 +706,29 @@ async function promoteFinishedNewcomers(): Promise<number> {
     },
     select: {
       id: true,
+      signupAt: true,
+      // letzter Wechsel per Hand auf Neukunde (Admin)
+      events: {
+        where: { type: CONTACT_EVENT.STATUS_CHANGED, meta: { path: ["to"], equals: "NEUKUNDE" } },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { createdAt: true },
+      },
       funnelEnrollments: {
         where: { completedAt: { not: null }, funnel: { trigger: "NEUKUNDE" } },
         orderBy: { completedAt: "desc" },
         take: 1,
-        select: { funnel: { select: { id: true, name: true } } },
+        select: { completedAt: true, funnel: { select: { id: true, name: true } } },
       },
     },
-    take: MEMBER_SWITCH_BATCH,
   });
 
+  // Ohne `take` in der Abfrage: Kontakte, die die Prüfung unten nicht bestehen,
+  // dürfen keine Plätze im Batch blockieren.
+  const eligible = candidates.filter(completedInCurrentNewcomerPhase).slice(0, MEMBER_SWITCH_BATCH);
+
   let promoted = 0;
-  for (const candidate of candidates) {
+  for (const candidate of eligible) {
     try {
       const switched = await switchToMember(candidate.id, candidate.funnelEnrollments[0]?.funnel);
       if (switched) promoted++;
@@ -688,6 +738,27 @@ async function promoteFinishedNewcomers(): Promise<number> {
     }
   }
   return promoted;
+}
+
+/**
+ * Der abgeschlossene Neukunden-Funnel muss zum AKTUELLEN Neukunden-Dasein
+ * gehören: nach der letzten Anmeldung und nach dem letzten Wechsel per Hand auf
+ * Neukunde. Sonst würde z. B. jemand, den Erik von Hand wieder auf Neukunde setzt
+ * oder der sich erneut anmeldet, sofort wieder Mitglied — wegen eines alten
+ * Funnels und ohne eigene Neukunden-Mails.
+ */
+function completedInCurrentNewcomerPhase(c: {
+  signupAt: Date | null;
+  events: { createdAt: Date }[];
+  funnelEnrollments: { completedAt: Date | null }[];
+}): boolean {
+  const completedAt = c.funnelEnrollments[0]?.completedAt;
+  if (!completedAt) return false;
+  const becameNewcomerAt = Math.max(
+    c.signupAt?.getTime() ?? 0,
+    c.events[0]?.createdAt.getTime() ?? 0,
+  );
+  return completedAt.getTime() > becameNewcomerAt;
 }
 
 async function switchToMember(

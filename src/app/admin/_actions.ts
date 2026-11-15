@@ -14,6 +14,7 @@ import {
   clubSignupSchema,
 } from "@/lib/validation";
 import { enrollIntoMatchingFunnels, processFunnels } from "@/lib/funnels";
+import { changeContactStatusManually } from "@/lib/funnel-status-change";
 import {
   CONTACT_EDIT_SELECT,
   ORIGINAL_VALUES_FIELD,
@@ -56,29 +57,9 @@ function parseOptionalInt(value: FormDataEntryValue | null): number | null {
 
 export async function updateContactStatus(contactId: string, newStatus: ContactStatus) {
   await requireAdmin();
-  const previous = await db.contact.findFirst({
-    where: { id: contactId },
-    select: { status: true },
-  });
-  if (!previous) return;
-
-  await db.contact.update({
-    where: { id: contactId },
-    data: {
-      status: newStatus,
-      ...(newStatus === "KUNDE" ? { memberSince: { set: new Date() } } : {}),
-      ...(newStatus === "EHEMALIGER" ? { memberUntil: { set: new Date() } } : {}),
-    },
-  });
-  await db.contactEvent.create({
-    data: {
-      contactId,
-      type: "STATUS_CHANGED",
-      meta: { from: previous.status, to: newStatus },
-    },
-  });
-
-  await enrollIntoMatchingFunnels(contactId, newStatus);
+  // Status + Funnels (alte sofort beenden, Widerruf → Interessenten-Funnel neu,
+  // passende neue starten) — siehe src/lib/funnel-status-change.ts.
+  await changeContactStatusManually(contactId, newStatus);
 
   revalidatePath("/admin/contacts");
   revalidatePath(`/admin/contacts/${contactId}`);
