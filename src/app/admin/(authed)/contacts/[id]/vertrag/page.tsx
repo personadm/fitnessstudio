@@ -130,71 +130,77 @@ export default async function VertragPage({ params }: PageProps) {
 
       {/* Druck-Bereich */}
       <main className="print-area mx-auto max-w-3xl bg-white px-10 py-8 text-sm leading-relaxed text-black md:px-16">
-        {/* ── Seite 1: Vertrag ── */}
-        <header className="mb-5 border-b border-black/10 pb-4">
-          <p className="text-[10px] uppercase tracking-widest text-gray-500">Anbieter</p>
-          <h1 className="mt-1 text-xl font-bold">{locationName} GmbH</h1>
-          <p className="mt-1">
-            {location?.street ?? ""}
-            <br />
-            {location?.postalCode ?? ""} {location?.city ?? ""}
-            <br />
-            {location?.phone ? `Telefon: ${location.phone}` : null}
-            {location?.email ? (
-              <>
-                <br />
-                E-Mail: {location.email}
-              </>
+        {/* ── Seite 1: Vertrag bis einschließlich Kasten „Programmlaufzeit & Kündigung" ──
+            Im Druck oberhalb des Kastens enger gesetzt (Zeilenhöhen und Abstände,
+            Schriftgrößen unverändert), damit der Kasten komplett auf Seite 1 passt. */}
+        <div className="print:leading-snug">
+          <header className="mb-5 border-b border-black/10 pb-4 print:mb-3 print:pb-2">
+            <p className="text-[10px] uppercase tracking-widest text-gray-500">Anbieter</p>
+            <h1 className="mt-1 text-xl font-bold">{locationName} GmbH</h1>
+            <p className="mt-1">
+              {location?.street ?? ""}
+              <br />
+              {location?.postalCode ?? ""} {location?.city ?? ""}
+              <br />
+              {location?.phone ? `Telefon: ${location.phone}` : null}
+              {location?.email ? (
+                <>
+                  <br />
+                  E-Mail: {location.email}
+                </>
+              ) : null}
+            </p>
+            <p className="mt-3 text-xs text-gray-600 print:mt-1.5">
+              Geschäftsführer: {anbieter.geschaeftsfuehrer} · USt-IdNr.: {anbieter.ustId} · HRB:{" "}
+              {anbieter.hrb}
+            </p>
+          </header>
+
+          <section className="mb-5 print:mb-3">
+            <h2 className="text-base font-bold uppercase tracking-wider" style={{ color: PETROL }}>
+              Mitgliedschaftsvereinbarung
+            </h2>
+            <p className="mt-2 text-xs text-gray-600 print:mt-1">Vertragsnummer: {contact.id.slice(-8).toUpperCase()}</p>
+          </section>
+
+          <section className="mb-5 print:mb-3">
+            <h3 className="mb-2 text-sm font-bold uppercase tracking-wider print:mb-1">Vertragspartner</h3>
+            <table className="w-full text-sm">
+              <tbody>
+                <Row dense label="Name" value={fullName} />
+                <Row dense label="Anschrift" value={fullAddress} />
+                <Row dense label="Geburtsdatum" value={birthDate} />
+                <Row dense label="E-Mail" value={contact.email} />
+                <Row dense label="Telefon" value={contact.phone ?? ""} />
+              </tbody>
+            </table>
+          </section>
+
+          <section className="mb-5 print:mb-3">
+            <h3 className="mb-2 text-sm font-bold uppercase tracking-wider print:mb-1">Tarif & Konditionen</h3>
+            <table className="w-full text-sm">
+              <tbody>
+                <Row dense label="Tarif" value={plan?.name ?? "—"} />
+                <Row dense label="Preis" value={`${price} ${billingLabel}`} />
+                <Row dense label="Vertragsschluss" value={`${vertragsschlussLabel} (Online-Anmeldung)`} />
+                <Row
+                  dense
+                  label="Programmstart"
+                  value={programmstartLabel ?? "wird beim Starttermin vereinbart"}
+                />
+                <Row dense label="Studio" value={locationName} />
+              </tbody>
+            </table>
+            {plan?.description ? (
+              <p className="mt-3 text-xs italic text-gray-700 print:mt-1.5">{plan.description}</p>
             ) : null}
-          </p>
-          <p className="mt-3 text-xs text-gray-600">
-            Geschäftsführer: {anbieter.geschaeftsfuehrer} · USt-IdNr.: {anbieter.ustId} · HRB:{" "}
-            {anbieter.hrb}
-          </p>
-        </header>
-
-        <section className="mb-5">
-          <h2 className="text-base font-bold uppercase tracking-wider" style={{ color: PETROL }}>
-            Mitgliedschaftsvereinbarung
-          </h2>
-          <p className="mt-2 text-xs text-gray-600">Vertragsnummer: {contact.id.slice(-8).toUpperCase()}</p>
-        </section>
-
-        <section className="mb-5">
-          <h3 className="mb-2 text-sm font-bold uppercase tracking-wider">Vertragspartner</h3>
-          <table className="w-full text-sm">
-            <tbody>
-              <Row label="Name" value={fullName} />
-              <Row label="Anschrift" value={fullAddress} />
-              <Row label="Geburtsdatum" value={birthDate} />
-              <Row label="E-Mail" value={contact.email} />
-              <Row label="Telefon" value={contact.phone ?? ""} />
-            </tbody>
-          </table>
-        </section>
-
-        <section className="mb-5">
-          <h3 className="mb-2 text-sm font-bold uppercase tracking-wider">Tarif & Konditionen</h3>
-          <table className="w-full text-sm">
-            <tbody>
-              <Row label="Tarif" value={plan?.name ?? "—"} />
-              <Row label="Preis" value={`${price} ${billingLabel}`} />
-              <Row label="Vertragsschluss" value={`${vertragsschlussLabel} (Online-Anmeldung)`} />
-              <Row
-                label="Programmstart"
-                value={programmstartLabel ?? "wird beim Starttermin vereinbart"}
-              />
-              <Row label="Studio" value={locationName} />
-            </tbody>
-          </table>
-          {plan?.description ? (
-            <p className="mt-3 text-xs italic text-gray-700">{plan.description}</p>
-          ) : null}
-        </section>
+          </section>
+        </div>
 
         {/* Rechtlich zentrale Bedingungen — bewusst als klar lesbarer Kasten,
-            ersetzt die frühere Zeile „VERTRAGSBEGINN ab Datum der Unterschrift". */}
-        <section className="mb-5">
+            ersetzt die frühere Zeile „VERTRAGSBEGINN ab Datum der Unterschrift".
+            Wird im Druck nie geteilt; er ist das Letzte auf Seite 1. */}
+        <section className="mb-5 break-inside-avoid">
           <div className="rounded-md border-2 border-black/70 p-3">
             <h3 className="mb-2 text-sm font-bold uppercase tracking-wider" style={{ color: PETROL }}>
               Programmlaufzeit &amp; Kündigung
@@ -214,26 +220,23 @@ export default async function VertragPage({ params }: PageProps) {
               </li>
               <li>
                 Ich verlange ausdrücklich, dass mit dem Programm schon vor Ablauf der 14-tägigen
-                Widerrufsfrist begonnen wird.{" "}
-                {/* Ergänzung (Erik, 15.11.2026): Wortlaut exakt, kleiner als der Satz
-                    davor, aber nicht kleiner/blasser als die Schlusszeile (text-xs,
-                    gray-700) — deshalb text-xs in Schwarz. */}
-                <span className="text-xs text-black">
-                  Vom Programmpreis sind 79,00 € für den Starttermin (Analyse, Personal Coaching,
-                  Begleitbuch, Starterpaket) vereinbart, der zu Beginn vollständig erbracht wird.
-                  Widerrufe ich nach dem Starttermin, zahle ich diese 79,00 €;
-                  Online-Ernährungscoaching und Krankenkassen-Bescheinigung entfallen dann.
-                </span>
+                Widerrufsfrist begonnen wird.
               </li>
             </ul>
-            <p className="mt-3 text-xs text-gray-700">
+            {/* Schlussabsatz (Erik, 21.11.2026): Wortlaut exakt. Druck 8 pt, Bildschirm
+                11 px (nicht kleiner), Farbe wie die frühere Schlusszeile (gray-700). */}
+            <p className="mt-3 text-[11px] leading-snug text-gray-700 print:text-[8pt]">
               Die AGB sowie die Programm-Inhalte aus der Online-Anmeldung sind Bestandteil dieses
-              Programms.
+              Programms. Vom Programmpreis sind 79,00&nbsp;€ für den Starttermin (Analyse,
+              Personal Coaching, Begleitbuch, Starterpaket) vereinbart, der zu Beginn vollständig
+              erbracht wird. Widerrufe ich nach dem Starttermin, zahle ich diese 79,00&nbsp;€;
+              Online-Ernährungscoaching und Krankenkassen-Bescheinigung entfallen dann.
             </p>
           </div>
         </section>
 
-        <section className="mb-5">
+        {/* ── Seite 2 beginnt im Druck immer hier ── */}
+        <section className="mb-5 print:break-before-page">
           <h3 className="mb-2 text-sm font-bold uppercase tracking-wider">Bankverbindung (SEPA-Lastschriftmandat)</h3>
           <p className="mb-3 text-xs text-gray-700">
             Ich ermächtige {locationName} GmbH widerruflich, die Beiträge bei Fälligkeit von meinem Konto
@@ -305,13 +308,22 @@ export default async function VertragPage({ params }: PageProps) {
   );
 }
 
-function Row({ label, value, emptyLine }: { label: string; value: string; emptyLine?: boolean }) {
+interface RowProps {
+  label: string;
+  value: string;
+  emptyLine?: boolean;
+  /** Im Druck engere Zeilen (Seite 1). Bankverbindung bleibt luftig zum Ausfüllen. */
+  dense?: boolean;
+}
+
+function Row({ label, value, emptyLine, dense }: RowProps) {
+  const padding = dense ? "py-1 print:py-0.5" : "py-1";
   return (
     <tr className="align-top">
-      <th className="w-40 py-1 pr-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+      <th className={`w-40 ${padding} pr-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500`}>
         {label}
       </th>
-      <td className={`py-1 ${emptyLine ? "font-mono tracking-widest text-gray-400" : ""}`}>
+      <td className={`${padding} ${emptyLine ? "font-mono tracking-widest text-gray-400" : ""}`}>
         {value}
       </td>
     </tr>

@@ -104,7 +104,9 @@ export const AGB_SECTIONS: AgbSection[] = [
       "Nutzung der Trainingsfläche und des allgemeinen Kursangebots sowie ggf. weitere studioabhängige Angebote " +
       "(z. B. Wellnessbereich in Ahaus). Nach vollständiger Absolvierung des zertifizierten " +
       "Online-Ernährungscoachings wird eine Teilnahmebescheinigung ausgestellt. Geschuldet ist ein fachgerechtes " +
-      "Bemühen, kein bestimmter Erfolg.",
+      "Bemühen, kein bestimmter Erfolg. Der Starttermin (Analyse, Personal Coaching, Begleitbuch, Starterpaket) " +
+      "ist eine eigenständige Leistung, die zu Beginn des Programms vollständig erbracht wird. Vom Programmpreis " +
+      "von 99,00 € sind dafür 79,00 € vereinbart.",
   },
   {
     heading: "§ 3 Vertragsschluss",
@@ -133,9 +135,11 @@ export const AGB_SECTIONS: AgbSection[] = [
     body:
       "Verbrauchern steht ein 14-tägiges Widerrufsrecht zu; Einzelheiten regelt die Widerrufsbelehrung, die dem " +
       "Kunden auf einem dauerhaften Datenträger (Bestätigungsmail sowie Vertragszettel) zur Verfügung gestellt " +
-      "wird. Verlangt der Kunde den vorzeitigen Beginn, schuldet er im Widerrufsfall einen angemessenen, " +
-      "anteiligen Betrag für die bereits erbrachten Leistungen. Der Zugang zum Online-Ernährungscoaching wird " +
-      "erst nach Ablauf der Widerrufsfrist freigeschaltet; mit einem Widerruf endet der Zugang zum Programm.",
+      "wird. Verlangt der Kunde den vorzeitigen Beginn und widerruft er nach dem Starttermin, schuldet er für " +
+      "den Starttermin den dafür vereinbarten Preis von 79,00 € und für die weiteren bereits erbrachten " +
+      "Leistungen einen angemessenen, anteiligen Betrag. Das Online-Ernährungscoaching und die " +
+      "Teilnahmebescheinigung für die Krankenkasse entfallen in diesem Fall. Der Zugang zum Online-Ernährungscoaching " +
+      "wird erst nach Ablauf der Widerrufsfrist freigeschaltet; mit einem Widerruf endet der Zugang zum Programm.",
   },
   {
     heading: "§ 7 Gesundheitszustand und Mitwirkung",
